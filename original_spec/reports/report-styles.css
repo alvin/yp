@@ -1,0 +1,216 @@
+:root {
+    --ink: #111;
+    --muted: #555;
+    --line: #777;
+    --bar: #111;
+    --paper: #fff;
+}
+body {
+    margin: 0;
+    background: #f2f2f2;
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+}
+.report-page {
+    width: 980px;
+    min-height: 1220px;
+    margin: 32px auto;
+    background: var(--paper);
+    padding: 46px 56px;
+    box-shadow: 0 2px 18px rgba(0, 0, 0, 0.18);
+    position: relative;
+    box-sizing: border-box;
+}
+.report-page.landscape {
+    width: 1220px;
+    min-height: 880px;
+}
+.blackbar {
+    background: var(--bar);
+    color: #fff;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-size: 28px;
+    padding: 9px 0 7px;
+    margin: 0 0 7px 0;
+}
+h1,
+h2,
+h3 {
+    text-align: center;
+    margin: 0;
+    line-height: 1.1;
+}
+h1 {
+    font-size: 30px;
+    letter-spacing: 0.04em;
+}
+h2 {
+    font-size: 24px;
+}
+h3 {
+    font-size: 17px;
+    font-weight: 700;
+}
+.logo {
+    text-align: center;
+    font-family: Georgia, serif;
+    font-size: 38px;
+    font-weight: 700;
+    margin: 0 0 24px;
+}
+.letterhead {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 20px;
+    font-size: 18px;
+    line-height: 1.55;
+}
+.right {
+    text-align: right;
+}
+.center {
+    text-align: center;
+}
+.large-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 28px;
+    margin: 24px 0 16px;
+}
+.rule {
+    border-top: 1px solid var(--line);
+    margin: 12px 0;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.25;
+    margin: 12px 0;
+}
+th {
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 1px solid #999;
+    padding: 5px 6px;
+}
+td {
+    padding: 5px 6px;
+    vertical-align: top;
+}
+.num,
+.money {
+    text-align: right;
+    white-space: nowrap;
+}
+.group {
+    font-weight: 700;
+    font-size: 18px;
+    padding-top: 18px;
+}
+.subtotal td,
+tr.subtotal td {
+    border-top: 1px solid #aaa;
+    font-weight: 700;
+}
+.total td,
+tr.total td {
+    border-top: 2px solid #444;
+    font-weight: 700;
+}
+.footer {
+    position: absolute;
+    left: 56px;
+    right: 56px;
+    bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #222;
+}
+.hand {
+    font-family: "Comic Sans MS", "Bradley Hand", cursive;
+    font-size: 24px;
+    color: #111;
+}
+.blank {
+    border-bottom: 1px solid #222;
+    display: inline-block;
+    min-width: 180px;
+    height: 1em;
+}
+.muted {
+    color: var(--muted);
+}
+.small {
+    font-size: 13px;
+}
+.note {
+    white-space: pre-line;
+}
+pre.transcript {
+    white-space: pre-wrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: #f6f6f6;
+    padding: 12px;
+    border: 1px solid #ddd;
+}
+
+/* report notes block */
+.report-annotations {
+    max-width: 1220px;
+    margin: 16px auto 64px;
+    padding: 18px 22px;
+    background: #fff;
+    border-left: 4px solid #888;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+    font-size: 14px;
+    line-height: 1.5;
+}
+.report-annotations h2 {
+    text-align: left;
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #555;
+    margin: 0 0 8px;
+}
+.report-annotations ul {
+    margin: 6px 0 0 18px;
+    padding: 0;
+}
+.report-annotations li {
+    margin: 3px 0;
+}
+.report-annotations code {
+    background: #f2f2f2;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+.report-annotations .src {
+    color: #777;
+    font-size: 12px;
+}
+.report-toolbar {
+    max-width: 1220px;
+    margin: 18px auto 0;
+    padding: 0 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #555;
+}
+.report-toolbar a {
+    color: #225;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+}
+.report-toolbar a:hover {
+    border-bottom-color: #225;
+}

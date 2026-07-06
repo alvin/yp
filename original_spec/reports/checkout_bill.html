@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Checkout Bill</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/reports/report-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="report-page">
+            <div class="logo">Yellow Point Lodge</div>
+            <div class="letterhead">
+                <div>
+                    HUNT, DON & SHANNON<br />8837 DELMONTE CRESCENT<br />DELTA,
+                    BC CAN<br />V4C 4A8
+                </div>
+                <div class="right">
+                    Date Printed: 24-Dec-25<br /><br />(604) 582-9228<br />Res.
+                    No. 108230
+                </div>
+            </div>
+            <div class="rule"></div>
+            <div class="large-line">
+                <span>Arrival: 12-Nov-25</span><span>Departure: 16-Nov-25</span>
+            </div>
+            <table>
+                <tr>
+                    <td>Lesley</td>
+                    <td class="num">4 @ $361.00</td>
+                    <td class="money">$1,444.00</td>
+                </tr>
+                <tr>
+                    <td>Sandhill Sauvignon Blanc</td>
+                    <td class="num">1 @ $20.87</td>
+                    <td class="money">$20.87</td>
+                </tr>
+                <tr>
+                    <td>Saltram Cab Sauv</td>
+                    <td class="num">2 @ $17.39</td>
+                    <td class="money">$34.78</td>
+                </tr>
+                <tr>
+                    <td>Sandhill Sauvignon Blanc</td>
+                    <td class="num">1 @ $20.87</td>
+                    <td class="money">$20.87</td>
+                </tr>
+                <tr>
+                    <td>Massage - 1 hour</td>
+                    <td class="num">1 @ $120.00</td>
+                    <td class="money">$120.00</td>
+                </tr>
+                <tr>
+                    <td>Massage - 1 hour</td>
+                    <td class="num">1 @ $120.00</td>
+                    <td class="money">$120.00</td>
+                </tr>
+            </table>
+            <table style="width: 45%; margin-left: auto">
+                <tr>
+                    <td>GST:</td>
+                    <td class="money">$76.02</td>
+                </tr>
+                <tr>
+                    <td>PST:</td>
+                    <td class="money">$0.00</td>
+                </tr>
+                <tr>
+                    <td>Liquor Tax:</td>
+                    <td class="money">$7.66</td>
+                </tr>
+                <tr>
+                    <td>Room Tax:</td>
+                    <td class="money">$69.32</td>
+                </tr>
+                <tr>
+                    <td>Dest. Mktg Tax:</td>
+                    <td class="money">$17.32</td>
+                </tr>
+                <tr class="total">
+                    <td>Subtotal:</td>
+                    <td class="money">$1,930.84</td>
+                </tr>
+            </table>
+            <table style="width: 75%">
+                <tr>
+                    <td>Payment (Regular)</td>
+                    <td class="money">−</td>
+                    <td class="money">$1,860.84</td>
+                </tr>
+                <tr>
+                    <td>Deposit (Applied)</td>
+                    <td class="money">−</td>
+                    <td class="money">$70.00</td>
+                </tr>
+                <tr>
+                    <td>Deposit (Received)</td>
+                    <td class="money">−</td>
+                    <td class="money">$0.00</td>
+                </tr>
+            </table>
+            <p class="right" style="font-size: 30px">
+                Balance:&nbsp;&nbsp; $0.00
+            </p>
+            <p class="right">
+                <b>Future Deposit</b><span class="blank"></span><br /><b
+                    >Gratuity:</b
+                ><span class="blank"></span><br /><b>Total:</b
+                ><span class="blank"></span>
+            </p>
+            <p>GST # R1105763445</p>
+            <p class="center" style="font-size: 26px; margin-top: 60px">
+                Thank you for staying with us.
+            </p>
+        </div>
+
+        <div class="report-toolbar">
+            <a href="/original_spec/">&larr; Scope index</a>
+            <span>Check-out Bill / Guest Invoice</span>
+        </div>
+        <aside class="report-annotations">
+            <h2>Report notes</h2>
+            <ul>
+                <li>
+                    This is the guest-facing final bill printed at checkout or
+                    reprinted after adjustments.
+                </li>
+                <li>
+                    It includes itemized charges, tax lines, subtotal, payment
+                    lines, deposit application lines, and final balance.
+                </li>
+                <li>
+                    The example confirms that payment and deposit application
+                    are shown separately on the bill, even when the balance
+                    reaches zero.
+                </li>
+                <li>
+                    Project principle: preserve the current printed structure,
+                    especially the itemized and tax breakdown sections.
+                </li>
+                <li>Primary feature: <code>printed_outputs.feature</code>.</li>
+            </ul>
+        </aside>
+
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

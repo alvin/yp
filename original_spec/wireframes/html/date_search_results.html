@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Date Search Results</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/wireframes/assets/wireframe-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="wireframe-page">
+            <header class="topbar">
+                <h1>Date Search Results</h1>
+                <div class="meta">
+                    <a href="/original_spec/wireframes/">Screens</a> ·
+                    <a href="/original_spec/">Scope home</a>
+                </div>
+            </header>
+
+            <main
+                class="screen wide"
+                id="date-search-results"
+                data-wireframe-id="WF-DATE-RESULTS"
+            >
+                <div class="screen-title">Date Search Results:</div>
+                <section
+                    class="panel"
+                    style="
+                        width: 58%;
+                        margin-left: auto;
+                        min-height: 460px;
+                        border-radius: 42px;
+                    "
+                >
+                    <div class="list-box" style="min-height: 410px">
+                        <h2>List of all Guests Arriving</h2>
+                        <h2>on selected date:</h2>
+                        <div
+                            style="
+                                display: grid;
+                                grid-template-columns: 1fr 1fr 1fr;
+                                gap: 30px;
+                                margin-top: 32px;
+                                text-align: center;
+                            "
+                        >
+                            <div>
+                                <p class="label">Last Name:</p>
+                                <span class="down-arrow">↓</span>
+                            </div>
+                            <div>
+                                <p class="label">First Name:</p>
+                                <span class="down-arrow">↓</span>
+                            </div>
+                            <div>
+                                <p class="label">Room:</p>
+                                <span class="down-arrow">↓</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+            <section class="annotation-section">
+                <h2>Screen Notes — ‘Date Search’ Return Screen</h2>
+                <p>
+                    This should be a simple list of all the guests, sorted
+                    alphabetically by last name, that have an ‘arrival date’
+                    that matches the date searched. When a particular name is
+                    selected, the appropriate
+                    <a
+                        href="/original_spec/wireframes/html/transaction_screen.html"
+                        >Transaction Screen</a
+                    >
+                    is returned.
+                </p>
+                <p class="source-note">
+                    <strong>Feature file:</strong>
+                    <code>date_search_results.feature</code>
+                </p>
+                <p class="source-note">
+                    <strong>Related screen:</strong>
+                    <a
+                        href="/original_spec/wireframes/html/transaction_screen.html"
+                        >Transaction Screen</a
+                    >
+                </p>
+                <p class="source-note">
+                    <strong>Scope note:</strong> the written requirements also
+                    say date search can return matching check-in or check-out
+                    dates; that difference is preserved in the feature file and
+                    main scope docs.
+                </p>
+            </section>
+            <script type="application/json" id="wireframe-data">
+                {
+                    "wireframe_id": "WF-DATE-RESULTS",
+                    "screen_name": "Date Search Results",
+                    "list": "List of all Guests Arriving on selected date",
+                    "columns": ["Last Name", "First Name", "Room"],
+                    "sort_order_stated": "alphabetically by last name",
+                    "selection_returns": "Transaction Screen"
+                }
+            </script>
+        </div>
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

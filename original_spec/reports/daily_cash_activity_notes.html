@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Notes on Daily Cash Activity Report</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/reports/report-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="report-page">
+            <div class="blackbar">Yellow Point Lodge</div>
+            <h1>Notes on Daily Cash Activity Report, (DCAR):</h1>
+            <p>
+                The DCAR is basically the ‘till tape’ of the day’s transaction
+                activity. As you can see from the sample, it is basically
+                divided into two sections. The top portion lists all the sources
+                of revenue and taxes retained, followed by balance sheet
+                adjustments (<em
+                    >items that will change your actual cash on hand</em
+                >) where deposits are recognized and applied, gift certificate
+                sales noted, etc.
+            </p>
+            <p>
+                We are in the practice of making a few manual adjustments to
+                reflect staff tips and purchases plus any ‘extraordinary’ items.
+                (<em>the sample shows $8.00 in staff tips, coded to ‘6025’</em>)
+                The total of the top sections of the sheet must balance with the
+                lower section, that lists all the payments we have received, by
+                type.
+            </p>
+            <p>
+                There is another series of related ‘appendices’ that provide
+                full detail on things like deposits received and applied, items
+                sold and things like that.
+            </p>
+            <p>
+                There are portions of this report that we are hoping to
+                eliminate, however. For example, our present system requires
+                ‘pre-payments’ to be separate but we’d like to see if we can
+                simplify this by just including those as ‘deposits’, which they
+                basically are, etc.
+            </p>
+            <p>
+                I won’t attempt to provide full detail here because this portion
+                of the project will probably be amongst the most involved and
+                we’ll have to do quite a bit of ‘back and forth’ to sort out
+                things like recognizing deposits applied to check out bills and
+                probably a few more head scratchers will present themselves.
+            </p>
+            <p>
+                How we set up the ‘transaction’ portion of the Transaction
+                Screen will be challenging and there may have to be a
+                combination of codes and dates looked at in order to feed this
+                report. More detail later, suffice it to say that we probably
+                won’t be able to key all of this sheet from something like
+                ‘departure day = today’. (<em
+                    >Please excuse me if it sounds like I’m trying to do your
+                    job, this may not be as big of a challenge to you as it
+                    appears to me.</em
+                >)
+            </p>
+            <p>
+                The sample will give you a good idea of what works for us now.
+                We don’t mind the manual adjustments because at the end of the
+                week, the daily reports are taken upstairs and entered into a
+                matching spreadsheet manually. This gives a chance to really see
+                what’s happening, catch errors, look for patterns and stay on
+                top of our activity. If this report fed automatically into our
+                Revenue Summary spreadsheets, errors could flow freely, we
+                wouldn’t know about them for quite some time and they’d be
+                difficult to trace.
+            </p>
+            <p>
+                We are open to any and all suggestions, but wanted you to have
+                an idea of what works for us at the moment.
+            </p>
+        </div>
+
+        <div class="report-toolbar">
+            <a href="/original_spec/">&larr; Scope index</a>
+            <span>Notes on Daily Cash Activity Report</span>
+        </div>
+        <aside class="report-annotations">
+            <h2>Report notes</h2>
+            <ul>
+                <li>
+                    These notes explain how the workflow currently uses the
+                    Daily Cash Activity Report (DCAR).
+                </li>
+                <li>
+                    Important workflow note: the DCAR has two balancing sections
+                    — revenue/tax/adjustment activity at the top and payments
+                    received by type at the bottom.
+                </li>
+                <li>
+                    Important workflow note: manual adjustments are expected and
+                    desirable, because staff use the daily reports as a checked
+                    manual handoff into weekly spreadsheet summaries.
+                </li>
+                <li>
+                    Daily cash scope questions, including prepayment handling,
+                    are tracked in
+                    <a href="/features/daily_cash_reporting.questions"
+                        >daily_cash_reporting.questions</a
+                    >.
+                </li>
+                <li>
+                    Important workflow note: the transaction portion of the
+                    Transaction Screen will need enough dates/codes/detail to
+                    feed the DCAR correctly.
+                </li>
+                <li>
+                    Primary feature: <code>daily_cash_reporting.feature</code>.
+                </li>
+            </ul>
+        </aside>
+
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

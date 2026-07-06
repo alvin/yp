@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Reports · Yellow Point Lodge Scope</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/wireframes/assets/wireframe-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="page">
+            <header class="topbar">
+                <h1>Reports</h1>
+                <div class="meta">
+                    <a href="/original_spec/">Scope home</a> ·
+                    <a href="/original_spec/wireframes/">Screens</a>
+                </div>
+            </header>
+
+            <section class="annotation-section">
+                <h2>Reading note</h2>
+                <p>
+                    These report pages are HTML only. Each report keeps the
+                    sample layout and includes a short report-notes block
+                    describing what the report is for and any workflow notes
+                    that materially affect scope.
+                </p>
+            </section>
+
+            <div class="strip" id="guest-documents">
+                Guest-facing slips and folios
+            </div>
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/reports/reservation_confirmation.html"
+                            >Reservation Confirmation Slip</a
+                        >
+                    </h2>
+                    <p>
+                        Daily confirmation output for reservations made that day
+                        or individually reprinted later.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/check_in_folio.html"
+                            >Check-in Folio</a
+                        >
+                    </h2>
+                    <p>
+                        Arrival folio with deposit detail, vehicle field, and
+                        signature line.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/checkout_bill.html"
+                            >Check-out Bill / Guest Invoice</a
+                        >
+                    </h2>
+                    <p>
+                        Guest-facing final bill with itemized charges, taxes,
+                        payments, deposits, and balance.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/reports/cancellation_notice.html"
+                            >Cancellation Notice</a
+                        >
+                    </h2>
+                    <p>
+                        Cancellation output that preserves deposit
+                        receipt/refund detail and printed cancellation notes.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+            </div>
+
+            <div class="strip" id="operations-reports">
+                Daily operations reports
+            </div>
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/reports/housekeeping_report.html"
+                            >Housekeeping Report</a
+                        >
+                    </h2>
+                    <p>
+                        Room operations report with statuses, note dates, and
+                        housekeeping-specific setup/request notes.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/in_house_report.html"
+                            >In House Report</a
+                        >
+                    </h2>
+                    <p>
+                        Occupancy report grouped into Arrive Today, Depart
+                        Today, and In House sections with office-facing notes.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/reports/kitchen_meal_report.html"
+                            >Kitchen / Meal Report</a
+                        >
+                    </h2>
+                    <p>
+                        Full kitchen report carrying dietary restrictions,
+                        allergies, and guest-specific meal notes.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/reports/kitchen_report_single.html"
+                            >Kitchen Report (single / filtered)</a
+                        >
+                    </h2>
+                    <p>
+                        Compact kitchen output for individual or date-range
+                        filtered printing.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/manual_sales_list.html"
+                            >Manual Sales List</a
+                        >
+                    </h2>
+                    <p>
+                        Room-based daily sales / charge list with the
+                        cancelled-reservation checkbox convention.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>printed_outputs.feature</code>
+                    </p>
+                </section>
+            </div>
+
+            <div class="strip" id="daily-cash-reporting">
+                Daily cash activity reporting
+            </div>
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/reports/daily_cash_activity_notes.html"
+                            >Notes on Daily Cash Activity Report</a
+                        >
+                    </h2>
+                    <p>
+                        Operating notes for how the DCAR is used, balanced,
+                        manually adjusted, and manually reconciled.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/reports/daily_cash_activity_report.html"
+                            >Daily Cash Activity Report</a
+                        >
+                    </h2>
+                    <p>
+                        Primary daily cash sheet summarizing sales, taxes,
+                        adjustments, and payments by type.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/deposits_received.html"
+                            >Deposits Received</a
+                        >
+                    </h2>
+                    <p>
+                        DCAR appendix showing deposit receipts grouped by
+                        payment type.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/deposits_applied.html"
+                            >Deposits Applied</a
+                        >
+                    </h2>
+                    <p>
+                        DCAR appendix showing deposits applied against
+                        reservation balances.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/cashier_detail.html"
+                            >Cashier Detail</a
+                        >
+                    </h2>
+                    <p>
+                        DCAR appendix listing payment events with category
+                        detail and subtotals by payment type.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/items_cashed_out.html"
+                            >Items Cashed Out</a
+                        >
+                    </h2>
+                    <p>
+                        DCAR appendix preserving item-level inventory-code
+                        detail, totals, and taxes.
+                    </p>
+                    <p>
+                        <strong>Primary feature:</strong>
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+            </div>
+        </div>
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

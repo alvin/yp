@@ -1,0 +1,20 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 676" width="976" height="676" font-family="Helvetica, Arial, sans-serif">
+  <title>Staff sign in</title>
+  <desc>The single office login in front of every screen: staff email and password, sign-in button, and nothing else. Anonymous visitors are redirected here; sign-out lives in the app header.</desc>
+  <rect x="0" y="0" width="976" height="676" fill="#fbfaf7"/>
+  <rect x="308" y="138" width="360" height="400" rx="14" fill="#ffffff" stroke="#333" stroke-width="2"/>
+  <circle cx="488" cy="208" r="26" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M472 216 L488 192 L498 206 L504 198 L512 216 Z" fill="#333"/>
+  <text x="488" y="266" text-anchor="middle" font-size="20" font-weight="bold" fill="#111">Yellow Point Lodge</text>
+  <text x="488" y="288" text-anchor="middle" font-size="12" fill="#666" letter-spacing="2">FRONT DESK SIGN IN</text>
+  <text x="344" y="330" font-size="13" fill="#333">Email</text>
+  <rect x="344" y="338" width="288" height="34" rx="6" fill="none" stroke="#999" stroke-width="1.5"/>
+  <text x="354" y="360" font-size="13" fill="#aaa">frontdesk@…</text>
+  <text x="344" y="402" font-size="13" fill="#333">Password</text>
+  <rect x="344" y="410" width="288" height="34" rx="6" fill="none" stroke="#999" stroke-width="1.5"/>
+  <text x="354" y="432" font-size="15" fill="#aaa">••••••••</text>
+  <rect x="344" y="466" width="288" height="38" rx="8" fill="#333"/>
+  <text x="488" y="490" text-anchor="middle" font-size="14" fill="#fff">Sign in</text>
+  <text x="488" y="576" text-anchor="middle" font-size="11" fill="#888">Every screen requires a signed-in staff session — anonymous</text>
+  <text x="488" y="592" text-anchor="middle" font-size="11" fill="#888">connections get no lodge data. Sign-out sits in the app header.</text>
+</svg>

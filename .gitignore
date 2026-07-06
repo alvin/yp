@@ -1,0 +1,11 @@
+# Generated full legacy exports may contain guest PII and legacy payment-card fields.
+supabase/legacy_import/*.sql
+# The Access source database contains guest PII and old payment-card fields.
+legacy-db
+sow
+# Python tooling caches.
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.local

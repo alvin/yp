@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Yellow Point Lodge Front Desk Scope</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/wireframes/assets/wireframe-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="page">
+            <header class="topbar">
+                <h1>Yellow Point Lodge Front Desk Scope</h1>
+                <div class="meta">
+                    Start here · screens · reports · features · operating notes
+                </div>
+            </header>
+
+            <section class="annotation-section">
+                <h2>Scope overview</h2>
+                <p>
+                    This scope brings together the operating principles, screen
+                    flows, reports, and daily cash workflow into one navigable
+                    reference for the lodge and implementation team.
+                </p>
+                <p>
+                    <strong>Project principles:</strong> keep the interface
+                    simple, keep reports and folios close to current printed
+                    outputs, simplify how staff interact with guest and
+                    reservation screens, and preserve the accounting/reporting
+                    clarity used day to day.
+                </p>
+            </section>
+
+            <div class="strip" id="screen-flow">Screen flow</div>
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/wireframes/html/lookup_screen.html"
+                            >Lookup Screen</a
+                        >
+                    </h2>
+                    <p>
+                        Home screen for name, reservation number,
+                        date/date-range, and all-fields search; also opens new
+                        reservations, reports, and print flows.
+                    </p>
+                    <p>
+                        <strong>Feature:</strong>
+                        <code>lookup_screen.feature</code>
+                    </p>
+                    <p>
+                        <strong>Primary paths:</strong>
+                        <a
+                            href="/original_spec/wireframes/html/print_screen.html"
+                            >Print Screen</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/#daily-cash-reporting"
+                            >Daily cash reporting</a
+                        >
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/wireframes/html/name_search_results.html"
+                            >Name Search Results</a
+                        >
+                    </h2>
+                    <p>
+                        Guest details, guest notes, and past / in-house / future
+                        reservation history.
+                    </p>
+                    <p>
+                        <strong>Feature:</strong>
+                        <code>name_search_results.feature</code>
+                    </p>
+                    <p>
+                        <strong>Next step:</strong>
+                        <a
+                            href="/original_spec/wireframes/html/transaction_screen.html"
+                            >Transaction Screen</a
+                        >
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/wireframes/html/date_search_results.html"
+                            >Date Search Results</a
+                        >
+                    </h2>
+                    <p>
+                        Date-based reservation list with last name, first name,
+                        room, and transaction-screen selection.
+                    </p>
+                    <p>
+                        <strong>Feature:</strong>
+                        <code>date_search_results.feature</code>
+                    </p>
+                    <p>
+                        <strong>Next step:</strong>
+                        <a
+                            href="/original_spec/wireframes/html/transaction_screen.html"
+                            >Transaction Screen</a
+                        >
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/wireframes/html/transaction_screen.html"
+                            >Transaction Screen</a
+                        >
+                    </h2>
+                    <p>
+                        Main reservation screen for guest details, room moves,
+                        report notes, charges, deposits, payments, cancellation,
+                        re-booking, and single-record printing.
+                    </p>
+                    <p>
+                        <strong>Feature:</strong>
+                        <code>transaction_screen.feature</code>
+                    </p>
+                    <p>
+                        <strong>Output groups:</strong>
+                        <a href="/original_spec/reports/#guest-documents"
+                            >Guest documents</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/#operations-reports"
+                            >Operational reports</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/#daily-cash-reporting"
+                            >Daily cash reporting</a
+                        >
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>
+                        <a
+                            href="/original_spec/wireframes/html/print_screen.html"
+                            >Print Screen</a
+                        >
+                    </h2>
+                    <p>
+                        Batch and individual printing for daily reports and
+                        guest-facing forms.
+                    </p>
+                    <p>
+                        <strong>Feature:</strong>
+                        <code>print_screen.feature</code>
+                    </p>
+                    <p>
+                        <strong>Report groups:</strong>
+                        <a href="/original_spec/reports/#guest-documents"
+                            >Guest documents</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/#operations-reports"
+                            >Operational reports</a
+                        >
+                    </p>
+                </section>
+            </div>
+
+            <div class="strip" id="reports-and-folios">Reports and folios</div>
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>
+                        <a href="/original_spec/reports/">Report library</a>
+                    </h2>
+                    <p>
+                        Guest-facing forms, daily operations reports, the Daily
+                        Cash Activity Report, and the appendix reports that
+                        support it.
+                    </p>
+                </section>
+                <section class="panel">
+                    <h2>Daily cash flow</h2>
+                    <p>
+                        <a
+                            href="/original_spec/reports/daily_cash_activity_report.html"
+                            >Daily Cash Activity Report</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/deposits_received.html"
+                            >Deposits Received</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/deposits_applied.html"
+                            >Deposits Applied</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/cashier_detail.html"
+                            >Cashier Detail</a
+                        >
+                        ·
+                        <a href="/original_spec/reports/items_cashed_out.html"
+                            >Items Cashed Out</a
+                        >
+                    </p>
+                    <p>
+                        <strong>Feature:</strong>
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+            </div>
+
+            <div class="strip" id="scope-docs-and-features">
+                Scope documents and features
+            </div>
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>Scope documents</h2>
+                    <ul>
+                        <li>
+                            <a href="/original_spec/requirements.md"
+                                >Requirements</a
+                            >
+                        </li>
+                        <li>
+                            <a href="/original_spec/screen_navigation.md"
+                                >Screen navigation</a
+                            >
+                        </li>
+                        <li>
+                            <a href="/original_spec/wireframes/">Screens</a>
+                        </li>
+                        <li><a href="/original_spec/reports/">Reports</a></li>
+                    </ul>
+                </section>
+                <section class="panel">
+                    <h2>Feature files</h2>
+                    <p>
+                        Preview the acceptance criteria directly from these
+                        pages. The feature files stay clean Gherkin; navigation
+                        context is handled in the shared HTML layer.
+                    </p>
+                    <p>
+                        <strong>Screen flow:</strong>
+                        <code>lookup_screen.feature</code>,
+                        <code>name_search_results.feature</code>,
+                        <code>date_search_results.feature</code>,
+                        <code>transaction_screen.feature</code>,
+                        <code>print_screen.feature</code>
+                    </p>
+                    <p>
+                        <strong>Reporting:</strong>
+                        <code>printed_outputs.feature</code>,
+                        <code>daily_cash_reporting.feature</code>
+                    </p>
+                </section>
+            </div>
+
+            <section class="annotation-section">
+                <h2>Important operating notes</h2>
+                <ul>
+                    <li>
+                        Reservations are stored only up to one year in advance.
+                    </li>
+                    <li>
+                        Guest notes are office-facing and should not print to
+                        reports.
+                    </li>
+                    <li>
+                        Reservations may involve multiple guest names, one-bill
+                        arrangements, room moves, and split-bill needs.
+                    </li>
+                    <li>
+                        Kitchen, housekeeping, and similar operational notes
+                        should stay close to the wording staff already use.
+                    </li>
+                    <li>
+                        The DCAR remains a major scope area: it must balance,
+                        support manual adjustments, and stay close to current
+                        practice.
+                    </li>
+                    <li>
+                        Unresolved flow alignment items are tracked in the
+                        <code>features/*.questions</code> files beside the
+                        related feature files.
+                    </li>
+                </ul>
+            </section>
+        </div>
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Name Search Results</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/wireframes/assets/wireframe-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="wireframe-page">
+            <header class="topbar">
+                <h1>Name Search Results</h1>
+                <div class="meta">
+                    <a href="/original_spec/wireframes/">Screens</a> ·
+                    <a href="/original_spec/">Scope home</a>
+                </div>
+            </header>
+
+            <main
+                class="screen wide"
+                id="name-search-results"
+                data-wireframe-id="WF-NAME-RESULTS"
+            >
+                <div class="screen-title">Name Search Results:</div>
+                <div class="grid-2 left-wide">
+                    <section class="panel" aria-label="Guest information panel">
+                        <div
+                            style="
+                                display: grid;
+                                grid-template-columns: 1fr auto;
+                                gap: 20px;
+                            "
+                        >
+                            <div class="label">Guest Name:</div>
+                            <div class="label">Guest #:</div>
+                        </div>
+                        <p class="label">Address:</p>
+                        <p class="label">Address:</p>
+                        <p class="label">
+                            City:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            Prov:
+                        </p>
+                        <p class="label">Country:</p>
+                        <p class="label">
+                            Phone: <small>(multiple numbers)</small>
+                        </p>
+                        <p class="label">Email:</p>
+                        <button class="small-button">Guest Notes:</button>
+                    </section>
+                    <section class="panel" aria-label="Reservation lists">
+                        <div class="panel inner">
+                            <h2>List of all Future Reservations:</h2>
+                            <h3>Show: Arrival Date &amp; Room eg:</h3>
+                            <table class="table-like">
+                                <tbody>
+                                    <tr>
+                                        <td>March 10, 2026</td>
+                                        <td>Lila’s</td>
+                                    </tr>
+                                    <tr>
+                                        <td>June 14, 2026</td>
+                                        <td>Lodge #6</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p class="center">
+                                All items in these lists are selectable and
+                                return<br />the ‘Transaction Screen’ (next)
+                            </p>
+                        </div>
+                        <div class="strip">
+                            Present Reservation: (ie: ‘in-house’)
+                        </div>
+                        <div class="panel inner">
+                            <h2>List of all Past Reservations:</h2>
+                            <h3>Show: Arrival Date &amp; Room,</h3>
+                            <p class="center label">same as above</p>
+                        </div>
+                    </section>
+                </div>
+            </main>
+            <section class="annotation-section">
+                <h2>Screen Notes — ‘Name Search’ return screen</h2>
+                <p>
+                    This screen is returned when a name is searched. It lists
+                    the guest information on the left and a list of all their
+                    reservations on the right. The reservation list is broken
+                    into three sections, ‘Past Reservations’ ‘In-House’ and
+                    ‘Future Reservations’. (We are hoping this is possible
+                    instead of our present set-up where any reservation older
+                    than a year is ‘archived’ and must be searched separately).
+                </p>
+                <p>
+                    The user will select the date that they want for that
+                    particular guest. They may be looking up payment information
+                    on a past stay, adding a charge or name to a current
+                    reservation, putting a deposit or payment on a future one,
+                    or simply providing information to the guest.
+                </p>
+                <p>
+                    When a date is selected, the
+                    <a
+                        href="/original_spec/wireframes/html/transaction_screen.html"
+                        >Transaction Screen</a
+                    >
+                    is returned.
+                </p>
+                <p>
+                    There is a button called ‘guest notes’ that brings up a text
+                    screen that is only viewable on screen and is particular to
+                    the guest themselves and is not detail about a single
+                    reservation. This information should not print to any report
+                    because it is usually sensitive, but required by the office.
+                    Examples may include touchy things like ‘credit card is
+                    usually declined’, ‘Hygiene / continence issues’, ‘smoked in
+                    room during visit’, ‘Idiot’, etc.
+                </p>
+                <p>
+                    In the ‘Guest Info’ section, we’ll need to talk about how we
+                    handle reservations with multiple names, ie: couples, people
+                    sharing a room, etc. Maybe there could be ‘stacked’ guest
+                    info screens when a box was checked or something.
+                </p>
+                <p class="source-note">
+                    <strong>Feature file:</strong>
+                    <code>name_search_results.feature</code>
+                </p>
+                <p class="source-note">
+                    <strong>Related screen:</strong>
+                    <a
+                        href="/original_spec/wireframes/html/transaction_screen.html"
+                        >Transaction Screen</a
+                    >
+                </p>
+            </section>
+            <script type="application/json" id="wireframe-data">
+                {
+                    "wireframe_id": "WF-NAME-RESULTS",
+                    "screen_name": "Name Search Results",
+                    "panels": [
+                        "Guest information",
+                        "Future Reservations",
+                        "Present Reservation",
+                        "Past Reservations"
+                    ],
+                    "selectable_lists_return": "Transaction Screen",
+                    "guest_notes_print_behavior": "This information should not print to any report because it is usually sensitive, but required by the office."
+                }
+            </script>
+        </div>
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

@@ -1,0 +1,8 @@
+# Transaction Screen Open Questions
+
+## Open questions
+
+- What mechanics are required for split-bill handling beyond `ypl.reservation_guests.percentageofbill` and per-reservation-guest charge/payment rows?
+- What user-facing deposit transfer workflow is required during cancellation or re-booking, given the refund/applied/kept payment categories and the lack of a first-class transfer table?
+- How is `ypl.reservations.resnumber` assigned for a reservation created in the new UI? It is `NOT NULL` and uniquely indexed, but is a separate value from the `reservationid` serial primary key, so new bookings need a defined source — next available number, continuation of the existing Access numbering, or front-desk entry.
+- How should `ypl.reservations.resbookedby` (a `NOT NULL` 3-character value matching `ypl.lookup_users.userinitials`) be populated for new bookings — derived automatically from the signed-in staff member, or chosen from a user picker when the reservation is saved?

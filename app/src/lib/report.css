@@ -1,0 +1,187 @@
+/* Printed-report styles, adopted from the client's original report designs
+   (original_spec/reports/report-styles.css) so every output matches the
+   existing printed versions exactly. Scoped under .report-root so the app UI
+   is unaffected. */
+
+.report-root {
+	background: #f2f2f2;
+	color: #111;
+	font-family: Arial, Helvetica, sans-serif;
+}
+.report-page {
+	width: 980px;
+	min-height: 1220px;
+	margin: 32px auto;
+	background: #fff;
+	padding: 46px 56px;
+	box-shadow: 0 2px 18px rgba(0, 0, 0, 0.18);
+	position: relative;
+	box-sizing: border-box;
+}
+.report-page.landscape {
+	width: 1220px;
+	min-height: 880px;
+}
+.report-page .blackbar {
+	background: #111;
+	color: #fff;
+	text-align: center;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	font-size: 28px;
+	padding: 9px 0 7px;
+	margin: 0 0 7px 0;
+}
+.report-page h1,
+.report-page h2,
+.report-page h3 {
+	text-align: center;
+	margin: 0;
+	line-height: 1.1;
+	color: #111;
+}
+.report-page h1 {
+	font-size: 30px;
+	letter-spacing: 0.04em;
+	font-weight: 700;
+}
+.report-page h2 {
+	font-size: 24px;
+	font-weight: 700;
+}
+.report-page h3 {
+	font-size: 17px;
+	font-weight: 700;
+}
+.report-page .logo {
+	text-align: center;
+	font-family: Georgia, serif;
+	font-size: 38px;
+	font-weight: 700;
+	margin: 0 0 24px;
+}
+.report-page .letterhead {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 40px;
+	margin-top: 20px;
+	font-size: 18px;
+	line-height: 1.55;
+}
+.report-page .right {
+	text-align: right;
+}
+.report-page .center {
+	text-align: center;
+}
+.report-page .large-line {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	font-size: 28px;
+	margin: 24px 0 16px;
+}
+.report-page .rule {
+	border-top: 1px solid #777;
+	margin: 12px 0;
+}
+.report-page table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 16px;
+	line-height: 1.25;
+	margin: 12px 0;
+}
+.report-page th {
+	font-weight: 700;
+	text-align: left;
+	border-bottom: 1px solid #999;
+	padding: 5px 6px;
+}
+.report-page td {
+	padding: 5px 6px;
+	vertical-align: top;
+}
+.report-page .num,
+.report-page .money {
+	text-align: right;
+	white-space: nowrap;
+}
+.report-page .group {
+	font-weight: 700;
+	font-size: 18px;
+	padding-top: 18px;
+}
+.report-page .subtotal td,
+.report-page tr.subtotal td {
+	border-top: 1px solid #aaa;
+	font-weight: 700;
+}
+.report-page .total td,
+.report-page tr.total td {
+	border-top: 2px solid #444;
+	font-weight: 700;
+}
+.report-page .footer {
+	position: absolute;
+	left: 56px;
+	right: 56px;
+	bottom: 32px;
+	display: flex;
+	justify-content: space-between;
+	font-size: 14px;
+	color: #222;
+}
+.report-page .hand {
+	font-family: 'Comic Sans MS', 'Bradley Hand', cursive;
+	font-size: 24px;
+	color: #111;
+}
+.report-page .blank {
+	border-bottom: 1px solid #222;
+	display: inline-block;
+	min-width: 180px;
+	height: 1em;
+}
+.report-page .muted {
+	color: #555;
+}
+.report-page .small {
+	font-size: 13px;
+}
+.report-page .note {
+	white-space: pre-line;
+}
+.report-page p {
+	margin: 1em 0;
+}
+.report-page b,
+.report-page strong {
+	font-weight: 700;
+}
+
+@media print {
+	.no-print {
+		display: none !important;
+	}
+	.report-root {
+		background: #fff;
+	}
+	.report-page {
+		width: auto;
+		min-height: 0;
+		margin: 0;
+		padding: 0.25in 0.35in 0.9in;
+		box-shadow: none;
+	}
+	.report-page.landscape {
+		width: auto;
+		min-height: 0;
+	}
+	.report-page .footer {
+		position: fixed;
+		left: 0.35in;
+		right: 0.35in;
+		bottom: 0.3in;
+	}
+}

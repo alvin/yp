@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Cancellation Notice</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/reports/report-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="report-page">
+            <div class="logo">Yellow Point Lodge</div>
+            <h1 style="letter-spacing: 0.45em">CANCELLATION</h1>
+            <div class="letterhead">
+                <div>LAVERY, MARGARET<br />C/O WOODWARD<br />CAN</div>
+                <div class="right">
+                    Date Printed: 24-Dec-25<br />Date Cancelled: 23-Dec-25<br />(250)
+                    882-8180<br />Res. No. 109050
+                </div>
+            </div>
+            <p class="center" style="margin-top: 55px">
+                We are sorry that you won't be able to visit us. Please check
+                the information<br />below for accuracy and call us immediately
+                if there are any problems.
+            </p>
+            <div class="large-line">
+                <span>Arrival: 15-Jan-26</span><span>Departure: 18-Jan-26</span>
+            </div>
+            <table>
+                <tr>
+                    <td><b>Room:</b> White Beach: 04</td>
+                    <td><b># Guests</b> 1</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Deposit (Received)</td>
+                    <td class="money">$70.00</td>
+                    <td class="right">19-Jan-25</td>
+                </tr>
+                <tr>
+                    <td>Deposit (Refund)</td>
+                    <td class="money">($70.00)</td>
+                    <td class="right">24-Dec-25</td>
+                </tr>
+            </table>
+            <p>
+                12/23/25 res cxl'd as per Woodward, Margaret is to call in to
+                confirm cxl and give<br />cc# for refund.<br />01/19/25 paid
+                dep. For WOODWARD as well
+            </p>
+            <p class="center" style="margin-top: 120px">
+                Our office is open from 8:00 AM to 10:30 PM every day for your
+                calls.<br />We hope we will be able to welcome you again soon.
+            </p>
+            <p
+                class="center"
+                style="
+                    margin-top: 250px;
+                    font-family: Georgia, serif;
+                    font-size: 24px;
+                "
+            >
+                Phone (250) 245-7422
+            </p>
+        </div>
+
+        <div class="report-toolbar">
+            <a href="/original_spec/">&larr; Scope index</a>
+            <span>Cancellation Notice</span>
+        </div>
+        <aside class="report-annotations">
+            <h2>Report notes</h2>
+            <ul>
+                <li>
+                    This is the guest-facing cancellation output for a cancelled
+                    reservation.
+                </li>
+                <li>
+                    It includes printed/cancelled dates, reservation number,
+                    arrival/departure, room, guest count, deposit received,
+                    deposit refund, and printed reservation notes tied to the
+                    cancellation.
+                </li>
+                <li>
+                    Important workflow note: cancellation handling must preserve
+                    deposit details, because deposits may need to be refunded or
+                    transferred to another reservation.
+                </li>
+                <li>Primary feature: <code>printed_outputs.feature</code>.</li>
+            </ul>
+        </aside>
+
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

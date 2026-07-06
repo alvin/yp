@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Print Screen</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/wireframes/assets/wireframe-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="wireframe-page">
+            <header class="topbar">
+                <h1>Print Screen</h1>
+                <div class="meta">
+                    <a href="/original_spec/wireframes/">Screens</a> ·
+                    <a href="/original_spec/">Scope home</a>
+                </div>
+            </header>
+
+            <main
+                class="screen short"
+                id="print-screen"
+                data-wireframe-id="WF-PRINT"
+            >
+                <div class="screen-title" style="font-size: 34px">
+                    Print Screen
+                </div>
+                <div class="report-menu">
+                    <section class="menu-panel" aria-label="Daily Reports">
+                        <h2>Daily Reports:</h2>
+                        <a
+                            class="button"
+                            href="/original_spec/reports/kitchen_meal_report.html"
+                            >Kitchen Report:</a
+                        >
+                        <a
+                            class="button"
+                            href="/original_spec/reports/housekeeping_report.html"
+                            >Housekeeping Report:</a
+                        >
+                        <a
+                            class="button"
+                            href="/original_spec/reports/in_house_report.html"
+                            >In-House List:</a
+                        >
+                        <a
+                            class="button"
+                            href="/original_spec/reports/manual_sales_list.html"
+                            >Liquor / Charge List:</a
+                        >
+                        <a
+                            class="button"
+                            href="/original_spec/reports/cancellation_notice.html"
+                            >Cancellation Report:</a
+                        >
+                        <a
+                            class="button dark"
+                            href="/original_spec/reports/#operations-reports"
+                        >
+                            Print All Reports for<br />Tomorrow:
+                        </a>
+                    </section>
+                    <section class="menu-panel" aria-label="Folios">
+                        <h2>Folios:</h2>
+                        <a
+                            class="button"
+                            href="/original_spec/reports/reservation_confirmation.html"
+                            >Confirmations:</a
+                        >
+                        <a
+                            class="button"
+                            href="/original_spec/reports/check_in_folio.html"
+                            >Check-in Folios:</a
+                        >
+                        <a
+                            class="button"
+                            href="/original_spec/reports/checkout_bill.html"
+                            >Check out Folio / Bill:</a
+                        >
+                        <a
+                            class="button dark"
+                            href="/original_spec/reports/#guest-documents"
+                        >
+                            Print All Folios<br />For Tomorrow:
+                        </a>
+                    </section>
+                </div>
+            </main>
+            <section class="annotation-section">
+                <h2>Screen Notes — The ‘Print Screen’</h2>
+                <p>
+                    This should hopefully be a fairly straightforward page with
+                    numerous buttons to select either the 8.5 x 11” standard
+                    paper reports or the smaller ‘A2’ folios for confirmations
+                    and check ins, etc.
+                </p>
+                <p>
+                    On most days this would be a ‘batch job’ with one button
+                    sending the command to print all the reports, automatically
+                    selected for ‘tomorrow’. However, when the individual
+                    buttons are selected, a date and/or name can be input to
+                    produce an individual copy. This is useful when a guest
+                    needs a new confirmation or we have made some changes to
+                    their bill upon check out and they need a copy of the
+                    correct one, but we don’t want to run a whole batch.
+                </p>
+                <p>
+                    This is a detail we’ll work out, but maybe when the
+                    individual ‘confirmation’, ‘cancellation’ or ‘Bill’ button
+                    is selected the user may be prompted with a choice of either
+                    ‘all confirmations for today’ or ‘select individual
+                    confirmation’, or something like that.
+                </p>
+                <p class="source-note">
+                    <strong>Feature file:</strong>
+                    <code>print_screen.feature</code>
+                </p>
+                <p class="source-note">
+                    <strong>Report areas:</strong>
+                    <a href="/original_spec/reports/#guest-documents"
+                        >Guest documents</a
+                    >
+                    ·
+                    <a href="/original_spec/reports/#operations-reports"
+                        >Operational reports</a
+                    >
+                    ·
+                    <a href="/original_spec/reports/">Report library</a>
+                </p>
+            </section>
+            <script type="application/json" id="wireframe-data">
+                {
+                    "wireframe_id": "WF-PRINT",
+                    "screen_name": "Print Screen",
+                    "daily_reports": [
+                        "Kitchen Report",
+                        "Housekeeping Report",
+                        "In-House List",
+                        "Liquor / Charge List",
+                        "Cancellation Report",
+                        "Print All Reports for Tomorrow"
+                    ],
+                    "folios": [
+                        "Confirmations",
+                        "Check-in Folios",
+                        "Check out Folio / Bill",
+                        "Print All Folios For Tomorrow"
+                    ],
+                    "batch_defaults_stated": "tomorrow",
+                    "individual_print_inputs_stated": ["date", "name"]
+                }
+            </script>
+        </div>
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

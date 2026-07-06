@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Lookup Screen</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/wireframes/assets/wireframe-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="wireframe-page">
+            <header class="topbar">
+                <h1>Lookup Screen</h1>
+                <div class="meta">
+                    <a href="/original_spec/wireframes/">Screens</a> ·
+                    <a href="/original_spec/">Scope home</a>
+                </div>
+            </header>
+
+            <main
+                class="screen short"
+                id="lookup-screen"
+                data-wireframe-id="WF-LOOKUP"
+            >
+                <div class="screen-title">Lookup Screen</div>
+                <div class="field-row">
+                    <span class="label">Search name:</span
+                    ><span class="input-line"></span>
+                </div>
+                <div class="field-row">
+                    <span class="label">Res Number:</span
+                    ><span class="input-line small"></span>
+                </div>
+                <div class="field-row" style="margin-top: 70px">
+                    <span class="label">Search date:</span
+                    ><span class="input-line"></span>
+                </div>
+                <div
+                    class="button-row lookup-actions"
+                    aria-label="Lookup actions"
+                >
+                    <a
+                        class="button big-button"
+                        href="/original_spec/wireframes/html/transaction_screen.html"
+                        >New<br />Reservation</a
+                    >
+                    <a
+                        class="button big-button"
+                        href="/original_spec/wireframes/html/print_screen.html"
+                        >Print<br />Menu</a
+                    >
+                    <a
+                        class="button dark"
+                        href="/original_spec/reports/daily_cash_activity_report.html"
+                        >Daily<br />Cash Report</a
+                    >
+                    <a class="button big-button dark" href="#lookup-annotations"
+                        >Search<br />All Fields<br /><small>(Query)</small></a
+                    >
+                </div>
+            </main>
+            <section class="annotation-section" id="lookup-annotations">
+                <h2>Screen Notes — The ‘Lookup’ Screen</h2>
+                <p>
+                    This will be the ‘home screen’, used to search for
+                    ‘Transaction’ screens either by entering the guests last
+                    name, (which will produce a steadily reducing list of
+                    choices as more characters are entered), their existing
+                    reservation number or a date (selectable by one of those
+                    little pop-up calendars). A useful feature would be the
+                    ability to enter a partial string and get a name match. Eg:
+                    if we have a couple with two last names like Winston McAdam
+                    we could enter ‘Adam’ and it would return any names with
+                    that string.
+                </p>
+                <p>
+                    The user can also access a blank
+                    <a
+                        href="/original_spec/wireframes/html/transaction_screen.html"
+                        >Transaction Screen</a
+                    >, (with ‘Guest Info’ blank as well, in case it’s a new
+                    guest) screen to make a new reservation and go to the
+                    <a href="/original_spec/wireframes/html/print_screen.html"
+                        >Print Screen</a
+                    >
+                    and
+                    <a
+                        href="/original_spec/reports/daily_cash_activity_report.html"
+                        >Daily Cash Activity Report</a
+                    >.
+                </p>
+                <p>
+                    The lookup screen also supports all-fields search for cases
+                    where staff only have a phone number or partial address, and
+                    date-range access in addition to single-day date search.
+                    All-fields access gating is tracked in
+                    <a href="/features/lookup_screen.questions"
+                        >lookup_screen.questions</a
+                    >.
+                </p>
+                <p class="source-note">
+                    <strong>Feature file:</strong>
+                    <code>lookup_screen.feature</code>
+                </p>
+                <p class="source-note">
+                    <strong>Primary report area:</strong>
+                    <a href="/original_spec/reports/#daily-cash-reporting"
+                        >Daily cash reporting</a
+                    >
+                </p>
+            </section>
+            <script type="application/json" id="wireframe-data">
+                {
+                    "wireframe_id": "WF-LOOKUP",
+                    "screen_name": "Lookup Screen",
+                    "fields": ["Search name", "Res Number", "Search date"],
+                    "buttons": [
+                        "New Reservation",
+                        "Print Menu",
+                        "Daily Cash Report",
+                        "Search All Fields (Query)"
+                    ],
+                    "navigation_targets_stated": [
+                        "Transaction Screen",
+                        "Print Menu",
+                        "Daily Cash Activity Report (DCAR)"
+                    ]
+                }
+            </script>
+        </div>
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

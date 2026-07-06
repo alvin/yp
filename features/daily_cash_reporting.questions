@@ -1,0 +1,7 @@
+# Daily Cash Reporting Open Questions
+
+## Open questions
+
+- Does the weekly spreadsheet handoff need in-app workflow support, or does the handoff stay manual outside the app after the DCAR and appendices are produced?
+- Should the system add an app-owned durable table for DCAR actual amounts, staff-tip codes, and manual adjustments, or keep those handwritten/external to preserve 1:1 production schema compliance?
+- If a new adjustment table is approved, which accounting-code lookup should it use, and how should it reconcile with `Reimbursed by Staff`, `Paid Out`, and `A/R`?

@@ -1,0 +1,5 @@
+# Name Search Results Open Questions
+
+## Open questions
+
+- What guest-side presentation should be used when a selected stay has multiple named occupants from multiple `ypl.reservation_guests` rows?

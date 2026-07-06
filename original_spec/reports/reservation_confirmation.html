@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Reservation Confirmation Slip</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/reports/report-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="report-page">
+            <div class="logo">Yellow Point Lodge</div>
+            <div class="letterhead">
+                <div>
+                    PRATT, WENDY<br />2034 BYRON STREET<br />VICTORIA, BC CAN<br />V8R
+                    1L9
+                </div>
+                <div class="right">
+                    Date Printed:&nbsp; 24-Dec-25<br />Date Confirmed:&nbsp;
+                    23-Dec-25<br />(250) 370-2445<br />Res. No. 115732
+                </div>
+            </div>
+            <div class="rule"></div>
+            <p class="center">
+                Thank you for your reservation. Please check the information
+                below for accuracy<br />and call us immediately if there are any
+                problems.
+            </p>
+            <div class="large-line">
+                <span>Arrival:&nbsp; 20-Dec-26</span
+                ><span>Departure:&nbsp; 23-Dec-26</span>
+            </div>
+            <table>
+                <tr>
+                    <td><b>Room:</b> Lodge: 02</td>
+                    <td><b>In:</b> 20-Dec-26</td>
+                    <td><b>Out:</b> 23-Dec-26</td>
+                    <td><b># Guests</b> 1</td>
+                </tr>
+            </table>
+            <p class="center">
+                Please note that Dec. 20th in 2026 will be the re-opening date
+                following<br />our annual "shut down" week. We kindly ask that
+                you do not arrive on<br />property any earlier than 3pm as we
+                will be working hard until this time<br />to finish up with the
+                repairs and maintenance. Thank you!
+            </p>
+            <table>
+                <tr>
+                    <td>Deposit (Received)</td>
+                    <td class="money">$35.00</td>
+                    <td class="right">23-Dec-25</td>
+                </tr>
+            </table>
+            <p class="center" style="margin-top: 190px">
+                Our office is open from 8:00 AM to 10:30 PM every day for your
+                calls.<br />Please check out the information on the back of this
+                confirmation.<br />We look forward to your visit.
+            </p>
+            <p
+                class="center"
+                style="
+                    margin-top: 210px;
+                    font-family: Georgia, serif;
+                    font-size: 24px;
+                "
+            >
+                Phone (250) 245-7422
+            </p>
+        </div>
+
+        <div class="report-toolbar">
+            <a href="/original_spec/">&larr; Scope index</a>
+            <span>Reservation Confirmation Slip</span>
+        </div>
+        <aside class="report-annotations">
+            <h2>Report notes</h2>
+            <ul>
+                <li>
+                    This is the guest-facing confirmation slip for reservations
+                    made that day or reprinted individually later.
+                </li>
+                <li>
+                    It includes the guest/contact block, printed and confirmed
+                    dates, reservation number, arrival/departure, room, in/out
+                    dates, guest count, and deposit received.
+                </li>
+                <li>
+                    The example shows that a confirmation can also carry a
+                    reservation-specific message for the guest, such as an
+                    arrival-time or seasonal operations note.
+                </li>
+                <li>
+                    Project principle: keep this slip very close to the current
+                    printed format.
+                </li>
+                <li>Primary feature: <code>printed_outputs.feature</code>.</li>
+            </ul>
+        </aside>
+
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

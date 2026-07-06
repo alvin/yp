@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Manual Sales List</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/reports/report-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="report-page">
+            <div class="blackbar">Yellow Point Lodge</div>
+            <h1>Manual Sales List</h1>
+            <h3>for 23-Dec-25</h3>
+            <p class="center small">
+                Checkbox beside Res # is visual check for Cancelled
+                Reservations. If check appears, res is cancelled. Report should
+                filter out cancelled reservations.
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Res #</th>
+                        <th>Guest</th>
+                        <th>Room Order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="">
+                        <td>Lodge 01</td>
+                        <td>☐ 108690</td>
+                        <td>BRENNAN</td>
+                        <td>1</td>
+                    </tr>
+                    <tr class="">
+                        <td>Lodge 04</td>
+                        <td>☐ 108705</td>
+                        <td>LOWEN</td>
+                        <td>4</td>
+                    </tr>
+                    <tr class="">
+                        <td>Lodge 05</td>
+                        <td>☐ 114395</td>
+                        <td>DRZEWIECKI EPP</td>
+                        <td>5</td>
+                    </tr>
+                    <tr class="">
+                        <td>Lodge 06</td>
+                        <td>☐ 115662</td>
+                        <td>SANDHU RUHR</td>
+                        <td>6</td>
+                    </tr>
+                    <tr class="">
+                        <td>Lodge 07</td>
+                        <td>☐ 108708</td>
+                        <td>LIPPINCOTT</td>
+                        <td>7</td>
+                    </tr>
+                    <tr class="">
+                        <td>Lodge 08</td>
+                        <td>☐ 115739</td>
+                        <td>SANDHU</td>
+                        <td>8</td>
+                    </tr>
+                    <tr class="">
+                        <td>Lodge 09</td>
+                        <td>☐ 108684</td>
+                        <td>BAAL</td>
+                        <td>9</td>
+                    </tr>
+                    <tr class="">
+                        <td>Penthouse</td>
+                        <td>☐ 115662</td>
+                        <td>SANDHU RUHR</td>
+                        <td>11</td>
+                    </tr>
+                    <tr class="">
+                        <td>Eve's</td>
+                        <td>☐ 108700</td>
+                        <td>JACQUES-JONES JONES</td>
+                        <td>12</td>
+                    </tr>
+                    <tr class="">
+                        <td>Boathouse</td>
+                        <td>☐ 108698</td>
+                        <td>MACLENNAN</td>
+                        <td>13</td>
+                    </tr>
+                    <tr class="">
+                        <td>Boathouse</td>
+                        <td>☐ 115645</td>
+                        <td>MCNICOLL</td>
+                        <td>13</td>
+                    </tr>
+                    <tr class="">
+                        <td>Millie</td>
+                        <td>☐ 108789</td>
+                        <td>KERLIN MADISON</td>
+                        <td>14</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="footer">
+                <span>December 24, 2025&nbsp; 05:06 PM</span
+                ><span>Page 1 of 3</span>
+            </div>
+        </div>
+
+        <div class="report-toolbar">
+            <a href="/original_spec/">&larr; Scope index</a>
+            <span>Manual Sales List</span>
+        </div>
+        <aside class="report-annotations">
+            <h2>Report notes</h2>
+            <ul>
+                <li>
+                    This is the room-based sales / charge list used as part of
+                    daily operations.
+                </li>
+                <li>
+                    The workflow’s instruction on the form is important: the
+                    checkbox beside the reservation number is a visual
+                    cancelled-reservation check, and cancelled reservations
+                    should be filtered out of the report.
+                </li>
+                <li>
+                    The example organizes rows by room with room-order
+                    sequencing.
+                </li>
+                <li>Primary feature: <code>printed_outputs.feature</code>.</li>
+            </ul>
+        </aside>
+
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>

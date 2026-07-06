@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Transaction Screen</title>
+        <link
+            rel="stylesheet"
+            href="/original_spec/wireframes/assets/wireframe-styles.css"
+        />
+    </head>
+    <body
+        data-feature-base="/features/"
+        data-wireframe-base="/original_spec/wireframes/html/"
+        data-report-base="/original_spec/reports/"
+    >
+        <div class="wireframe-page">
+            <header class="topbar">
+                <h1>Transaction Screen</h1>
+                <div class="meta">
+                    <a href="/original_spec/wireframes/">Screens</a> ·
+                    <a href="/original_spec/">Scope home</a>
+                </div>
+            </header>
+
+            <main
+                class="screen wide"
+                id="transaction-screen"
+                data-wireframe-id="WF-TRANSACTION"
+            >
+                <div class="screen-title">Transaction Screen:</div>
+                <div class="grid-2 left-narrow">
+                    <div>
+                        <section class="panel" aria-label="Guest information">
+                            <div
+                                style="
+                                    display: grid;
+                                    grid-template-columns: 1fr 230px;
+                                    gap: 16px;
+                                "
+                            >
+                                <div>
+                                    <p class="label">Guest Name(s):</p>
+                                    <p class="label">Address:</p>
+                                    <p class="label">Address:</p>
+                                    <p class="label">
+                                        City:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                        Prov:
+                                    </p>
+                                    <p class="label">Country:</p>
+                                    <p class="label">
+                                        Phone: <small>(Mult. numbers)</small>
+                                    </p>
+                                    <p class="label">Email:</p>
+                                </div>
+                                <div class="annotation-box">
+                                    Will need option for multiple guest names,
+                                    ability to split bills.
+                                </div>
+                            </div>
+                            <button
+                                class="small-button"
+                                style="float: right; margin-top: -12px"
+                            >
+                                Guest Notes:
+                            </button>
+                            <div style="clear: both"></div>
+                        </section>
+                        <section
+                            class="panel"
+                            style="margin-top: 16px"
+                            aria-label="Reservation information"
+                        >
+                            <div class="field-row three">
+                                <span class="label">Arrival Date:</span
+                                ><span></span><span class="label">Room:</span
+                                ><span></span
+                                ><span class="label"># of guests:</span
+                                ><span></span>
+                            </div>
+                            <div class="field-row two-label">
+                                <span class="label">Move Date:</span
+                                ><span></span><span class="label">Room:</span
+                                ><span></span>
+                            </div>
+                            <div class="field-row two-label">
+                                <span class="label">Move Date:</span
+                                ><span></span><span class="label">Room:</span
+                                ><span></span>
+                            </div>
+                            <div class="field-row two-label">
+                                <span class="label">Departure Date:</span
+                                ><span></span
+                                ><span class="label">Reservation #:</span
+                                ><span></span>
+                            </div>
+                            <div
+                                class="button-row"
+                                style="
+                                    margin-top: 35px;
+                                    justify-content: space-between;
+                                "
+                            >
+                                <button class="small-button">
+                                    Reservation Notes:
+                                </button>
+                                <a
+                                    class="small-button"
+                                    href="/original_spec/reports/kitchen_meal_report.html"
+                                >
+                                    Kitchen Report:
+                                </a>
+                                <a
+                                    class="small-button"
+                                    href="/original_spec/reports/housekeeping_report.html"
+                                >
+                                    Housekeeping:
+                                </a>
+                                <button class="small-button">Requests:</button>
+                                <button class="button dark">Re-Book</button>
+                                <button class="button dark">Cancel</button>
+                            </div>
+                        </section>
+                    </div>
+                    <div>
+                        <section
+                            class="panel square transaction-ledger"
+                            aria-label="Transaction list"
+                        >
+                            <h2>
+                                List of all transactions pertaining to<br />current
+                                reservation:
+                            </h2>
+                            <p class="center label">
+                                Deposits and payments will be<br />negative
+                                numbers.
+                            </p>
+                            <p class="center label">
+                                All charges (room nights, liquor, sundries,<br />etc.)
+                                will be positive numbers and pulled from<br />pull-down
+                                selection menus. User will input date and<br />number
+                                of each item.<br />Prices are manually
+                                overridable Eg:
+                            </p>
+                            <div class="example-row">
+                                <span>Date: Code: Deposit</span><span>1 @</span
+                                ><span>$70.00</span><span>—</span
+                                ><span class="right">- $70.00</span>
+                            </div>
+                            <div class="example-row">
+                                <span>Date: Code: Ocean view Lodge:</span
+                                ><span>3 @</span><span>$250.00</span
+                                ><span>—</span
+                                ><span class="right">$750.00</span>
+                            </div>
+                            <div class="example-row">
+                                <span>Date: Code: House wine litre:</span
+                                ><span>3 @</span><span>$10.00</span
+                                ><span>—</span><span class="right">$30.00</span>
+                            </div>
+                            <div class="line"></div>
+                            <div class="example-row">
+                                <span></span><span></span
+                                ><span>Sub—Total :</span><span></span
+                                ><span class="right">$710.00</span>
+                            </div>
+                            <div class="example-row">
+                                <span
+                                    >Date: Payment:
+                                    <em>(pull down payment type)</em></span
+                                ><span></span><span></span><span>—</span
+                                ><span class="right">- $710.00</span>
+                            </div>
+                            <div
+                                class="line"
+                                style="width: 45%; margin-left: auto"
+                            ></div>
+                            <div class="example-row">
+                                <span></span><span></span
+                                ><span>Balance Owing</span><span>—</span
+                                ><span class="right">$0.00</span>
+                            </div>
+                        </section>
+                        <div
+                            class="button-row"
+                            style="
+                                margin-top: 18px;
+                                justify-content: space-around;
+                            "
+                        >
+                            <a
+                                class="small-button"
+                                href="/original_spec/reports/checkout_bill.html"
+                            >
+                                Print Single Bill
+                            </a>
+                            <a
+                                class="small-button"
+                                href="/original_spec/reports/cancellation_notice.html"
+                            >
+                                Print Cancellation
+                            </a>
+                            <a
+                                class="small-button"
+                                href="/original_spec/reports/check_in_folio.html"
+                                >Print Folio</a
+                            >
+                            <a
+                                class="small-button"
+                                href="/original_spec/reports/reservation_confirmation.html"
+                            >
+                                Print Confirmation
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <section class="annotation-section">
+                <h2>Screen Notes — ‘Transaction Screen:’</h2>
+                <p>
+                    This will be the ‘main screen’ is what all the searches are
+                    looking for. In the upper left is the ‘Guest Info’ and can
+                    be exactly the same as on the ‘name search’ screen.
+                </p>
+                <p>
+                    The reservation information, particular to that stay, will
+                    be at the bottom left and require some thinking on how we
+                    handle guests who move from room to room during their stay.
+                    Eg: They arrive on August 5th for Lila’s cabin and depart
+                    Aug. 15th, but move to a Beach Cabin on the 9th and a lodge
+                    room on the 12th, etc. A pull-down menu of room types should
+                    have a brief description of the bed layout.
+                </p>
+                <p>
+                    On this screen, as opposed to the ‘guest notes’ field there
+                    may be buttons (or a pull down menu, I’m sure you’ll have
+                    all the good ideas) that is used to populate the fields that
+                    are printed to the various reports. Diet information (eg:
+                    vegetarian, fish ok, etc.) would go to the Kitchen report,
+                    ‘need split beds and a cot’ would go to Housekeeping etc.
+                </p>
+                <p>
+                    ‘Re-book’ would open another transaction screen with only
+                    the guest info printed and have the user input the new
+                    reservation dates and room, along with any deposit on the
+                    actual ‘transaction’ portion of the screen. ‘Cancel’ would
+                    move some information to the ‘cancellation’ report. There
+                    will have to be some detail work done on how deposits are
+                    refunded or transferred to another reservation, we would
+                    anticipate a ‘transfer’ or ‘refund’ item selectable as a
+                    transaction type with the amount noted.
+                </p>
+                <p>
+                    In keeping with the motto of ‘dumb it down’ we would like to
+                    keep the transaction portion of this screen as simple as is
+                    needed to feed the Daily Cash report. We are envisioning
+                    deposits and payments as negative numbers and charges (for
+                    rooms, sundries, drinks, etc.) as positive numbers so a
+                    payment, equal to all the charges will bring a zero balance
+                    at the bottom. Since the deposit is a negative number when
+                    applied, it is already deducted.
+                </p>
+                <p>
+                    All inputs on this portion will probably need dates and
+                    ‘type codes’ to get things compiled and sent to the proper
+                    reports, but you will have a way better idea of the nuts and
+                    bolts, so I’ll stick mainly to what we’d like and you can
+                    let me know how, or if, it’s possible.
+                </p>
+                <p>
+                    How this screen works with the actual Daily Cash Activity
+                    Report (‘DCAR’ or ‘Cash Sheet’) will definitely take up a
+                    good portion of our work on this project. The DCAR is
+                    something that we would like to resemble the existing one
+                    since it feeds into our already established revenue summary
+                    and bank deposit sheets and systems.
+                </p>
+                <p>
+                    As a side note, we would actually like all of our reports
+                    and folios to be as close as possible to our existing ones.
+                    The part of this system that needs simplifying is how the
+                    user interacts with the guest and reservations screens.
+                </p>
+                <p class="source-note">
+                    <strong>Feature file:</strong>
+                    <code>transaction_screen.feature</code>
+                </p>
+                <p class="source-note">
+                    <strong>Report areas:</strong>
+                    <a href="/original_spec/reports/#guest-documents"
+                        >Guest documents</a
+                    >
+                    ·
+                    <a href="/original_spec/reports/#operations-reports"
+                        >Operational reports</a
+                    >
+                    ·
+                    <a href="/original_spec/reports/#daily-cash-reporting"
+                        >Daily cash reporting</a
+                    >
+                </p>
+            </section>
+            <script type="application/json" id="wireframe-data">
+                {
+                    "wireframe_id": "WF-TRANSACTION",
+                    "screen_name": "Transaction Screen",
+                    "panels": [
+                        "Guest Info",
+                        "Reservation Information",
+                        "Transaction List"
+                    ],
+                    "transaction_sign_convention": {
+                        "deposits_and_payments": "negative numbers",
+                        "charges": "positive numbers"
+                    },
+                    "buttons": [
+                        "Guest Notes",
+                        "Reservation Notes",
+                        "Kitchen Report",
+                        "Housekeeping",
+                        "Requests",
+                        "Re-Book",
+                        "Cancel",
+                        "Print Single Bill",
+                        "Print Cancellation",
+                        "Print Folio",
+                        "Print Confirmation"
+                    ],
+                    "report_feeds_stated": [
+                        "Daily Cash report",
+                        "Kitchen report",
+                        "Housekeeping",
+                        "cancellation report"
+                    ]
+                }
+            </script>
+        </div>
+        <script src="/original_spec/tools/feature-preview.js"></script>
+    </body>
+</html>
