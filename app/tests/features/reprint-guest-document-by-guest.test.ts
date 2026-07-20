@@ -31,6 +31,19 @@ describe('reprint guest document by guest', () => {
 		expect(sheet).toContain(`Res. No. ${fx.resnumber}`);
 	});
 
+	it('selects one guest and views that guest’s documents for reprinting', async () => {
+		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
+		await page.fill('#guest-doc-q', fx.lastname.slice(0, 12));
+		await page.waitForSelector(`button:has-text("${fx.lastname}")`, { timeout: 10_000 });
+		await page.click(`button:has-text("${fx.lastname}")`);
+		await page.waitForSelector(`button:has-text("#${fx.resnumber}")`, { timeout: 10_000 });
+		await page.click(`button:has-text("#${fx.resnumber}")`);
+		await page.waitForURL(new RegExp(`/reports/confirmation/${fx.resnumber}`), {
+			timeout: 15_000
+		});
+		expect(await page.textContent('.report-page')).toContain(`Res. No. ${fx.resnumber}`);
+	});
+
 	it('reprints any of the document types for the reservation', async () => {
 		const tabs = await page.textContent('nav[aria-label="Reports in this workflow"]');
 		for (const t of ['Confirmation', 'Check-in folio', 'Check-out bill', 'Cancellation']) {
