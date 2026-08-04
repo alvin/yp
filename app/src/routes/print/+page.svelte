@@ -231,8 +231,7 @@
         </div>
         {#if endDate}
             <p class="text-muted-foreground text-xs">
-                Reports that support a range use it; single-day reports use the
-                report date.
+                Used by reports that accept a range.
             </p>
         {/if}
     </div>

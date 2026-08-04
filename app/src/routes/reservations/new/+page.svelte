@@ -491,8 +491,7 @@
                         </Select.Content>
                     </Select.Root>
                     <p class="text-muted-foreground text-xs">
-                        Bed layout shown beside each room. Add room moves later
-                        from the reservation.
+                        Room moves can be added later from the reservation.
                     </p>
                 </div>
             </Card.Content>

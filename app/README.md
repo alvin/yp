@@ -44,6 +44,54 @@ npm run check    # type-check
 npm run build    # static SPA build (deploy the build/ folder to any host)
 ```
 
+## Deploying to Cloudflare
+
+The build is a static SPA (`adapter-static` with an `index.html` fallback), so
+Cloudflare serves it as an assets-only Worker — there is no server-side
+runtime. See `wrangler.jsonc`.
+
+### One-time Cloudflare setup
+
+Connect the GitHub repo in **Workers & Pages → Create → Import a repository**,
+then set:
+
+| Setting | Value |
+|---|---|
+| Root directory | `app` |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Build output directory | `build` |
+
+Add these as **build** variables (Settings → Build → Variables). They are read
+by `$env/static/public` and inlined into the bundle at build time:
+
+```
+PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=<publishable key>
+```
+
+Do not add the secret or service-role key to Cloudflare. Anything the build can
+read can end up in the browser bundle, and those keys bypass RLS entirely.
+
+After that, every push to `main` rebuilds and deploys.
+
+### Deploying by hand
+
+```sh
+npm run deploy       # vite build && wrangler deploy
+npm run cf:preview   # build and serve locally through workerd
+```
+
+### What the config does
+
+- `wrangler.jsonc` — `not_found_handling: single-page-application` sends every
+  unmatched path back to `index.html` so client-side routes like
+  `/reservations/12345` resolve instead of 404ing.
+- `static/_headers` — security headers, plus immutable caching for hashed
+  assets and `no-cache` on the HTML shell so clients pick up new deploys.
+- `static/robots.txt` and the `X-Robots-Tag` header — keep non-production
+  environments out of search indexes.
+
 ## How it's wired
 
 - `src/lib/data/client.ts` — Supabase client bound to the `ypl` schema.

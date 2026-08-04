@@ -34,8 +34,17 @@ describe('assign reservation numbers automatically', () => {
 
 	it('keeps an explicitly supplied number', async () => {
 		const client = await staffClient();
-		// Far outside the sequence range so it can't collide with assigned numbers.
-		const explicit = 90_000_000 + (Date.now() % 1_000_000);
+		// Strictly below the lowest stored number: guaranteed unused, and it can
+		// never ratchet the lodge's numbering sequence upward (the sequence only
+		// syncs to max(resnumber), so explicit test numbers must stay below max).
+		const minRow = unwrap(
+			await client
+				.from('reservations')
+				.select('resnumber')
+				.order('resnumber', { ascending: true })
+				.limit(1)
+		) as { resnumber: number }[];
+		const explicit = (minRow[0]?.resnumber ?? 501) - 1;
 		const arrival = isolatedDate();
 		const rows = unwrap(
 			await client

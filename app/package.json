@@ -10,7 +10,9 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"deploy": "vite build && wrangler deploy",
+		"cf:preview": "vite build && wrangler dev"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.3.1",
@@ -26,7 +28,8 @@
 		"tw-animate-css": "^1.2.5",
 		"typescript": "^5.8.2",
 		"vite": "^6.2.5",
-		"vitest": "^2.1.8"
+		"vitest": "^2.1.8",
+		"wrangler": "^4.118.0"
 	},
 	"dependencies": {
 		"@lucide/svelte": "^0.487.0",

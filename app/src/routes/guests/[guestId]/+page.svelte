@@ -269,8 +269,7 @@
                 ><NotebookIcon class="size-4" /> Guest notes</Dialog.Title
             >
             <Dialog.Description class="flex items-center gap-1.5">
-                <EyeOffIcon class="size-3.5" /> Office only — these never print on
-                guest documents or reports.
+                <EyeOffIcon class="size-3.5" /> Office only — never printed.
             </Dialog.Description>
         </Dialog.Header>
         <Textarea

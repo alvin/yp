@@ -37,9 +37,9 @@
 >
 	{#snippet toolbar()}
 		{#if agrees}
-			<Badge variant="success">Ties to DCAR 'Total Receipts Today' · ✓ Agrees</Badge>
+			<Badge variant="success">Agrees with Daily Cash</Badge>
 		{:else}
-			<Badge variant="warning">✗ Differs from DCAR line by {money(Math.abs(total - data.receipts_total))}</Badge>
+			<Badge variant="warning">Differs by {money(Math.abs(total - data.receipts_total))}</Badge>
 		{/if}
 	{/snippet}
 	<div class="blackbar">Yellow Point Lodge</div>

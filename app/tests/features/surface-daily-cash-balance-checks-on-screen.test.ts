@@ -58,8 +58,7 @@ describe('surface daily cash balance checks on screen', () => {
 			waitUntil: 'networkidle'
 		});
 		const toolbar = await page.textContent('.no-print');
-		expect(toolbar).toMatch(/Ties to DCAR/);
-		expect(toolbar).toMatch(/Agrees/);
+		expect(toolbar).toMatch(/Agrees with Daily Cash/);
 	});
 
 	it('keeps the balance indicators out of the printed sheet', async () => {

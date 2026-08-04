@@ -171,7 +171,7 @@
 					</div>
 				{:else}
 					<p class="text-muted-foreground mt-2 px-1 text-xs">
-						Matches any part of a name — first, last, or company. The list narrows as you type.
+						Matches any part of a name — first, last, or company.
 					</p>
 				{/if}
 			</Tabs.Content>
@@ -195,7 +195,6 @@
 					</div>
 					<Button class="h-11" onclick={openReservation}>Open <ArrowRightIcon /></Button>
 				</div>
-				<p class="text-muted-foreground mt-2 px-1 text-xs">Opens the reservation directly.</p>
 			</Tabs.Content>
 
 			<!-- Date -->
@@ -253,7 +252,7 @@
 					<Button class="h-11" onclick={runAllSearch}>Search <ArrowRightIcon /></Button>
 				</div>
 				<p class="text-muted-foreground mt-2 px-1 text-xs">
-					Use when you only have a phone number, an address fragment, or an email.
+					Phone, address, email, or reservation number.
 				</p>
 			</Tabs.Content>
 		</Tabs.Root>

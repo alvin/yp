@@ -1,0 +1,25 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "yp-frontdesk",
+	"compatibility_date": "2026-08-04",
+
+	// Assets-only Worker: there is no server. `adapter-static` emits a client
+	// rendered SPA that talks to Supabase directly, so Cloudflare only serves
+	// files. `single-page-application` routes every unmatched path back to
+	// index.html, which is what the adapter's `fallback` option expects — the
+	// SvelteKit router then resolves /reservations/12345, /reports/..., etc.
+	"assets": {
+		"directory": "./build",
+		"not_found_handling": "single-page-application"
+	},
+
+	// Build-time only. PUBLIC_* values are read by `$env/static/public` and
+	// baked into the JS bundle, so they must be set as *build* environment
+	// variables in the Cloudflare dashboard (Workers & Pages → Settings →
+	// Build → Variables), not as runtime `vars` here. Never put
+	// STAGING_SUPABASE_SECRET_KEY or STAGING_SERVICE_ROLE in Cloudflare:
+	// anything the build can see can end up in the browser bundle.
+	"observability": {
+		"enabled": true
+	}
+}

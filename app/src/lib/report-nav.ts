@@ -9,15 +9,14 @@ export interface ReportTab {
 	current: boolean;
 }
 
-/** Daily cash reporting: the DCAR, its four appendices, and the notes page. */
+/** Daily cash reporting: the DCAR and its four appendices. */
 export function dailyCashTabs(date: string, current: string): ReportTab[] {
 	return [
 		{ label: 'Daily Cash Report', slug: 'dcar' },
 		{ label: 'Deposits received', slug: 'deposits-received' },
 		{ label: 'Deposits applied', slug: 'deposits-applied' },
 		{ label: 'Cashier detail', slug: 'cashier-detail' },
-		{ label: 'Items cashed out', slug: 'items-cashed-out' },
-		{ label: 'Notes', slug: 'dcar-notes' }
+		{ label: 'Items cashed out', slug: 'items-cashed-out' }
 	].map((t) => ({
 		label: t.label,
 		href: `/reports/${t.slug}?date=${date}`,

@@ -1,37 +1,48 @@
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 676" width="976" height="676" font-family="Helvetica, Arial, sans-serif" data-uf-id="iIak77HmSvkg3TaGbXJP">
   <title>Daily cash activity notes display</title>
-  <desc>The "Notes on Daily Cash Activity Report" document — the client's own explanation of the DCAR as the day's till tape, its two balancing sections, the manual staff-tip/purchase adjustments, and the weekly spreadsheet control — kept one tab away from the DCAR so reviewers always have the workflow's intent beside the numbers. Printed as its own sheet.</desc>
+  <desc>PROPOSED — not built. A per-day notes panel beside the daily cash review: what was adjusted by hand on that day's sheet, how US funds were converted, and any trace/reconciliation remarks, so the reviewer sees the day's own notes without leaving the cash workflow. Distinct from the client's background commentary about the DCAR, which is spec material and does not belong in the product.</desc>
   <rect x="0" y="0" width="976" height="676" fill="#fbfaf7"/>
   <rect x="24" y="24" width="928" height="46" rx="8" fill="#fff" stroke="#333" stroke-width="2"/>
-  <text x="44" y="53" font-size="13" fill="#333">&#8592; Daily Cash</text>
-  <text x="170" y="53" font-size="13" font-weight="bold" fill="#111">Notes on Daily Cash Activity Report</text>
-  <rect x="880" y="33" width="52" height="28" rx="6" fill="#333"/>
-  <text x="906" y="52" text-anchor="middle" font-size="11" fill="#fff">Print</text>
-  <!-- tabs -->
-  <g font-size="12">
-    <text x="44" y="98" fill="#888">Daily Cash Report</text>
-    <text x="180" y="98" fill="#888">Deposits received</text>
-    <text x="310" y="98" fill="#888">Deposits applied</text>
-    <text x="432" y="98" fill="#888">Cashier detail</text>
-    <text x="538" y="98" fill="#888">Items cashed out</text>
-    <text x="662" y="98" fill="#111" font-weight="bold">Notes</text>
-    <rect x="660" y="104" width="42" height="3" fill="#333"/>
+  <text x="44" y="53" font-size="13" fill="#333">&#8592; Lookup</text>
+  <text x="150" y="53" font-size="13" font-weight="bold" fill="#111">Daily Cash Activity Report</text>
+  <rect x="620" y="33" width="120" height="28" rx="6" fill="none" stroke="#999"/>
+  <text x="680" y="52" text-anchor="middle" font-size="11" fill="#666">Date 2025-12-23</text>
+  <rect x="756" y="33" width="110" height="28" rx="14" fill="#e8f4ea" stroke="#3a7d44"/>
+  <text x="811" y="52" text-anchor="middle" font-size="11" fill="#2a5d33">Balanced &#10003;</text>
+  <!-- status ribbon -->
+  <rect x="24" y="82" width="928" height="26" rx="6" fill="#fdf3dd" stroke="#b98a2f" stroke-dasharray="6 4"/>
+  <text x="488" y="100" text-anchor="middle" font-size="11" fill="#8a6620">PROPOSED DESIGN — backlog. Not implemented in the current build.</text>
+  <!-- report column -->
+  <rect x="48" y="128" width="520" height="500" rx="8" fill="#fff" stroke="#666" stroke-width="1.5"/>
+  <rect x="80" y="148" width="456" height="22" fill="#111"/>
+  <text x="308" y="164" text-anchor="middle" font-size="11" fill="#fff" letter-spacing="3">YELLOW POINT LODGE</text>
+  <text x="308" y="192" text-anchor="middle" font-size="13" font-weight="bold" fill="#111">Daily Cash Activity Report</text>
+  <g stroke="#eee">
+    <line x1="80" y1="216" x2="536" y2="216"/><line x1="80" y1="240" x2="536" y2="240"/>
+    <line x1="80" y1="264" x2="536" y2="264"/><line x1="80" y1="288" x2="536" y2="288"/>
+    <line x1="80" y1="312" x2="536" y2="312"/><line x1="80" y1="336" x2="536" y2="336"/>
   </g>
-  <!-- document -->
-  <rect x="72" y="126" width="832" height="510" fill="#fff" stroke="#666" stroke-width="1.5"/>
-  <rect x="112" y="146" width="752" height="24" fill="#111"/>
-  <text x="488" y="163" text-anchor="middle" font-size="12" fill="#fff" letter-spacing="3">YELLOW POINT LODGE</text>
-  <text x="488" y="198" text-anchor="middle" font-size="15" font-weight="bold" fill="#111">Notes on Daily Cash Activity Report, (DCAR):</text>
-  <g font-size="10" fill="#333">
-    <text x="120" y="230">The DCAR is basically the 'till tape' of the day's transaction activity …</text>
-    <text x="120" y="252">… divided into two sections: revenue and taxes retained, then balance</text>
-    <text x="120" y="268">sheet adjustments where deposits are recognized and applied …</text>
-    <text x="120" y="298">We are in the practice of making a few manual adjustments to reflect</text>
-    <text x="120" y="314">staff tips and purchases plus any 'extraordinary' items …</text>
-    <text x="120" y="344">The total of the top sections must balance with the lower section,</text>
-    <text x="120" y="360">that lists all the payments we have received, by type …</text>
-    <text x="120" y="390">… at the end of the week the daily reports are taken upstairs and</text>
-    <text x="120" y="406">entered into a matching spreadsheet manually …</text>
-  </g>
-  <text x="488" y="660" text-anchor="middle" font-size="11" fill="#888">The client's full wording is reproduced verbatim on the page.</text>
+  <text x="88" y="368" font-size="10" fill="#888">…the day's revenue, taxes, adjustments and receipts…</text>
+  <text x="88" y="404" font-size="10" fill="#333">Today's Revenue and Expenses:      $1,649.43</text>
+  <text x="88" y="428" font-size="10" fill="#333">Total Receipts Today:              $1,649.43</text>
+  <!-- notes column -->
+  <rect x="596" y="128" width="332" height="500" rx="8" fill="#fff" stroke="#333" stroke-width="2"/>
+  <text x="620" y="158" font-size="13" font-weight="bold" fill="#111">Notes for this day</text>
+  <line x1="620" y1="170" x2="904" y2="170" stroke="#999"/>
+  <text x="620" y="196" font-size="11" font-weight="bold" fill="#333">Handwritten adjustments</text>
+  <rect x="620" y="206" width="284" height="60" rx="6" fill="#fafafa" stroke="#ddd"/>
+  <text x="630" y="226" font-size="10" fill="#666">$8.00 staff tips, coded 6025</text>
+  <text x="630" y="244" font-size="10" fill="#666">— entered by hand on the sheet</text>
+  <text x="620" y="298" font-size="11" font-weight="bold" fill="#333">US funds conversion</text>
+  <rect x="620" y="308" width="284" height="60" rx="6" fill="#fafafa" stroke="#ddd"/>
+  <text x="630" y="328" font-size="10" fill="#666">US receipts converted at the</text>
+  <text x="630" y="346" font-size="10" fill="#666">rate effective for the day</text>
+  <text x="620" y="400" font-size="11" font-weight="bold" fill="#333">Trace / reconciliation</text>
+  <rect x="620" y="410" width="284" height="80" rx="6" fill="#fafafa" stroke="#ddd"/>
+  <text x="630" y="430" font-size="10" fill="#666">Notes the reviewer leaves while</text>
+  <text x="630" y="448" font-size="10" fill="#666">balancing, carried to the weekly</text>
+  <text x="630" y="466" font-size="10" fill="#666">spreadsheet entry</text>
+  <text x="620" y="524" font-size="10" fill="#888">The notes stay beside the report — the</text>
+  <text x="620" y="540" font-size="10" fill="#888">reviewer never leaves the cash workflow.</text>
+  <text x="488" y="662" text-anchor="middle" font-size="11" fill="#888">Requires an app-owned notes table; pending the client's decision on stored vs. handwritten adjustments.</text>
 </svg>

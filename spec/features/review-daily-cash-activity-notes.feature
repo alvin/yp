@@ -1,5 +1,5 @@
 # id: QNkMmzPW5Jt0E7er7NCz
-@persona:daily-cash-reviewer @status:done @priority:5 @daily-cash @notes @review
+@persona:daily-cash-reviewer @status:backlog @priority:5 @daily-cash @notes @review
 Feature: review daily cash activity notes
 
   As Daily cash reviewer

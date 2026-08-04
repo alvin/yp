@@ -603,8 +603,7 @@
             <Card.Header class="border-b pb-4">
                 <Card.Title class="text-base">Notes for reports</Card.Title>
                 <Card.Description
-                    >Print on kitchen, housekeeping, and in-house reports. Guest
-                    notes stay office-only.</Card.Description
+                    >Notes that print on the daily reports and guest documents.</Card.Description
                 >
             </Card.Header>
             <Card.Content>
@@ -622,7 +621,7 @@
                             placeholder="Diet, allergies, meal preferences"
                         />
                         <p class="text-muted-foreground text-xs">
-                            Feeds into → Kitchen / Meal reports.
+                            Prints on the kitchen report.
                         </p>
                         <Button
                             size="sm"
@@ -637,8 +636,7 @@
                             placeholder="Bed setup, room readiness"
                         />
                         <p class="text-muted-foreground text-xs">
-                            Feeds into → Housekeeping report, with the note
-                            date.
+                            Prints on the housekeeping report.
                         </p>
                         <Button
                             size="sm"
@@ -654,8 +652,7 @@
                             placeholder="Occupancy & in-house requests"
                         />
                         <p class="text-muted-foreground text-xs">
-                            Feeds into → In-House report; used for room
-                            assignment.
+                            Prints on the in-house report.
                         </p>
                         <Button
                             size="sm"
@@ -670,8 +667,7 @@
                             placeholder="Reservation message"
                         />
                         <p class="text-muted-foreground text-xs">
-                            Feeds into → Confirmation slip and cancellation
-                            notice.
+                            Prints on the confirmation and cancellation notice.
                         </p>
                         <Button
                             size="sm"
@@ -725,8 +721,7 @@
                 ><NotebookIcon class="size-4" /> Guest notes</Dialog.Title
             >
             <Dialog.Description class="flex items-center gap-1.5">
-                <EyeOffIcon class="size-3.5" /> Office only — never printed on any
-                document.
+                <EyeOffIcon class="size-3.5" /> Office only — never printed.
             </Dialog.Description>
         </Dialog.Header>
         <Textarea
@@ -751,8 +746,7 @@
         <Dialog.Header>
             <Dialog.Title>Add a guest name</Dialog.Title>
             <Dialog.Description>
-                Everyone attached shows on this reservation and prints on its
-                documents.
+                Names on this stay.
             </Dialog.Description>
         </Dialog.Header>
         <div class="space-y-3">
@@ -819,9 +813,8 @@
         <Dialog.Header>
             <Dialog.Title>Re-book reservation #{s.resnumber}</Dialog.Title>
             <Dialog.Description>
-                Creates a new reservation for the same guests. Any deposit on
-                file transfers to the new stay and this reservation is
-                cancelled.
+                New dates for the same guests. Any deposit follows; this
+                reservation is cancelled.
             </Dialog.Description>
         </Dialog.Header>
         <div class="grid grid-cols-2 gap-3">
@@ -858,7 +851,7 @@
                 {mMode === "move" ? "Move rooms" : "Add a room"}
             </Dialog.Title>
             <Dialog.Description
-                >Both rooms stay on file for history and reports.</Dialog.Description
+                >Both rooms stay in the stay history.</Dialog.Description
             >
         </Dialog.Header>
         <div class="space-y-3">
@@ -928,8 +921,7 @@
                     <Label for="m-date">Move date</Label>
                     <Input id="m-date" type="date" bind:value={mMoveDate} />
                     <p class="text-muted-foreground text-xs">
-                        The room being left keeps its history up to this date;
-                        the new room takes over from it.
+                        The stay switches rooms on this date.
                     </p>
                 </div>
             {:else}

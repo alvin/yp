@@ -1,6 +1,6 @@
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 676" width="976" height="676" font-family="Helvetica, Arial, sans-serif" data-uf-id="lO0F2iDY3DPaPQDx2eRL">
   <title>DCAR/appendices details viewer</title>
-  <desc>The daily cash workspace: the DCAR and its four appendices (Deposits Received, Deposits Applied, Cashier Detail, Items Cashed Out) plus the Notes document sit on one tab row sharing a single business date, so reviewers move between the report and its supporting detail without leaving the workflow. Each view is the exact printed sheet.</desc>
+  <desc>The daily cash workspace: the DCAR and its four appendices (Deposits Received, Deposits Applied, Cashier Detail, Items Cashed Out) sit on one tab row sharing a single business date, so reviewers move between the report and its supporting detail without leaving the workflow. Each view is the exact printed sheet.</desc>
   <rect x="0" y="0" width="976" height="676" fill="#fbfaf7"/>
   <rect x="24" y="24" width="928" height="46" rx="8" fill="#fff" stroke="#333" stroke-width="2"/>
   <text x="44" y="53" font-size="13" fill="#333">&#8592; Lookup</text>
@@ -19,7 +19,6 @@
     <text x="310" y="98" fill="#888">Deposits applied</text>
     <text x="432" y="98" fill="#888">Cashier detail</text>
     <text x="538" y="98" fill="#888">Items cashed out</text>
-    <text x="662" y="98" fill="#888">Notes</text>
   </g>
   <!-- printed DCAR -->
   <rect x="72" y="126" width="832" height="510" fill="#fff" stroke="#666" stroke-width="1.5"/>

@@ -313,9 +313,6 @@
             <span>Balance owing</span>
             <Money value={balance} muteZero />
         </div>
-        <p class="text-muted-foreground pt-1 text-[11px]">
-            Deposits and payments reduce the balance and show as negative lines.
-        </p>
     </div>
 </div>
 
@@ -325,7 +322,7 @@
         <Dialog.Header>
             <Dialog.Title>Add charge</Dialog.Title>
             <Dialog.Description
-                >Room nights and extras. Prices can be overridden.</Dialog.Description
+                >Room nights and extras.</Dialog.Description
             >
         </Dialog.Header>
         <div class="space-y-3">
@@ -365,9 +362,6 @@
                             {/each}
                         </Select.Content>
                     </Select.Root>
-                    <p class="text-muted-foreground text-xs">
-                        Bed layout shown beside each room.
-                    </p>
                 </div>
             {:else}
                 <div class="space-y-1.5">
@@ -461,7 +455,7 @@
         <Dialog.Header>
             <Dialog.Title>Record payment or deposit</Dialog.Title>
             <Dialog.Description
-                >US funds convert to Canadian dollars automatically.</Dialog.Description
+                >Deposits, payments, and refunds.</Dialog.Description
             >
         </Dialog.Header>
         <div class="space-y-3">

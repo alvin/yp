@@ -56,7 +56,7 @@
         <Dialog.Header>
             <Dialog.Title>Cancel reservation #{resnumber}</Dialog.Title>
             <Dialog.Description
-                >Records the cancellation date and how the deposit is handled.</Dialog.Description
+                >Records the cancellation and how the deposit is handled.</Dialog.Description
             >
         </Dialog.Header>
 

@@ -27,6 +27,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0004_security.sql` | Supabase grants and RLS for the `ypl` production schema |
 | `migrations/0005_business_logic.sql` | Business logic in the database: consistency triggers plus every workflow write RPC |
 | `migrations/0006_ux_refinements.sql` | Search/report refinements from the wireframe audit: richer date search, cancelled-rows option on Manual Sales, multi-name guest documents, shared-booking context in guest history |
+| `migrations/0007_note_text.sql` | Converts Access rich-text notes to plain text and keeps them that way |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -45,6 +46,7 @@ Apply migrations in filename order:
 4. `0004_security.sql`
 5. `0005_business_logic.sql`
 6. `0006_ux_refinements.sql`
+7. `0007_note_text.sql`
 
 Then load `seed.sql` for repeatable reference/configuration data.
 
@@ -56,7 +58,7 @@ table editor, SQL editor, or import:
 
 | Table | Trigger behaviour |
 |---|---|
-| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the one-year booking horizon, keeps confirmation/cancellation dates consistent; date changes cascade to reservation-guest check-in/out |
+| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the one-year booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out |
 | `reservation_guests` | Check-in/out default from the reservation; exactly one primary guest per reservation |
 | `room_assignments` | Date validation; guest count defaults from the reservation |
 | `transactions` | Auto-completes the amount from the price list (manual overrides always win) and recomputes all seven tax columns from room/inventory tax flags × the rate effective on the transaction date |
@@ -194,6 +196,7 @@ The full import script:
   triggers do not recompute or validate historical rows (byte-for-byte import;
   requires superuser, which the controlled migration environment provides),
 - nulls Access "zero dates" (day 00, e.g. `1900-01-00`) that PostgreSQL rejects,
+- converts the rich-text memo fields to plain text (`ypl.normalize_stored_notes()`),
 - resets serial sequences and the in-house reservation-number sequence after import.
 
 The path is verified end-to-end against the real `.accdb`: all tables load with
@@ -204,6 +207,53 @@ milliseconds on the full dataset (~31k reservations, ~76k payments). Note that
 import uses) is authoritative.
 
 Do not commit generated full-import SQL.
+
+## Deploying to a hosted Supabase project
+
+`tools/run_remote_sql.py` applies SQL files to a hosted project through the
+Management API, so no direct database password is needed for schema work:
+
+```sh
+export SUPABASE_ACCESS_TOKEN=…
+python3 tools/run_remote_sql.py <project-ref> \
+  migrations/0001_extensions.sql migrations/0002_schema.sql \
+  migrations/0003_views_and_reports.sql migrations/0004_security.sql \
+  migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
+  migrations/0007_note_text.sql seed.sql
+```
+
+Two things the Management API cannot do, because they need a *direct* session:
+
+- **The full legacy import.** It is one transaction using
+  `set session_replication_role = replica`, which must hold for the whole
+  session. Use `psql` against the **session-mode** pooler (port 5432 — the
+  transaction-mode pooler on 6543 will not hold session state):
+
+  ```sh
+  PGPASSWORD=… psql "postgresql://postgres.<ref>@<region>.pooler.supabase.com:5432/postgres?sslmode=require" \
+    -v ON_ERROR_STOP=1 -f legacy_import/all_legacy_data.sql
+  ```
+
+  Note that `session_replication_role = replica` *is* available to the
+  `postgres` role on hosted Supabase, so the byte-for-byte import path works
+  there and not only in the air-gapped environment.
+
+- **Exposing `ypl` on the API.** Project Settings → API → Exposed schemas is
+  the durable place to set this. If your access token lacks org privileges for
+  that endpoint, the same thing can be set at the database level:
+
+  ```sql
+  alter role authenticator set pgrst.db_schemas = 'public, graphql_public, ypl';
+  notify pgrst, 'reload schema';
+  ```
+
+### Non-production environments
+
+`0004_security.sql` grants the `authenticated` role access to `ypl`. Supabase
+projects permit self-service signup by default, so on any environment carrying
+real data **anyone who can sign up gains staff-level read access**. Turn signup
+off in the dashboard, and apply `staging/staging_hardening.sql`, which enforces
+an email allowlist with a trigger on `auth.users` as a second line of defence.
 
 ## Security and Supabase API exposure
 

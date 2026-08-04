@@ -124,6 +124,14 @@ def build_import_sql(access_db: Path, include_counts: bool) -> str:
         parts.append(sequence_reset_sql(table, column) + "\n")
 
     parts.append(
+        "\n-- Settle the deferred foreign-key checks: the notes conversion suspends\n"
+        "-- table triggers, which PostgreSQL refuses while events are still pending.\n"
+        "set constraints all immediate;\n"
+        "\n-- Access memo fields arrive as rich text; the import loads them verbatim,\n"
+        "-- so convert them to plain text now that triggers are back on.\n"
+        "select ypl.normalize_stored_notes();\n"
+    )
+    parts.append(
         "\n-- Keep in-house reservation numbering ahead of imported data.\n"
         f"select setval('{TARGET_SCHEMA}.resnumber_seq',\n"
         f"  greatest(coalesce((select max(resnumber) from {TARGET_SCHEMA}.reservations), 100000),\n"

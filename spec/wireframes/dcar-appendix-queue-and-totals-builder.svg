@@ -17,7 +17,6 @@
   <text x="180" y="96" font-size="12" fill="#888">Deposits applied</text>
   <text x="300" y="96" font-size="12" fill="#888">Cashier detail</text>
   <text x="410" y="96" font-size="12" fill="#888">Items cashed out</text>
-  <text x="540" y="96" font-size="12" fill="#888">Notes</text>
   <!-- printed sheet with automatic grouping/totals -->
   <rect x="72" y="120" width="832" height="500" fill="#fff" stroke="#666" stroke-width="1.5"/>
   <rect x="112" y="140" width="752" height="24" fill="#111"/>
