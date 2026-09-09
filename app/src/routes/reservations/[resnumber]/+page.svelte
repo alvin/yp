@@ -13,6 +13,7 @@
     import XCircleIcon from "@lucide/svelte/icons/circle-x";
     import FileTextIcon from "@lucide/svelte/icons/file-text";
     import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+    import CalendarIcon from "@lucide/svelte/icons/calendar";
 
     import { Button } from "$lib/components/ui/button/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
@@ -22,16 +23,22 @@
     import * as Card from "$lib/components/ui/card/index.js";
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import * as Tabs from "$lib/components/ui/tabs/index.js";
-    import * as Select from "$lib/components/ui/select/index.js";
+    import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Field from "$lib/components/app/field.svelte";
     import Money from "$lib/components/app/money.svelte";
     import StatusBadge from "$lib/components/app/status-badge.svelte";
     import ReservationLedger from "$lib/components/app/reservation-ledger.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
+    import ChargeBasket from "$lib/components/app/charge-basket.svelte";
+    import GuestSearch from "$lib/components/app/guest-search.svelte";
     import { goto, invalidateAll } from "$app/navigation";
-    import { dateMed, dateShort, nightsBetween } from "$lib/format.js";
-    import { ROOMS, roomById, roomOptionLabel } from "$lib/data/reference.js";
-    import { occupancySummaries } from "$lib/data/queries.js";
+    import { dateMed, dateShort, nightsBetween, oneYearAhead } from "$lib/format.js";
+    import { ROOMS, roomById } from "$lib/data/reference.js";
+    import { roomOptions } from "$lib/options.js";
+    import {
+        occupancySummaries,
+        reservationGuestSummaries,
+    } from "$lib/data/queries.js";
     import {
         addHousekeepingNote,
         addReservationGuest,
@@ -44,9 +51,10 @@
         saveKitchenMeal,
         setGuestNotes,
         setReservationNotes,
+        updateReservation,
         updateReservationGuestNotes,
     } from "$lib/data/mutations.js";
-    import { searchGuestsByName } from "$lib/data/queries.js";
+    import { postPendingLines, type PendingLine } from "$lib/pending-charges.js";
     import type {
         GuestSearchRow,
         OccupancySummary,
@@ -140,15 +148,63 @@
         }
     }
 
+    // Change dates: the same stay, extended or shortened. The database moves
+    // the reservation guests and their room assignments with it and recomputes
+    // the night count; charges already posted stay as posted.
+    let datesOpen = $state(false);
+    let dArrival = $state("");
+    let dDeparture = $state("");
+    let savingDates = $state(false);
+    function openDates() {
+        dArrival = s.resarrivaldate;
+        dDeparture = s.resdeparturedate;
+        datesOpen = true;
+    }
+    const dNights = $derived(
+        dArrival && dDeparture && dDeparture > dArrival
+            ? nightsBetween(dArrival, dDeparture)
+            : 0,
+    );
+    const dChanged = $derived(
+        dArrival !== s.resarrivaldate || dDeparture !== s.resdeparturedate,
+    );
+    async function saveDates() {
+        if (!dArrival || !dDeparture || dDeparture <= dArrival) {
+            toast.error("Departure must be after arrival.");
+            return;
+        }
+        savingDates = true;
+        try {
+            await updateReservation(s.reservationid, {
+                arrival: dArrival,
+                departure: dDeparture,
+            });
+            datesOpen = false;
+            toast.success(`Stay dates updated`, {
+                description: `${dateMed(dArrival)} → ${dateMed(dDeparture)} · ${dNights} night${dNights === 1 ? "" : "s"}`,
+            });
+            await invalidateAll();
+            occupancy = await occupancySummaries(s.reservationid);
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Could not change the dates.",
+            );
+        } finally {
+            savingDates = false;
+        }
+    }
+
     // Re-book: new dates for the same guests; deposits transfer and the
     // original reservation is cancelled (all handled in the database).
     let rebookOpen = $state(false);
     let rbArrival = $state("");
     let rbDeparture = $state("");
+    let rbPending = $state<PendingLine[]>([]);
     let rebooking = $state(false);
     function openRebook() {
         rbArrival = "";
         rbDeparture = "";
+        rbPending = [];
         rebookOpen = true;
     }
     async function doRebook() {
@@ -164,11 +220,38 @@
                 rbDeparture,
                 s.resbookedby,
             );
+            // Any charge or deposit taken while re-booking goes onto the new
+            // stay.
+            let problem = "";
+            if (rbPending.length) {
+                try {
+                    const guests = await reservationGuestSummaries(
+                        created.reservationid,
+                    );
+                    const rgid =
+                        guests.find((g) => g.primaryguest)
+                            ?.reservationguestid ??
+                        guests[0]?.reservationguestid;
+                    if (!rgid) throw new Error("no guest on the new stay");
+                    await postPendingLines(rgid, rbPending, today);
+                } catch (e) {
+                    problem =
+                        e instanceof Error
+                            ? e.message
+                            : "the new charges did not post";
+                }
+            }
             rebookOpen = false;
-            toast.success(`Re-booked as #${created.resnumber}`, {
-                description:
-                    "Deposit transferred; original reservation cancelled.",
-            });
+            if (problem) {
+                toast.error(
+                    `Re-booked as #${created.resnumber}, but: ${problem}`,
+                );
+            } else {
+                toast.success(`Re-booked as #${created.resnumber}`, {
+                    description:
+                        "Deposit transferred; original reservation cancelled.",
+                });
+            }
             await goto(`/reservations/${created.resnumber}`);
         } catch (e) {
             toast.error(
@@ -191,12 +274,12 @@
     let mOut = $state(i.mOut);
     let mGuests = $state(2);
     let mNotes = $state("");
-    const mRoomLabel = $derived(
-        roomOptionLabel(roomById(Number(mRoom)) ?? ROOMS[0]),
-    );
-    const mFromLabel = $derived(
-        occupancy.find((o) => String(o.occupancyid) === mFrom)?.room_compact ??
-            "Select room",
+    const rooms = roomOptions();
+    const occupancyOptions = $derived(
+        occupancy.map((o) => ({
+            value: String(o.occupancyid),
+            label: `${o.room_compact} · ${dateShort(o.occupancyin)} → ${dateShort(o.occupancyout)}`,
+        })),
     );
 
     function openMove() {
@@ -253,26 +336,9 @@
     // Additional guest names on the reservation
     let addGuestOpen = $state(false);
     let agQuery = $state("");
-    let agMatches = $state<GuestSearchRow[]>([]);
     let agLastName = $state("");
     let agFirstName = $state("");
     let agSaving = $state(false);
-    $effect(() => {
-        const q = agQuery.trim();
-        if (!addGuestOpen || !q) {
-            agMatches = [];
-            return;
-        }
-        let alive = true;
-        const timer = setTimeout(async () => {
-            const rows = await searchGuestsByName(q);
-            if (alive) agMatches = rows.slice(0, 6);
-        }, 150);
-        return () => {
-            alive = false;
-            clearTimeout(timer);
-        };
-    });
     async function attachGuest(guestid: number, label: string) {
         agSaving = true;
         try {
@@ -425,6 +491,11 @@
                 onclick={markConfirmed}
             >
                 <CheckIcon /> Mark confirmed
+            </Button>
+        {/if}
+        {#if !cancelled}
+            <Button variant="outline" size="sm" onclick={openDates}>
+                <CalendarIcon /> Change dates
             </Button>
         {/if}
         <Button variant="outline" size="sm" onclick={openRebook}>
@@ -752,32 +823,14 @@
         <div class="space-y-3">
             <div class="space-y-1.5">
                 <Label for="ag-q">Find an existing guest</Label>
-                <Input
+                <GuestSearch
                     id="ag-q"
-                    bind:value={agQuery}
+                    bind:query={agQuery}
+                    disabled={agSaving}
                     placeholder="Type a name…"
-                    autocomplete="off"
+                    onselect={(g: GuestSearchRow) =>
+                        attachGuest(g.guestid, g.guest_name)}
                 />
-                {#if agMatches.length}
-                    <div class="overflow-hidden rounded-lg border">
-                        {#each agMatches as g (g.guestid)}
-                            <button
-                                type="button"
-                                class="hover:bg-accent flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm last:border-0"
-                                disabled={agSaving}
-                                onclick={() =>
-                                    attachGuest(g.guestid, g.guest_name)}
-                            >
-                                <span>{g.guest_name}</span>
-                                <span class="text-muted-foreground text-xs"
-                                    >{[g.guestcity, g.guestregion]
-                                        .filter(Boolean)
-                                        .join(", ")}</span
-                                >
-                            </button>
-                        {/each}
-                    </div>
-                {/if}
             </div>
             <div class="text-muted-foreground text-center text-xs">
                 — or add a new name —
@@ -807,6 +860,60 @@
     </Dialog.Content>
 </Dialog.Root>
 
+<!-- Change stay dates -->
+<Dialog.Root bind:open={datesOpen}>
+    <Dialog.Content class="sm:max-w-md">
+        <Dialog.Header>
+            <Dialog.Title>Change the dates of #{s.resnumber}</Dialog.Title>
+            <Dialog.Description>
+                New stay dates for this reservation.
+            </Dialog.Description>
+        </Dialog.Header>
+        <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                    <Label for="d-arr">Arrival</Label>
+                    <Input
+                        id="d-arr"
+                        type="date"
+                        bind:value={dArrival}
+                        max={oneYearAhead(today)}
+                    />
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="d-dep">Departure</Label>
+                    <Input
+                        id="d-dep"
+                        type="date"
+                        bind:value={dDeparture}
+                        min={dArrival}
+                        aria-invalid={!!dArrival &&
+                            !!dDeparture &&
+                            dDeparture <= dArrival}
+                    />
+                </div>
+            </div>
+            {#if dNights > 0 && dChanged}
+                <p class="text-muted-foreground text-xs">
+                    {dNights} night{dNights === 1 ? "" : "s"} — was {s.numnights ??
+                        nightsBetween(s.resarrivaldate, s.resdeparturedate)}.
+                </p>
+            {/if}
+        </div>
+        <Dialog.Footer>
+            <Button variant="ghost" onclick={() => (datesOpen = false)}
+                >Cancel</Button
+            >
+            <Button
+                onclick={saveDates}
+                disabled={savingDates || !dChanged || dNights <= 0}
+            >
+                <CalendarIcon /> Save dates
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
 <!-- Re-book dialog -->
 <Dialog.Root bind:open={rebookOpen}>
     <Dialog.Content class="sm:max-w-md">
@@ -817,19 +924,25 @@
                 reservation is cancelled.
             </Dialog.Description>
         </Dialog.Header>
-        <div class="grid grid-cols-2 gap-3">
-            <div class="space-y-1.5">
-                <Label for="rb-arr">New arrival</Label>
-                <Input id="rb-arr" type="date" bind:value={rbArrival} />
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                    <Label for="rb-arr">New arrival</Label>
+                    <Input id="rb-arr" type="date" bind:value={rbArrival} />
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="rb-dep">New departure</Label>
+                    <Input
+                        id="rb-dep"
+                        type="date"
+                        bind:value={rbDeparture}
+                        min={rbArrival}
+                    />
+                </div>
             </div>
-            <div class="space-y-1.5">
-                <Label for="rb-dep">New departure</Label>
-                <Input
-                    id="rb-dep"
-                    type="date"
-                    bind:value={rbDeparture}
-                    min={rbArrival}
-                />
+            <div class="space-y-2 border-t pt-3">
+                <Label>Charges & deposit</Label>
+                <ChargeBasket bind:lines={rbPending} />
             </div>
         </div>
         <Dialog.Footer>
@@ -876,41 +989,24 @@
 
             {#if mMode === "move"}
                 <div class="space-y-1.5">
-                    <Label>Room being left</Label>
-                    <Select.Root type="single" bind:value={mFrom}>
-                        <Select.Trigger class="w-full"
-                            >{mFromLabel}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each occupancy as o (o.occupancyid)}
-                                <Select.Item
-                                    value={String(o.occupancyid)}
-                                    label={`${o.room_compact} · ${dateShort(o.occupancyin)} → ${dateShort(o.occupancyout)}`}
-                                >
-                                    {o.room_compact} · {dateShort(
-                                        o.occupancyin,
-                                    )} → {dateShort(o.occupancyout)}
-                                </Select.Item>
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="m-from">Room being left</Label>
+                    <Combobox
+                        id="m-from"
+                        bind:value={mFrom}
+                        options={occupancyOptions}
+                        placeholder="Select room"
+                    />
                 </div>
             {/if}
 
             <div class="space-y-1.5">
-                <Label>{mMode === "move" ? "New room" : "Room"}</Label>
-                <Select.Root type="single" bind:value={mRoom}>
-                    <Select.Trigger class="w-full">{mRoomLabel}</Select.Trigger>
-                    <Select.Content>
-                        {#each ROOMS as r (r.roomid)}
-                            <Select.Item
-                                value={String(r.roomid)}
-                                label={roomOptionLabel(r)}
-                                >{roomOptionLabel(r)}</Select.Item
-                            >
-                        {/each}
-                    </Select.Content>
-                </Select.Root>
+                <Label for="m-room">{mMode === "move" ? "New room" : "Room"}</Label>
+                <Combobox
+                    id="m-room"
+                    bind:value={mRoom}
+                    options={rooms}
+                    searchPlaceholder="Room name or number…"
+                />
                 <p class="text-muted-foreground text-xs">
                     Bed layout shown beside each room.
                 </p>

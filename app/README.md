@@ -102,6 +102,16 @@ npm run cf:preview   # build and serve locally through workerd
 - `src/lib/report.css` + `src/routes/reports/**` — printed outputs cloned
   from the client's original designs in `original_spec/reports/`; the markup
   and CSS classes match the originals so printed pages are identical.
+- `src/lib/components/ui/combobox/` — the one dropdown. A plain select button
+  whose list can be narrowed by typing any part of an entry; used for every
+  choice on every screen, which is what makes rooms and the priced-item list
+  workable. `src/lib/options.ts` builds its option lists.
+- `src/lib/pending-charges.ts` — charges and the deposit captured while a stay
+  is being booked, posted through the ordinary workflow RPCs once the
+  reservation exists.
+- `src/lib/components/app/guest-search.svelte` — the one guest lookup, shared by
+  the lookup screen, the new-reservation guest panel, the add-a-name dialog and
+  the Print Center, so partial-name search behaves the same everywhere.
 
 Screens are intentionally minimal: Lookup (home), Name/Date/All-fields search
 results, Guest history, the Reservation transaction screen, the Print Center,

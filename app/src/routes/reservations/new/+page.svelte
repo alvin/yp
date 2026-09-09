@@ -2,7 +2,6 @@
     import { goto } from "$app/navigation";
     import { toast } from "svelte-sonner";
     import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
-    import SearchIcon from "@lucide/svelte/icons/search";
     import UserCheckIcon from "@lucide/svelte/icons/user-check";
     import XIcon from "@lucide/svelte/icons/x";
     import AlertTriangleIcon from "@lucide/svelte/icons/triangle-alert";
@@ -12,16 +11,21 @@
     import { Input } from "$lib/components/ui/input/index.js";
     import { Label } from "$lib/components/ui/label/index.js";
     import * as Card from "$lib/components/ui/card/index.js";
-    import * as Select from "$lib/components/ui/select/index.js";
+    import { Combobox } from "$lib/components/ui/combobox/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
+    import { Textarea } from "$lib/components/ui/textarea/index.js";
+    import ChargeBasket from "$lib/components/app/charge-basket.svelte";
+    import GuestSearch from "$lib/components/app/guest-search.svelte";
+    import { BED_TYPES, GUEST_DIETS, SALUTATIONS } from "$lib/data/reference.js";
+    import { roomOptions, textOptions } from "$lib/options.js";
+    import { getGuest } from "$lib/data/queries.js";
     import {
-        BED_TYPES,
-        ROOMS,
-        SALUTATIONS,
-        roomOptionLabel,
-    } from "$lib/data/reference.js";
-    import { searchGuestsByName } from "$lib/data/queries.js";
-    import { createGuest, createReservation } from "$lib/data/mutations.js";
+        addHousekeepingNote,
+        createGuest,
+        createReservation,
+        saveKitchenMeal,
+    } from "$lib/data/mutations.js";
+    import { postPendingLines, type PendingLine } from "$lib/pending-charges.js";
     import { supabase } from "$lib/data/client.js";
     import { dateMed, nightsBetween } from "$lib/format.js";
     import type { GuestSearchRow } from "$lib/data/types.js";
@@ -61,35 +65,39 @@
     let phone = $state(i.phone);
     let email = $state(i.email);
 
-    // Guest typeahead
+    // Guest lookup — the same partial-name search as the lookup screen.
     let guestQuery = $state("");
-    let guestMatches = $state<GuestSearchRow[]>([]);
-    $effect(() => {
-        const q = guestQuery.trim();
-        if (!q) {
-            guestMatches = [];
-            return;
-        }
-        let alive = true;
-        const timer = setTimeout(async () => {
-            const rows = await searchGuestsByName(q);
-            if (alive) guestMatches = rows.slice(0, 6);
-        }, 150);
-        return () => {
-            alive = false;
-            clearTimeout(timer);
-        };
-    });
+    let attaching = $state(false);
 
-    function attachSearchRow(g: GuestSearchRow) {
-        attachedGuestId = g.guestid;
-        lastName = g.guestlastname;
-        firstName = g.guestfirstname ?? "";
-        city = g.guestcity ?? "";
-        region = g.guestregion ?? "";
-        phone = g.guestprimaryphone ?? "";
-        email = g.guestemailaddress ?? "";
-        guestQuery = "";
+    async function attachSearchRow(g: GuestSearchRow) {
+        attaching = true;
+        try {
+            // The search row carries only enough to recognise a guest. The
+            // full record has the street address and the rest of the mailing
+            // details the confirmation prints, so pull it before filling in.
+            const full = await getGuest(g.guestid);
+            attachedGuestId = g.guestid;
+            salutation = full?.guestsalutation ?? "";
+            firstName = full?.guestfirstname ?? g.guestfirstname ?? "";
+            lastName = full?.guestlastname ?? g.guestlastname;
+            company = full?.guestcompany ?? "";
+            address = full?.guestaddress ?? "";
+            city = full?.guestcity ?? g.guestcity ?? "";
+            region = full?.guestregion ?? g.guestregion ?? "";
+            country = full?.guestcountry ?? "CAN";
+            postal = full?.guestpczip ?? "";
+            phone = full?.guestprimaryphone ?? g.guestprimaryphone ?? "";
+            email = full?.guestemailaddress ?? g.guestemailaddress ?? "";
+            guestQuery = "";
+        } catch (e) {
+            toast.error(
+                e instanceof Error
+                    ? e.message
+                    : "Could not load that guest record.",
+            );
+        } finally {
+            attaching = false;
+        }
     }
 
     function clearGuest() {
@@ -126,12 +134,21 @@
     });
 
     // Room
-    let roomId = $state(String(ROOMS[0].roomid));
-    const roomLabel = $derived(
-        roomOptionLabel(
-            ROOMS.find((r) => String(r.roomid) === roomId) ?? ROOMS[0],
-        ),
-    );
+    const rooms = roomOptions();
+    let roomId = $state(rooms[0]?.value ?? "");
+    const salutationOptions = textOptions(SALUTATIONS);
+    const bedTypeOptions = textOptions(BED_TYPES);
+    const dietOptions = textOptions(GUEST_DIETS);
+
+    // Charges and the deposit taken while booking. Held until the reservation
+    // exists, then posted to it.
+    let pending = $state<PendingLine[]>([]);
+
+    // Housekeeping and diet notes are usually given while the booking is made,
+    // so they are captured here and feed the same reports as later edits.
+    let diet = $state("");
+    let kitchenNotes = $state("");
+    let housekeepingNotes = $state("");
 
     const nights = $derived(
         arrival && departure ? nightsBetween(arrival, departure) : 0,
@@ -184,9 +201,66 @@
                 roomid: Number(roomId) || null,
                 numguests: adults + children,
             });
-            toast.success(`Reservation #${created.resnumber} created`, {
-                description: `${lastName}${firstName ? ", " + firstName : ""} · ${dateMed(arrival)} → ${dateMed(departure)}`,
-            });
+            // Everything below happens after the reservation exists. If any
+            // of it fails the booking still stands, so report what did not
+            // land and take the clerk to the reservation to finish there.
+            const problems: string[] = [];
+            if (pending.length) {
+                try {
+                    await postPendingLines(
+                        created.reservationguestid,
+                        pending,
+                        data.today,
+                    );
+                } catch (e) {
+                    problems.push(
+                        e instanceof Error
+                            ? e.message
+                            : "the charges and deposit did not post",
+                    );
+                }
+            }
+            if (diet || kitchenNotes.trim()) {
+                try {
+                    await saveKitchenMeal(
+                        guestid,
+                        diet,
+                        kitchenNotes.trim() || null,
+                    );
+                } catch (e) {
+                    problems.push(
+                        e instanceof Error
+                            ? e.message
+                            : "the diet notes did not save",
+                    );
+                }
+            }
+            if (housekeepingNotes.trim()) {
+                try {
+                    await addHousekeepingNote(
+                        created.reservationguestid,
+                        housekeepingNotes.trim(),
+                        data.today,
+                    );
+                } catch (e) {
+                    problems.push(
+                        e instanceof Error
+                            ? e.message
+                            : "the housekeeping notes did not save",
+                    );
+                }
+            }
+
+            const stay = `${lastName}${firstName ? ", " + firstName : ""} · ${dateMed(arrival)} → ${dateMed(departure)}`;
+            if (problems.length) {
+                toast.error(
+                    `Reservation #${created.resnumber} created, but: ${problems.join("; ")}`,
+                );
+            } else {
+                toast.success(`Reservation #${created.resnumber} created`, {
+                    description: stay,
+                });
+            }
             await goto(`/reservations/${created.resnumber}`);
         } catch (e) {
             toast.error(e instanceof Error ? e.message : "Could not save the reservation.");
@@ -207,152 +281,173 @@
 </div>
 
 <div class="grid items-start gap-5 lg:grid-cols-2">
-    <!-- Guest -->
-    <Card.Root>
-        <Card.Header class="border-b pb-4">
-            <Card.Title class="text-base">Guest</Card.Title>
-            <Card.Description
-                >Attach an existing guest or enter a new one.</Card.Description
-            >
-        </Card.Header>
-        <Card.Content class="space-y-4">
-            {#if attachedGuestId}
-                <div
-                    class="bg-accent/60 flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
+    <div class="space-y-5">
+        <!-- Guest -->
+        <Card.Root>
+            <Card.Header class="border-b pb-4">
+                <Card.Title class="text-base">Guest</Card.Title>
+                <Card.Description
+                    >Attach an existing guest or enter a new one.</Card.Description
                 >
-                    <span class="flex items-center gap-2 text-sm font-medium">
-                        <UserCheckIcon class="text-primary size-4" /> Existing guest
-                        #{attachedGuestId}
-                    </span>
-                    <Button variant="ghost" size="sm" onclick={clearGuest}
-                        ><XIcon /> Use a new guest</Button
+            </Card.Header>
+            <Card.Content class="space-y-4">
+                {#if attachedGuestId}
+                    <div
+                        class="bg-accent/60 flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
                     >
-                </div>
-            {:else}
-                <div class="relative">
-                    <SearchIcon
-                        class="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2"
-                    />
-                    <Input
-                        bind:value={guestQuery}
-                        placeholder="Find an existing guest by name…"
-                        class="pl-9"
-                        autocomplete="off"
-                    />
-                    {#if guestMatches.length}
-                        <div
-                            class="bg-popover absolute z-20 mt-1 w-full overflow-hidden rounded-lg border shadow-md"
+                        <span
+                            data-testid="attached-guest"
+                            class="flex items-center gap-2 text-sm font-medium"
                         >
-                            {#each guestMatches as g (g.guestid)}
-                                <button
-                                    type="button"
-                                    class="hover:bg-accent flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm last:border-0"
-                                    onclick={() => attachSearchRow(g)}
-                                >
-                                    <span>{g.guest_name}</span>
-                                    <span class="text-muted-foreground text-xs"
-                                        >{[g.guestcity, g.guestregion]
-                                            .filter(Boolean)
-                                            .join(", ")}</span
-                                    >
-                                </button>
-                            {/each}
-                        </div>
-                    {/if}
-                </div>
-            {/if}
+                            <UserCheckIcon class="text-primary size-4" /> Existing guest
+                            #{attachedGuestId}
+                        </span>
+                        <Button variant="ghost" size="sm" onclick={clearGuest}
+                            ><XIcon /> Use a new guest</Button
+                        >
+                    </div>
+                {:else}
+                    <div class="space-y-1.5">
+                        <Label for="guest-q" class="sr-only"
+                            >Find an existing guest</Label
+                        >
+                        <GuestSearch
+                            id="guest-q"
+                            float
+                            bind:query={guestQuery}
+                            disabled={attaching}
+                            placeholder="Find an existing guest by name…"
+                            onselect={attachSearchRow}
+                        />
+                    </div>
+                {/if}
 
-            <div class="grid grid-cols-[90px_1fr] gap-3">
-                <div class="space-y-1.5">
-                    <Label>Title</Label>
-                    <Select.Root type="single" bind:value={salutation}>
-                        <Select.Trigger class="w-full"
-                            >{salutation || "—"}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each SALUTATIONS as slt (slt)}<Select.Item
-                                    value={slt}
-                                    label={slt}>{slt}</Select.Item
-                                >{/each}
-                        </Select.Content>
-                    </Select.Root>
+                <div class="grid grid-cols-[90px_1fr] gap-3">
+                    <div class="space-y-1.5">
+                        <Label for="slt">Title</Label>
+                        <Combobox
+                            id="slt"
+                            bind:value={salutation}
+                            options={salutationOptions}
+                            placeholder="—"
+                        />
+                    </div>
+                    <div class="space-y-1.5">
+                        <Label for="fn">First name</Label><Input
+                            id="fn"
+                            bind:value={firstName}
+                        />
+                    </div>
                 </div>
                 <div class="space-y-1.5">
-                    <Label for="fn">First name</Label><Input
-                        id="fn"
-                        bind:value={firstName}
+                    <Label for="ln"
+                        >Last name <span class="text-destructive">*</span></Label
+                    >
+                    <Input
+                        id="ln"
+                        bind:value={lastName}
+                        aria-invalid={!lastName.trim()}
                     />
                 </div>
-            </div>
-            <div class="space-y-1.5">
-                <Label for="ln"
-                    >Last name <span class="text-destructive">*</span></Label
-                >
-                <Input
-                    id="ln"
-                    bind:value={lastName}
-                    aria-invalid={!lastName.trim()}
-                />
-            </div>
-            <div class="space-y-1.5">
-                <Label for="co">Company (optional)</Label><Input
-                    id="co"
-                    bind:value={company}
-                />
-            </div>
-            <div class="space-y-1.5">
-                <Label for="ad">Address</Label><Input
-                    id="ad"
-                    bind:value={address}
-                />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                    <Label for="ci">City</Label><Input
-                        id="ci"
-                        bind:value={city}
+                    <Label for="co">Company (optional)</Label><Input
+                        id="co"
+                        bind:value={company}
+                    />
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="ad">Address</Label><Input
+                        id="ad"
+                        bind:value={address}
                     />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1.5">
-                        <Label for="rg">Prov</Label><Input
-                            id="rg"
-                            bind:value={region}
-                            maxlength={2}
+                        <Label for="ci">City</Label><Input
+                            id="ci"
+                            bind:value={city}
+                        />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1.5">
+                            <Label for="rg">Prov</Label><Input
+                                id="rg"
+                                bind:value={region}
+                                maxlength={2}
+                            />
+                        </div>
+                        <div class="space-y-1.5">
+                            <Label for="pc">Postal</Label><Input
+                                id="pc"
+                                bind:value={postal}
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                        <Label for="cn">Country</Label><Input
+                            id="cn"
+                            bind:value={country}
+                            maxlength={3}
                         />
                     </div>
                     <div class="space-y-1.5">
-                        <Label for="pc">Postal</Label><Input
-                            id="pc"
-                            bind:value={postal}
+                        <Label for="ph">Phone</Label><Input
+                            id="ph"
+                            bind:value={phone}
                         />
                     </div>
                 </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                    <Label for="cn">Country</Label><Input
-                        id="cn"
-                        bind:value={country}
-                        maxlength={3}
+                    <Label for="em">Email</Label><Input
+                        id="em"
+                        type="email"
+                        bind:value={email}
+                    />
+                </div>
+            </Card.Content>
+        </Card.Root>
+
+        <!-- Housekeeping and diet, usually given while booking -->
+        <Card.Root>
+            <Card.Header class="border-b pb-4">
+                <Card.Title class="text-base">Housekeeping & diet</Card.Title>
+                <Card.Description>
+                    Prints on the housekeeping and kitchen reports.
+                </Card.Description>
+            </Card.Header>
+            <Card.Content class="space-y-4">
+                <div class="space-y-1.5">
+                    <Label for="diet">Diet</Label>
+                    <Combobox
+                        id="diet"
+                        bind:value={diet}
+                        options={dietOptions}
+                        placeholder="None"
                     />
                 </div>
                 <div class="space-y-1.5">
-                    <Label for="ph">Phone</Label><Input
-                        id="ph"
-                        bind:value={phone}
+                    <Label for="kitchen-notes">Diet & allergy notes</Label>
+                    <Textarea
+                        id="kitchen-notes"
+                        bind:value={kitchenNotes}
+                        rows={3}
+                        placeholder="Allergies, meal preferences"
                     />
                 </div>
-            </div>
-            <div class="space-y-1.5">
-                <Label for="em">Email</Label><Input
-                    id="em"
-                    type="email"
-                    bind:value={email}
-                />
-            </div>
-        </Card.Content>
-    </Card.Root>
+                <div class="space-y-1.5">
+                    <Label for="hk-notes">Housekeeping notes</Label>
+                    <Textarea
+                        id="hk-notes"
+                        bind:value={housekeepingNotes}
+                        rows={3}
+                        placeholder="Bed setup, room readiness"
+                    />
+                </div>
+            </Card.Content>
+        </Card.Root>
+    </div>
 
     <!-- Reservation + room -->
     <div class="space-y-5">
@@ -427,18 +522,12 @@
                         />
                     </div>
                     <div class="space-y-1.5">
-                        <Label>Bed type</Label>
-                        <Select.Root type="single" bind:value={bedType}>
-                            <Select.Trigger class="w-full"
-                                >{bedType}</Select.Trigger
-                            >
-                            <Select.Content>
-                                {#each BED_TYPES as b (b)}<Select.Item
-                                        value={b}
-                                        label={b}>{b}</Select.Item
-                                    >{/each}
-                            </Select.Content>
-                        </Select.Root>
+                        <Label for="bed">Bed type</Label>
+                        <Combobox
+                            id="bed"
+                            bind:value={bedType}
+                            options={bedTypeOptions}
+                        />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -475,25 +564,30 @@
             </Card.Header>
             <Card.Content class="space-y-3">
                 <div class="space-y-1.5">
-                    <Label>Room</Label>
-                    <Select.Root type="single" bind:value={roomId}>
-                        <Select.Trigger class="w-full"
-                            >{roomLabel}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each ROOMS as r (r.roomid)}
-                                <Select.Item
-                                    value={String(r.roomid)}
-                                    label={roomOptionLabel(r)}
-                                    >{roomOptionLabel(r)}</Select.Item
-                                >
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="room">Room</Label>
+                    <Combobox
+                        id="room"
+                        bind:value={roomId}
+                        options={rooms}
+                        searchPlaceholder="Room name or number…"
+                    />
                     <p class="text-muted-foreground text-xs">
                         Room moves can be added later from the reservation.
                     </p>
                 </div>
+            </Card.Content>
+        </Card.Root>
+
+        <!-- Items to be charged and the deposit taken now -->
+        <Card.Root>
+            <Card.Header class="border-b pb-4">
+                <Card.Title class="text-base">Charges & deposit</Card.Title>
+                <Card.Description>
+                    Posted when the reservation is saved.
+                </Card.Description>
+            </Card.Header>
+            <Card.Content>
+                <ChargeBasket bind:lines={pending} />
             </Card.Content>
         </Card.Root>
     </div>

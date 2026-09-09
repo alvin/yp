@@ -119,4 +119,27 @@ describe('keep data consistent for direct database edits', () => {
 		) as { checkindate: string }[];
 		expect(rg[0].checkindate.slice(0, 10)).toBe(newArrival);
 	});
+
+	it('moves room assignments that ran to the reservation dates with it', async () => {
+		const fresh = await makeReservation();
+		const client = await staffClient();
+		const newDeparture = addDays(fresh.departure, 4);
+		unwrap(
+			await client
+				.from('reservations')
+				.update({ resdeparturedate: newDeparture })
+				.eq('reservationid', fresh.reservationid)
+				.select()
+		);
+		const rooms = unwrap(
+			await client
+				.from('room_assignments')
+				.select('occupancyin, occupancyout')
+				.eq('reservationguestid', fresh.reservationguestid)
+				.eq('occupancyarchive', false)
+		) as { occupancyin: string; occupancyout: string }[];
+		expect(rooms).toHaveLength(1);
+		expect(rooms[0].occupancyin.slice(0, 10)).toBe(fresh.arrival);
+		expect(rooms[0].occupancyout.slice(0, 10)).toBe(newDeparture);
+	});
 });

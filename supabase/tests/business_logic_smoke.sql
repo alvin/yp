@@ -246,6 +246,65 @@ begin
   assert v_count = 1, 'gift certificate receipt missing';
 
   ------------------------------------------------------------------
+  -- Changing the stay dates: guests and rooms follow
+  ------------------------------------------------------------------
+  declare
+    v_arr date;
+    v_dep date;
+    v_occid integer;
+    v_occout date;
+  begin
+    select r.resarrivaldate::date, r.resdeparturedate::date into v_arr, v_dep
+      from ypl.reservations r where r.reservationid = v_res.reservationid;
+    select o.occupancyid into v_occid
+      from ypl.room_assignments o
+      join ypl.reservation_guests rg on rg.reservationguestid = o.reservationguestid
+     where rg.reservationid = v_res.reservationid
+       and not o.occupancyarchive
+       and o.occupancyout::date = v_dep
+     limit 1;
+
+    perform ypl.update_reservation(v_res.reservationid, p_departure => v_dep + 3);
+
+    select r.numnights into v_int from ypl.reservations r where r.reservationid = v_res.reservationid;
+    assert v_int = (v_dep + 3) - v_arr, format('nights after date change expected %s, got %s',
+      (v_dep + 3) - v_arr, v_int);
+    select count(*) into v_count from ypl.reservation_guests rg
+     where rg.reservationid = v_res.reservationid
+       and not rg.rgarchive
+       and rg.checkoutdate::date <> v_dep + 3;
+    assert v_count = 0, 'reservation guests did not follow the new departure';
+    if v_occid is not null then
+      select o.occupancyout::date into v_occout from ypl.room_assignments o where o.occupancyid = v_occid;
+      assert v_occout = v_dep + 3, 'room assignment did not follow the new departure';
+    end if;
+
+    -- and back, so later day-scoped assertions see the original stay
+    perform ypl.update_reservation(v_res.reservationid, p_departure => v_dep);
+  end;
+
+  ------------------------------------------------------------------
+  -- Removing a line entered in error
+  ------------------------------------------------------------------
+  v_txid := ypl.post_charge(v_res.reservationguestid, v_invid, p_quantity => 1,
+                            p_transdate => current_date);
+  v_payid := ypl.record_payment(v_res.reservationguestid, 'Payment (Regular)', 'Cash', 12);
+  select count(*) into v_count from ypl.reservation_ledger(v_res.reservationid)
+   where (line_source = 'transaction' and line_id = v_txid)
+      or (line_source = 'payment' and line_id = v_payid);
+  assert v_count = 2, 'lines to be removed are not on the ledger';
+  perform ypl.archive_transaction(v_txid);
+  perform ypl.archive_payment(v_payid);
+  select count(*) into v_count from ypl.reservation_ledger(v_res.reservationid)
+   where (line_source = 'transaction' and line_id = v_txid)
+      or (line_source = 'payment' and line_id = v_payid);
+  assert v_count = 0, 'removed lines still on the ledger';
+  assert (select transarchive from ypl.transactions where transactionid = v_txid),
+    'removed charge was deleted rather than archived';
+  assert (select paymentarchive from ypl.payments where paymentid = v_payid),
+    'removed payment was deleted rather than archived';
+
+  ------------------------------------------------------------------
   -- Notes
   ------------------------------------------------------------------
   perform ypl.add_housekeeping_note(v_res.reservationguestid, 'Twin beds needed');
@@ -276,7 +335,9 @@ begin
   perform * from ypl.report_cashier_detail(current_date);
   perform * from ypl.report_items_cashed_out(current_date);
   perform * from ypl.search_guests_by_name('SMOKE');
+  perform * from ypl.search_guests_by_name('-MOKE SMITH');
   perform * from ypl.search_all_fields('SMOKE');
+  perform * from ypl.search_all_fields('SMOKE LADYSMITH');
   perform * from ypl.search_by_date(current_date, 'in_house');
   perform * from ypl.search_by_date_range(current_date, current_date + 30, 'overlap');
   perform * from ypl.guest_history(v_guestid, current_date);

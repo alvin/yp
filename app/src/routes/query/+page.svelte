@@ -54,7 +54,7 @@
 
     {#if data.rows.length}
         <div class="overflow-hidden rounded-xl border bg-card shadow-sm">
-            {#each data.rows as row, i (i)}
+            {#each data.rows as row (`${row.resnumber ?? ""}:${row.guestid ?? ""}`)}
                 <button
                     type="button"
                     onclick={() => open(row)}

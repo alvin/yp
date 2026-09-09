@@ -41,6 +41,10 @@ import type {
 /** Today's business date (YYYY-MM-DD, local time). */
 export const TODAY = new Date().toLocaleDateString('en-CA');
 
+/** How many name matches a lookup asks for. The result lists scroll, so this
+ * is a comfortable "everyone who could plausibly be meant", not a preview. */
+const NAME_SEARCH_LIMIT = 100;
+
 // ---------------------------------------------------------------------------
 // Row normalization: ypl table columns are `timestamp without time zone`, so
 // PostgREST serializes them as `2025-12-15T00:00:00`. Screens work with plain
@@ -84,9 +88,20 @@ function reservationSummaryRow(row: Record<string, unknown>): ReservationSummary
 // Lookup-screen and navigation RPCs
 // ---------------------------------------------------------------------------
 
+/**
+ * Partial-name guest search. The database handles keyword splitting, the
+ * placeholder punctuation staff type for a half-remembered name ('-illington'),
+ * and the other names a stay is booked under, so every screen that looks a
+ * guest up behaves identically.
+ */
 export async function searchGuestsByName(query: string): Promise<GuestSearchRow[]> {
 	if (!query.trim()) return [];
-	return unwrap(await supabase.rpc('search_guests_by_name', { p_query: query.trim() }));
+	return unwrap(
+		await supabase.rpc('search_guests_by_name', {
+			p_query: query.trim(),
+			p_limit: NAME_SEARCH_LIMIT
+		})
+	);
 }
 
 export async function searchAllFields(query: string): Promise<AllFieldsRow[]> {

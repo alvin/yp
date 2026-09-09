@@ -3,6 +3,7 @@
 // of truth: edits made in Supabase show up here on the next app load.
 
 import { supabase, unwrap } from './client';
+import { sortItemsByCode } from '../inventory';
 import type {
 	InventoryItem,
 	PaymentCategory,
@@ -87,8 +88,7 @@ export async function loadReference(): Promise<void> {
 				.from('inventory_items')
 				.select('*')
 				.eq('invarchive', false)
-				.order('invtype')
-				.order('invitemdescription')
+				.order('invcode')
 				.then(unwrap),
 			supabase
 				.from('tax_rates')
@@ -115,7 +115,9 @@ export async function loadReference(): Promise<void> {
 	fill(PAYMENT_CATEGORIES, payCats as PaymentCategory[]);
 	fill(PAYMENT_TYPES, payTypes as PaymentType[]);
 	fill(ROOMS, rooms as Room[]);
-	fill(INVENTORY_ITEMS, inventory as InventoryItem[]);
+	// Item-code order — the order the front desk reads the price list in, and
+	// the order the charge-item picker presents.
+	fill(INVENTORY_ITEMS, sortItemsByCode(inventory as InventoryItem[]));
 
 	const taxByType: Record<string, number> = {};
 	for (const t of taxes as { taxratetype: string; taxrate: number }[]) {

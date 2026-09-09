@@ -14,11 +14,11 @@
     import { Label } from "$lib/components/ui/label/index.js";
     import * as Card from "$lib/components/ui/card/index.js";
     import * as Tabs from "$lib/components/ui/tabs/index.js";
+    import GuestSearch from "$lib/components/app/guest-search.svelte";
     import {
         findReservation,
         guestHistory,
         reportGuestDocumentQueue,
-        searchGuestsByName,
         TODAY,
     } from "$lib/data/queries.js";
     import type {
@@ -104,29 +104,11 @@
     // Reprint by guest: find the guest by name, pick one of their stays, and
     // open the selected document type for that reservation.
     let guestQuery = $state("");
-    let guestMatches = $state<GuestSearchRow[]>([]);
     let guestStays = $state<GuestHistoryRow[]>([]);
     let guestPicked = $state<string | null>(null);
-    $effect(() => {
-        const q = guestQuery.trim();
-        if (!q) {
-            guestMatches = [];
-            return;
-        }
-        let alive = true;
-        const timer = setTimeout(async () => {
-            const rows = await searchGuestsByName(q);
-            if (alive) guestMatches = rows.slice(0, 5);
-        }, 150);
-        return () => {
-            alive = false;
-            clearTimeout(timer);
-        };
-    });
     async function pickGuest(g: GuestSearchRow) {
         guestPicked = g.guest_name;
         guestQuery = "";
-        guestMatches = [];
         guestStays = (await guestHistory(g.guestid)).slice(0, 4);
     }
     function openStayDocument(resnumber: number, route: string) {
@@ -357,32 +339,12 @@
                             <Label for="guest-doc-q" class="text-xs"
                                 >…or reprint by guest</Label
                             >
-                            <Input
+                            <GuestSearch
                                 id="guest-doc-q"
-                                bind:value={guestQuery}
+                                bind:query={guestQuery}
                                 placeholder="Find a guest by name…"
-                                autocomplete="off"
-                                class="h-9"
+                                onselect={pickGuest}
                             />
-                            {#if guestMatches.length}
-                                <div class="overflow-hidden rounded-lg border">
-                                    {#each guestMatches as g (g.guestid)}
-                                        <button
-                                            type="button"
-                                            class="hover:bg-accent flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm last:border-0"
-                                            onclick={() => pickGuest(g)}
-                                        >
-                                            <span>{g.guest_name}</span>
-                                            <span
-                                                class="text-muted-foreground text-xs"
-                                                >{[g.guestcity, g.guestregion]
-                                                    .filter(Boolean)
-                                                    .join(", ")}</span
-                                            >
-                                        </button>
-                                    {/each}
-                                </div>
-                            {/if}
                             {#if guestPicked && guestStays.length}
                                 <p class="text-muted-foreground text-xs">
                                     {guestPicked} — pick the stay to reprint its

@@ -17,38 +17,19 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
+	import { Combobox } from '$lib/components/ui/combobox/index.js';
 	import { toast } from 'svelte-sonner';
 
 	import { onMount } from 'svelte';
-	import { findReservation, searchByDate, searchGuestsByName, TODAY } from '$lib/data/queries.js';
+	import GuestSearch from '$lib/components/app/guest-search.svelte';
+	import { findReservation, searchByDate, TODAY } from '$lib/data/queries.js';
 	import type { DateMode, GuestSearchRow } from '$lib/data/types.js';
 	import { dateMed } from '$lib/format.js';
 
 	// --- Name search (live narrowing) ---
 	let nameQuery = $state('');
-	let nameMatches = $state<GuestSearchRow[]>([]);
-	$effect(() => {
-		const q = nameQuery.trim();
-		if (!q) {
-			nameMatches = [];
-			return;
-		}
-		let alive = true;
-		const timer = setTimeout(async () => {
-			const rows = await searchGuestsByName(q);
-			if (alive) nameMatches = rows.slice(0, 8);
-		}, 150);
-		return () => {
-			alive = false;
-			clearTimeout(timer);
-		};
-	});
-	function openGuest(guestid: number) {
-		goto(`/guests/${guestid}`);
-	}
-	function onNameEnter() {
-		if (nameMatches.length) openGuest(nameMatches[0].guestid);
+	function openGuest(g: GuestSearchRow) {
+		goto(`/guests/${g.guestid}`);
 	}
 
 	// --- Reservation number ---
@@ -71,7 +52,6 @@
 		{ value: 'in_house', label: 'In house' }
 	];
 	let dateMode = $state<DateMode>('arrivals');
-	const dateModeLabel = $derived(MODES.find((m) => m.value === dateMode)?.label ?? 'Arrivals');
 	function runDateSearch() {
 		if (!searchDate) return;
 		const params = new URLSearchParams({ mode: dateMode });
@@ -128,48 +108,20 @@
 			<!-- Name -->
 			<Tabs.Content value="name" class="p-3">
 				<Label for="name-q" class="sr-only">Guest name</Label>
-				<div class="relative">
-					<SearchIcon
-						class="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2"
-					/>
-					<Input
-						id="name-q"
-						bind:value={nameQuery}
-						onkeydown={(e) => e.key === 'Enter' && onNameEnter()}
-						placeholder="Start typing a last name… (e.g. “adam”)"
-						class="h-11 pl-9"
-						autocomplete="off"
-					/>
-				</div>
-				{#if nameQuery.trim()}
-					<div class="mt-2 overflow-hidden rounded-lg border">
-						{#if nameMatches.length}
-							{#each nameMatches as g (g.guestid)}
-								<button
-									type="button"
-									onclick={() => openGuest(g.guestid)}
-									class="hover:bg-accent flex w-full items-center justify-between gap-3 border-b px-3 py-2.5 text-left transition-colors last:border-0"
-								>
-									<span class="min-w-0">
-										<span class="block truncate text-sm font-medium">{g.guest_name}</span>
-										<span class="text-muted-foreground block truncate text-xs">
-											{[g.guestcity, g.guestregion].filter(Boolean).join(', ')}
-											{#if g.guestprimaryphone}· {g.guestprimaryphone}{/if}
-										</span>
-									</span>
-									<ArrowRightIcon class="text-muted-foreground size-4 shrink-0" />
-								</button>
-							{/each}
-						{:else}
-							<p class="text-muted-foreground px-3 py-6 text-center text-sm">
-								No matching guests. Try fewer letters, or
-								<a class="text-primary underline-offset-2 hover:underline" href="/reservations/new"
-									>start a new reservation</a
-								>.
-							</p>
-						{/if}
-					</div>
-				{:else}
+				<GuestSearch
+					id="name-q"
+					bind:query={nameQuery}
+					placeholder="Start typing a last name… (e.g. “adam”)"
+					onselect={openGuest}
+				>
+					{#snippet emptyAction()}
+						Try fewer letters, or
+						<a class="text-primary underline-offset-2 hover:underline" href="/reservations/new"
+							>start a new reservation</a
+						>.
+					{/snippet}
+				</GuestSearch>
+				{#if !nameQuery.trim()}
 					<p class="text-muted-foreground mt-2 px-1 text-xs">
 						Matches any part of a name — first, last, or company.
 					</p>
@@ -205,15 +157,13 @@
 						<Input id="date-q" type="date" bind:value={searchDate} class="h-11" />
 					</div>
 					<div class="space-y-1.5">
-						<Label>Show</Label>
-						<Select.Root type="single" bind:value={dateMode}>
-							<Select.Trigger class="h-11 w-full">{dateModeLabel}</Select.Trigger>
-							<Select.Content>
-								{#each MODES as m (m.value)}
-									<Select.Item value={m.value} label={m.label}>{m.label}</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
+						<Label for="date-mode">Show</Label>
+						<Combobox
+							id="date-mode"
+							bind:value={dateMode}
+							options={MODES}
+							class="h-11"
+						/>
 					</div>
 				</div>
 				{#if useRange}

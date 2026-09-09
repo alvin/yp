@@ -28,6 +28,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0005_business_logic.sql` | Business logic in the database: consistency triggers plus every workflow write RPC |
 | `migrations/0006_ux_refinements.sql` | Search/report refinements from the wireframe audit: richer date search, cancelled-rows option on Manual Sales, multi-name guest documents, shared-booking context in guest history |
 | `migrations/0007_note_text.sql` | Converts Access rich-text notes to plain text and keeps them that way |
+| `migrations/0008_input_refinements.sql` | Front-desk input refinements from live use: forgiving search terms, multi-keyword and second-name search, stay dates that carry their rooms, loud removal of lines entered in error |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -47,6 +48,7 @@ Apply migrations in filename order:
 5. `0005_business_logic.sql`
 6. `0006_ux_refinements.sql`
 7. `0007_note_text.sql`
+8. `0008_input_refinements.sql`
 
 Then load `seed.sql` for repeatable reference/configuration data.
 
@@ -58,7 +60,7 @@ table editor, SQL editor, or import:
 
 | Table | Trigger behaviour |
 |---|---|
-| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the one-year booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out |
+| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the one-year booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out and to the room assignments that ran to the reservation's own dates (mid-stay move windows keep theirs) |
 | `reservation_guests` | Check-in/out default from the reservation; exactly one primary guest per reservation |
 | `room_assignments` | Date validation; guest count defaults from the reservation |
 | `transactions` | Auto-completes the amount from the price list (manual overrides always win) and recomputes all seven tax columns from room/inventory tax flags × the rate effective on the transaction date |
@@ -86,6 +88,10 @@ Charges: `post_room_nights`, `post_charge`, `archive_transaction`,
 `sell_gift_certificate` (charge line + matching receipt).
 Payments: `record_payment` (all categories; refund categories store negative),
 `archive_payment`.
+`archive_transaction`/`archive_payment` are how a line entered in error is
+removed: the row is archived, not deleted, so it leaves the ledger, the balance
+and every report while the correction stays auditable. Both raise when the line
+is already gone rather than silently doing nothing.
 Notes: `add_housekeeping_note`, `archive_housekeeping_note`,
 `save_kitchen_meal`, `archive_kitchen_meal`.
 
@@ -128,8 +134,20 @@ Use tables directly for table-editor/admin work. Use views/RPCs when the applica
 
 ### Search and navigation
 
-- `ypl.search_guests_by_name(p_query)`
-- `ypl.search_all_fields(p_query)`
+- `ypl.search_guests_by_name(p_query, p_limit)` — partial-string match on
+  last/first/display name and company. Every keyword must match, so extra
+  characters narrow rather than widen. Guests sharing a stay with a match come
+  back after the direct matches (`match_kind`), so a booking held under two
+  names is found from either; `other_names` carries the second name.
+- `ypl.search_all_fields(p_query)` — broad match over guest name, company,
+  phones, address and email plus reservation number and group. Several keywords
+  may be entered; a record is returned once, only when it carries them all, with
+  `matched_on`/`detail` naming the fields that matched.
+- `ypl.search_pattern(p_term)` / `ypl.search_patterns(p_query)` — how a typed
+  entry becomes LIKE patterns: keywords split on whitespace, placeholder
+  punctuation at either end dropped (`-illington` finds `Shillington`), `*`
+  honoured as a wildcard, literal LIKE metacharacters escaped.
+- `ypl.guest_co_names(p_guestid)`
 - `ypl.find_reservation(p_resnumber)`
 - `ypl.search_by_date(p_date, p_mode)` where `p_mode` is `arrivals`, `departures`, `both`, `in_house`, or `occupancy`
 - `ypl.search_by_date_range(p_from, p_to, p_mode)`
@@ -219,7 +237,7 @@ python3 tools/run_remote_sql.py <project-ref> \
   migrations/0001_extensions.sql migrations/0002_schema.sql \
   migrations/0003_views_and_reports.sql migrations/0004_security.sql \
   migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
-  migrations/0007_note_text.sql seed.sql
+  migrations/0007_note_text.sql migrations/0008_input_refinements.sql seed.sql
 ```
 
 Two things the Management API cannot do, because they need a *direct* session:

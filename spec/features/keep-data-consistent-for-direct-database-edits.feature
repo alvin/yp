@@ -14,3 +14,4 @@ Feature: keep data consistent for direct database edits
     And A reservation's number of nights always matches its arrival and departure dates.
     And Cancellation and confirmation dates stay consistent with their flags.
     And Reservation-guest check-in and check-out dates follow the reservation when its dates move.
+    And Room assignments that ran to the reservation's own dates follow it too, so occupancy stays correct.

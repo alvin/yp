@@ -88,6 +88,43 @@ export async function createReservation(input: NewReservationInput): Promise<Cre
 	return rows[0];
 }
 
+export interface ReservationChanges {
+	arrival?: string;
+	departure?: string;
+	numadults?: number;
+	numchildren?: number;
+	numrooms?: number;
+	bedtype?: string;
+	arrivaltime?: string | null;
+	groupname?: string | null;
+	bookedby?: string | null;
+}
+
+/**
+ * Changes an existing reservation. Only the fields passed here move; the
+ * database recomputes the night count, re-checks the booking rules, and carries
+ * the reservation's guests and room assignments to the new stay dates.
+ */
+export async function updateReservation(
+	reservationid: number,
+	changes: ReservationChanges
+): Promise<void> {
+	unwrap(
+		await supabase.rpc('update_reservation', {
+			p_reservationid: reservationid,
+			p_arrival: changes.arrival ?? null,
+			p_departure: changes.departure ?? null,
+			p_numadults: changes.numadults ?? null,
+			p_numchildren: changes.numchildren ?? null,
+			p_numrooms: changes.numrooms ?? null,
+			p_bedtype: changes.bedtype ?? null,
+			p_arrivaltime: changes.arrivaltime ?? null,
+			p_groupname: changes.groupname ?? null,
+			p_bookedby: changes.bookedby ?? null
+		})
+	);
+}
+
 export async function addReservationGuest(
 	reservationid: number,
 	guestid: number,
@@ -251,6 +288,12 @@ export async function postCharge(
 	);
 }
 
+/** Removes a charge line entered in error. Archived, not deleted, so the
+ * correction stays auditable — it leaves the ledger and every report. */
+export async function archiveTransaction(transactionid: number): Promise<void> {
+	unwrap(await supabase.rpc('archive_transaction', { p_transactionid: transactionid }));
+}
+
 export async function recordPayment(
 	reservationguestid: number,
 	paymentcategory: string,
@@ -271,6 +314,12 @@ export async function recordPayment(
 			p_notes: notes ?? null
 		})
 	);
+}
+
+/** Removes a payment or deposit entered in error. Archived, not deleted, so
+ * the correction stays auditable — it leaves the ledger and daily cash. */
+export async function archivePayment(paymentid: number): Promise<void> {
+	unwrap(await supabase.rpc('archive_payment', { p_paymentid: paymentid }));
 }
 
 export async function sellGiftCertificate(

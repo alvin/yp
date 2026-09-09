@@ -2,37 +2,39 @@
     import PlusIcon from "@lucide/svelte/icons/plus";
     import ReceiptIcon from "@lucide/svelte/icons/receipt";
     import CreditCardIcon from "@lucide/svelte/icons/credit-card";
+    import TrashIcon from "@lucide/svelte/icons/trash-2";
     import { toast } from "svelte-sonner";
 
     import { Button } from "$lib/components/ui/button/index.js";
     import { Input } from "$lib/components/ui/input/index.js";
     import { Label } from "$lib/components/ui/label/index.js";
     import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import * as Select from "$lib/components/ui/select/index.js";
+    import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
-    import { addDays, dateShort } from "$lib/format.js";
+    import { addDays, dateShort, money } from "$lib/format.js";
     import { reservationLedger } from "$lib/data/queries.js";
     import {
+        archivePayment,
+        archiveTransaction,
         postCharge,
         postRoomNights,
         recordPayment,
     } from "$lib/data/mutations.js";
     import { round2, usdToCdn } from "$lib/charges.js";
     import {
-        INVENTORY_ITEMS,
         INV_TYPE_TO_TRANSTYPE,
-        PAYMENT_CATEGORIES,
-        PAYMENT_CURRENCIES,
-        PAYMENT_TYPES,
         ROOMS,
         inventoryById,
         roomById,
-        roomOptionLabel,
     } from "$lib/data/reference.js";
-    import type {
-        LedgerRow,
-        ReservationGuestSummary,
-    } from "$lib/data/types.js";
+    import {
+        currencyOptions,
+        itemOptions,
+        paymentCategoryOptions,
+        roomOptions,
+        tenderTypeOptions,
+    } from "$lib/options.js";
+    import type { LedgerRow, ReservationGuestSummary } from "$lib/data/types.js";
 
     let {
         reservationid,
@@ -88,7 +90,7 @@
     let chargeOpen = $state(false);
     let chargeKind = $state<"room" | "item">("room");
     let cRoom = $state(String(ROOMS[0].roomid));
-    let cItem = $state(String(INVENTORY_ITEMS[0].inventoryid));
+    let cItem = $state("");
     let cQty = $state(1);
     let cUnit = $state(0);
     let cDate = $state("");
@@ -98,7 +100,7 @@
     function openCharge() {
         chargeKind = "room";
         cRoom = String(ROOMS[0].roomid);
-        cItem = String(INVENTORY_ITEMS[0].inventoryid);
+        cItem = "";
         cQty = 1;
         cUnit = 0;
         cDate = today;
@@ -108,26 +110,29 @@
     }
 
     function onItemChange(id: string) {
-        cItem = id;
         cUnit = inventoryById(Number(id))?.invamount ?? 0;
     }
 
-    const cRoomLabel = $derived(
-        roomOptionLabel(roomById(Number(cRoom)) ?? ROOMS[0]),
-    );
-    const cItemLabel = $derived(() => {
-        const i = inventoryById(Number(cItem));
-        return i ? `${i.invcode} · ${i.invitemdescription}` : "Select item";
-    });
-    const cGuestLabel = $derived(
-        reservationGuests.find((g) => String(g.reservationguestid) === cGuest)
-            ?.guest_name ?? "Select guest",
+    const rooms = roomOptions();
+    const items = itemOptions();
+    const categories = paymentCategoryOptions();
+    const tenders = tenderTypeOptions();
+    const currencies = currencyOptions();
+    const guestPickerOptions = $derived(
+        reservationGuests.map((g) => ({
+            value: String(g.reservationguestid),
+            label: g.guest_name,
+        })),
     );
 
     async function saveCharge() {
         const qty = Math.max(1, Number(cQty) || 1);
         const unit = round2(Number(cUnit) || 0);
         const rgid = Number(cGuest) || defaultGuest;
+        if (chargeKind === "item" && !cItem) {
+            toast.error("Choose an item to charge.");
+            return;
+        }
         try {
             let description: string;
             if (chargeKind === "room") {
@@ -190,21 +195,10 @@
         payOpen = true;
     }
 
-    const pGuestLabel = $derived(
-        reservationGuests.find((g) => String(g.reservationguestid) === pGuest)
-            ?.guest_name ?? "Select guest",
-    );
-
     $effect(() => {
         if (pCurrency === "US") pCdn = usdToCdn(Number(pAmount) || 0);
         else pCdn = round2(Number(pAmount) || 0);
     });
-
-    const pCatLabel = $derived(pCategory);
-    const pTypeLabel = $derived(pType);
-    const pCurLabel = $derived(
-        pCurrency === "US" ? "US dollars" : "Canadian dollars",
-    );
 
     async function savePayment() {
         const amount = round2(Number(pAmount) || 0);
@@ -231,6 +225,41 @@
             toast.error(
                 e instanceof Error ? e.message : "Could not record the payment.",
             );
+        }
+    }
+
+    // ---- Remove a line entered in error ----
+    // Charges and receipts posted by mistake are taken off the reservation
+    // here. The database archives the row rather than deleting it, so it
+    // leaves the ledger, the balance, and every report while the correction
+    // stays on record.
+    let removeOpen = $state(false);
+    let removing = $state(false);
+    let target = $state<LedgerRow | null>(null);
+
+    function askRemove(line: LedgerRow) {
+        target = line;
+        removeOpen = true;
+    }
+
+    async function confirmRemove() {
+        const line = target;
+        if (!line) return;
+        removing = true;
+        try {
+            if (line.line_source === "transaction")
+                await archiveTransaction(line.line_id);
+            else await archivePayment(line.line_id);
+            lines = await reservationLedger(reservationid);
+            removeOpen = false;
+            target = null;
+            toast.success(`Removed ${line.description}`);
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Could not remove the line.",
+            );
+        } finally {
+            removing = false;
         }
     }
 </script>
@@ -262,11 +291,14 @@
                     <th class="py-2 text-left font-medium">Description</th>
                     <th class="py-2 text-right font-medium">Qty</th>
                     <th class="px-4 py-2 text-right font-medium">Amount</th>
+                    {#if !readonly}<th class="w-9 py-2"
+                            ><span class="sr-only">Remove</span></th
+                        >{/if}
                 </tr>
             </thead>
             <tbody>
-                {#each lines as l (l.line_id)}
-                    <tr class="border-b last:border-0">
+                {#each lines as l (`${l.line_source}:${l.line_id}`)}
+                    <tr class="group border-b last:border-0">
                         <td
                             class="text-muted-foreground px-4 py-2 whitespace-nowrap tabular-nums"
                             >{dateShort(l.line_date)}</td
@@ -288,11 +320,24 @@
                         <td class="px-4 py-2 text-right"
                             ><Money value={l.balance_effect} /></td
                         >
+                        {#if !readonly}
+                            <td class="pr-2 text-right">
+                                <button
+                                    type="button"
+                                    aria-label="Remove {l.description}"
+                                    title="Remove this line"
+                                    onclick={() => askRemove(l)}
+                                    class="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                >
+                                    <TrashIcon class="size-3.5" />
+                                </button>
+                            </td>
+                        {/if}
                     </tr>
                 {:else}
                     <tr
                         ><td
-                            colspan="4"
+                            colspan={readonly ? 4 : 5}
                             class="text-muted-foreground px-4 py-8 text-center"
                             >No transactions yet.</td
                         ></tr
@@ -347,44 +392,25 @@
 
             {#if chargeKind === "room"}
                 <div class="space-y-1.5">
-                    <Label>Room</Label>
-                    <Select.Root type="single" bind:value={cRoom}>
-                        <Select.Trigger class="w-full"
-                            >{cRoomLabel}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each ROOMS as r (r.roomid)}
-                                <Select.Item
-                                    value={String(r.roomid)}
-                                    label={roomOptionLabel(r)}
-                                    >{roomOptionLabel(r)}</Select.Item
-                                >
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="c-room">Room</Label>
+                    <Combobox
+                        id="c-room"
+                        bind:value={cRoom}
+                        options={rooms}
+                        searchPlaceholder="Room name or number…"
+                    />
                 </div>
             {:else}
                 <div class="space-y-1.5">
-                    <Label>Item</Label>
-                    <Select.Root
-                        type="single"
-                        value={cItem}
-                        onValueChange={onItemChange}
-                    >
-                        <Select.Trigger class="w-full"
-                            >{cItemLabel()}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each INVENTORY_ITEMS as i (i.inventoryid)}
-                                <Select.Item
-                                    value={String(i.inventoryid)}
-                                    label={`${i.invcode} · ${i.invitemdescription}`}
-                                >
-                                    {i.invcode} · {i.invitemdescription}
-                                </Select.Item>
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="c-item">Item</Label>
+                    <Combobox
+                        id="c-item"
+                        bind:value={cItem}
+                        options={items}
+                        placeholder="Choose an item"
+                        searchPlaceholder="Item code or name…"
+                        onchange={onItemChange}
+                    />
                 </div>
             {/if}
 
@@ -413,21 +439,12 @@
 
             {#if reservationGuests.length > 1}
                 <div class="space-y-1.5">
-                    <Label>Charge to</Label>
-                    <Select.Root type="single" bind:value={cGuest}>
-                        <Select.Trigger class="w-full"
-                            >{cGuestLabel}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each reservationGuests as g (g.reservationguestid)}
-                                <Select.Item
-                                    value={String(g.reservationguestid)}
-                                    label={g.guest_name}
-                                    >{g.guest_name}</Select.Item
-                                >
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="c-guest">Charge to</Label>
+                    <Combobox
+                        id="c-guest"
+                        bind:value={cGuest}
+                        options={guestPickerOptions}
+                    />
                 </div>
             {/if}
 
@@ -460,52 +477,29 @@
         </Dialog.Header>
         <div class="space-y-3">
             <div class="space-y-1.5">
-                <Label>Category</Label>
-                <Select.Root type="single" bind:value={pCategory}>
-                    <Select.Trigger class="w-full">{pCatLabel}</Select.Trigger>
-                    <Select.Content>
-                        {#each PAYMENT_CATEGORIES as c (c.paymentcategory)}
-                            <Select.Item
-                                value={c.paymentcategory}
-                                label={c.paymentcategory}
-                                >{c.paymentcategory}</Select.Item
-                            >
-                        {/each}
-                    </Select.Content>
-                </Select.Root>
+                <Label for="p-cat">Category</Label>
+                <Combobox
+                    id="p-cat"
+                    bind:value={pCategory}
+                    options={categories}
+                />
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                    <Label>Tender type</Label>
-                    <Select.Root type="single" bind:value={pType}>
-                        <Select.Trigger class="w-full"
-                            >{pTypeLabel}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each PAYMENT_TYPES as t (t.paymenttype)}
-                                <Select.Item
-                                    value={t.paymenttype}
-                                    label={t.paymenttype}
-                                    >{t.paymenttype}</Select.Item
-                                >
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="p-type">Tender type</Label>
+                    <Combobox
+                        id="p-type"
+                        bind:value={pType}
+                        options={tenders}
+                    />
                 </div>
                 <div class="space-y-1.5">
-                    <Label>Funds</Label>
-                    <Select.Root type="single" bind:value={pCurrency}>
-                        <Select.Trigger class="w-full"
-                            >{pCurLabel}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each PAYMENT_CURRENCIES as c (c)}
-                                <Select.Item value={c} label={c}
-                                    >{c} dollars</Select.Item
-                                >
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="p-cur">Funds</Label>
+                    <Combobox
+                        id="p-cur"
+                        bind:value={pCurrency}
+                        options={currencies}
+                    />
                 </div>
             </div>
             <div class="grid grid-cols-3 gap-3">
@@ -537,21 +531,12 @@
             </div>
             {#if reservationGuests.length > 1}
                 <div class="space-y-1.5">
-                    <Label>Received from</Label>
-                    <Select.Root type="single" bind:value={pGuest}>
-                        <Select.Trigger class="w-full"
-                            >{pGuestLabel}</Select.Trigger
-                        >
-                        <Select.Content>
-                            {#each reservationGuests as g (g.reservationguestid)}
-                                <Select.Item
-                                    value={String(g.reservationguestid)}
-                                    label={g.guest_name}
-                                    >{g.guest_name}</Select.Item
-                                >
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <Label for="p-guest">Received from</Label>
+                    <Combobox
+                        id="p-guest"
+                        bind:value={pGuest}
+                        options={guestPickerOptions}
+                    />
                 </div>
             {/if}
 
@@ -565,6 +550,50 @@
                 >Cancel</Button
             >
             <Button onclick={savePayment}>Record</Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Remove a line entered in error -->
+<Dialog.Root bind:open={removeOpen}>
+    <Dialog.Content class="sm:max-w-sm">
+        <Dialog.Header>
+            <Dialog.Title>
+                Remove this {target?.line_source === "payment"
+                    ? "payment"
+                    : "charge"}?
+            </Dialog.Title>
+            <Dialog.Description>
+                It comes off the balance and the reports.
+            </Dialog.Description>
+        </Dialog.Header>
+        {#if target}
+            <div class="bg-muted/40 rounded-lg border px-3 py-2 text-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="min-w-0 truncate font-medium"
+                        >{target.description}</span
+                    >
+                    <Money value={target.balance_effect} class="shrink-0" />
+                </div>
+                <div class="text-muted-foreground mt-0.5 text-xs">
+                    {dateShort(target.line_date)} · {target.code ??
+                        target.line_type}
+                    {#if target.tax_total > 0}
+                        · tax {money(target.tax_total)}{/if}
+                </div>
+            </div>
+        {/if}
+        <Dialog.Footer>
+            <Button variant="ghost" onclick={() => (removeOpen = false)}
+                >Keep it</Button
+            >
+            <Button
+                variant="destructive"
+                disabled={removing}
+                onclick={confirmRemove}
+            >
+                <TrashIcon /> Remove line
+            </Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

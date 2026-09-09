@@ -4,7 +4,7 @@
     import { Label } from "$lib/components/ui/label/index.js";
     import { Textarea } from "$lib/components/ui/textarea/index.js";
     import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import * as Select from "$lib/components/ui/select/index.js";
+    import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
 
     let {
@@ -40,11 +40,6 @@
     function initialOutcome() {
         return depositAmount ? "Deposit (Refund)" : "none";
     }
-    const outcomeLabel = $derived(
-        OUTCOMES.find((o) => o.value === outcome)?.label ??
-            "No deposit on file",
-    );
-
     function confirm() {
         onconfirm({ date, outcome, notes });
         open = false;
@@ -76,19 +71,12 @@
             {/if}
 
             <div class="space-y-1.5">
-                <Label>Deposit handling</Label>
-                <Select.Root type="single" bind:value={outcome}>
-                    <Select.Trigger class="w-full"
-                        >{outcomeLabel}</Select.Trigger
-                    >
-                    <Select.Content>
-                        {#each OUTCOMES as o (o.value)}
-                            <Select.Item value={o.value} label={o.label}
-                                >{o.label}</Select.Item
-                            >
-                        {/each}
-                    </Select.Content>
-                </Select.Root>
+                <Label for="cx-outcome">Deposit handling</Label>
+                <Combobox
+                    id="cx-outcome"
+                    bind:value={outcome}
+                    options={OUTCOMES}
+                />
             </div>
 
             <div class="space-y-1.5">

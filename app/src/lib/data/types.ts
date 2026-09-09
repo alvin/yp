@@ -197,6 +197,10 @@ export interface GuestSearchRow {
 	guestregion: string | null;
 	guestprimaryphone: string | null;
 	guestemailaddress: string | null;
+	/** 'name' matched the guest directly; 'shared reservation' matched a name they share a stay with. */
+	match_kind: 'name' | 'shared reservation';
+	/** Other names recorded on this guest's stays — the second name a booking is held under. */
+	other_names: string | null;
 }
 
 export interface AllFieldsRow {
