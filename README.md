@@ -1,4 +1,4 @@
-# Yellow Point Lodge — Front Desk System
+# Yellow Point Lodge — Front Desk System 
 
 Production reservation and daily-cash system for Yellow Point Lodge, replacing
 the lodge's MS Access workflow while preserving its printed outputs and
