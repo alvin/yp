@@ -29,16 +29,12 @@
     import StatusBadge from "$lib/components/app/status-badge.svelte";
     import ReservationLedger from "$lib/components/app/reservation-ledger.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
-    import ChargeBasket from "$lib/components/app/charge-basket.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
-    import { goto, invalidateAll } from "$app/navigation";
-    import { dateMed, dateShort, nightsBetween, oneYearAhead } from "$lib/format.js";
+    import { invalidateAll } from "$app/navigation";
+    import { bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
     import { ROOMS, roomById } from "$lib/data/reference.js";
     import { roomOptions } from "$lib/options.js";
-    import {
-        occupancySummaries,
-        reservationGuestSummaries,
-    } from "$lib/data/queries.js";
+    import { occupancySummaries } from "$lib/data/queries.js";
     import {
         addHousekeepingNote,
         addReservationGuest,
@@ -46,7 +42,6 @@
         cancelReservation,
         confirmReservation,
         createGuest,
-        rebookReservation,
         recordRoomMove,
         saveKitchenMeal,
         setGuestNotes,
@@ -54,7 +49,6 @@
         updateReservation,
         updateReservationGuestNotes,
     } from "$lib/data/mutations.js";
-    import { postPendingLines, type PendingLine } from "$lib/pending-charges.js";
     import type {
         GuestSearchRow,
         OccupancySummary,
@@ -191,74 +185,6 @@
             );
         } finally {
             savingDates = false;
-        }
-    }
-
-    // Re-book: new dates for the same guests; deposits transfer and the
-    // original reservation is cancelled (all handled in the database).
-    let rebookOpen = $state(false);
-    let rbArrival = $state("");
-    let rbDeparture = $state("");
-    let rbPending = $state<PendingLine[]>([]);
-    let rebooking = $state(false);
-    function openRebook() {
-        rbArrival = "";
-        rbDeparture = "";
-        rbPending = [];
-        rebookOpen = true;
-    }
-    async function doRebook() {
-        if (!rbArrival || !rbDeparture || rbDeparture <= rbArrival) {
-            toast.error("Enter valid new arrival and departure dates.");
-            return;
-        }
-        rebooking = true;
-        try {
-            const created = await rebookReservation(
-                s.reservationid,
-                rbArrival,
-                rbDeparture,
-                s.resbookedby,
-            );
-            // Any charge or deposit taken while re-booking goes onto the new
-            // stay.
-            let problem = "";
-            if (rbPending.length) {
-                try {
-                    const guests = await reservationGuestSummaries(
-                        created.reservationid,
-                    );
-                    const rgid =
-                        guests.find((g) => g.primaryguest)
-                            ?.reservationguestid ??
-                        guests[0]?.reservationguestid;
-                    if (!rgid) throw new Error("no guest on the new stay");
-                    await postPendingLines(rgid, rbPending, today);
-                } catch (e) {
-                    problem =
-                        e instanceof Error
-                            ? e.message
-                            : "the new charges did not post";
-                }
-            }
-            rebookOpen = false;
-            if (problem) {
-                toast.error(
-                    `Re-booked as #${created.resnumber}, but: ${problem}`,
-                );
-            } else {
-                toast.success(`Re-booked as #${created.resnumber}`, {
-                    description:
-                        "Deposit transferred; original reservation cancelled.",
-                });
-            }
-            await goto(`/reservations/${created.resnumber}`);
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not re-book.",
-            );
-        } finally {
-            rebooking = false;
         }
     }
 
@@ -498,7 +424,13 @@
                 <CalendarIcon /> Change dates
             </Button>
         {/if}
-        <Button variant="outline" size="sm" onclick={openRebook}>
+        <!-- Next season's stay, not a change to this one: a new reservation
+             carrying this party, room and dates forward. This one stands. -->
+        <Button
+            variant="outline"
+            size="sm"
+            href="/reservations/new?from={s.resnumber}"
+        >
             <RepeatIcon /> Re-book
         </Button>
         {#if !cancelled}
@@ -877,7 +809,7 @@
                         id="d-arr"
                         type="date"
                         bind:value={dArrival}
-                        max={oneYearAhead(today)}
+                        max={bookingHorizon(today)}
                     />
                 </div>
                 <div class="space-y-1.5">
@@ -909,48 +841,6 @@
                 disabled={savingDates || !dChanged || dNights <= 0}
             >
                 <CalendarIcon /> Save dates
-            </Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Re-book dialog -->
-<Dialog.Root bind:open={rebookOpen}>
-    <Dialog.Content class="sm:max-w-md">
-        <Dialog.Header>
-            <Dialog.Title>Re-book reservation #{s.resnumber}</Dialog.Title>
-            <Dialog.Description>
-                New dates for the same guests. Any deposit follows; this
-                reservation is cancelled.
-            </Dialog.Description>
-        </Dialog.Header>
-        <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
-                    <Label for="rb-arr">New arrival</Label>
-                    <Input id="rb-arr" type="date" bind:value={rbArrival} />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="rb-dep">New departure</Label>
-                    <Input
-                        id="rb-dep"
-                        type="date"
-                        bind:value={rbDeparture}
-                        min={rbArrival}
-                    />
-                </div>
-            </div>
-            <div class="space-y-2 border-t pt-3">
-                <Label>Charges & deposit</Label>
-                <ChargeBasket bind:lines={rbPending} />
-            </div>
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (rebookOpen = false)}
-                >Keep as is</Button
-            >
-            <Button onclick={doRebook} disabled={rebooking}>
-                <RepeatIcon /> Re-book
             </Button>
         </Dialog.Footer>
     </Dialog.Content>

@@ -3,7 +3,7 @@
 Production front desk system for Yellow Point Lodge, built with SvelteKit
 (Svelte 5) and Supabase. All business rules — reservation numbering, the
 one-year booking horizon, tax calculation, US→CDN conversion, deposit
-refund/transfer handling — live in the `ypl` database schema (triggers +
+refund/kept handling — live in the `ypl` database schema (triggers +
 RPCs), so the data stays consistent even when rows are edited directly in
 Supabase.
 

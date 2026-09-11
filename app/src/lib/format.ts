@@ -125,9 +125,27 @@ export function nightsBetween(from: string, to: string): number {
   return Math.round((b.getTime() - a.getTime()) / 86_400_000);
 }
 
-/** The latest date a new reservation may be booked (one year ahead, per policy). */
-export function oneYearAhead(d: string): string {
+/**
+ * The latest arrival a reservation may carry, per policy: a year from the
+ * given day plus a week of grace. Mirrors the check in ypl.reservations_autofill
+ * so the date input stops at the same day the database does. The grace covers
+ * the lodge's annual cadence — re-booking runs on a 52-week weekday, which
+ * from mid-stay lands a few days past a bare year.
+ */
+export function bookingHorizon(d: string): string {
   const dt = parse(d)!;
   dt.setFullYear(dt.getFullYear() + 1);
-  return toISO(dt);
+  return addDays(toISO(dt), 7);
+}
+
+/**
+ * The same date one year on, in the lodge's 52-week cadence — the same
+ * weekday rather than the same calendar date, which is how the lodge's
+ * seasons actually repeat. Steps again while the result is still in the past,
+ * so a stay picked out of an older season lands on the next one.
+ */
+export function nextSeason(d: string, notBefore?: string): string {
+  let next = addDays(d, 364);
+  while (notBefore && next < notBefore) next = addDays(next, 364);
+  return next;
 }

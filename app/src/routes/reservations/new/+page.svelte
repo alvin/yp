@@ -18,7 +18,7 @@
     import GuestSearch from "$lib/components/app/guest-search.svelte";
     import { BED_TYPES, GUEST_DIETS, SALUTATIONS } from "$lib/data/reference.js";
     import { roomOptions, textOptions } from "$lib/options.js";
-    import { getGuest } from "$lib/data/queries.js";
+    import { getGuest, guestKitchenMeal } from "$lib/data/queries.js";
     import {
         addHousekeepingNote,
         createGuest,
@@ -34,6 +34,7 @@
 
     function seed() {
         const g = data.guest;
+        const k = data.kitchen;
         return {
             attachedGuestId: g?.guestid ?? null,
             salutation: g?.guestsalutation ?? "",
@@ -47,9 +48,18 @@
             postal: g?.guestpczip ?? "",
             phone: g?.guestprimaryphone ?? "",
             email: g?.guestemailaddress ?? "",
+            kitchenMealId: k?.kitchenmealid ?? null,
+            diet: k?.guestdiet ?? "",
+            kitchenNotes: k?.kitchenmealnotes ?? "",
+            src: data.source,
         };
     }
     const i = seed();
+
+    // Re-booking arrives here with the stay it came from: same party, same
+    // room, next season's dates. All of it is editable, and the stay it came
+    // from is not touched — this saves a new reservation like any other.
+    const src = i.src;
 
     // Guest fields
     let attachedGuestId = $state<number | null>(i.attachedGuestId);
@@ -75,7 +85,10 @@
             // The search row carries only enough to recognise a guest. The
             // full record has the street address and the rest of the mailing
             // details the confirmation prints, so pull it before filling in.
-            const full = await getGuest(g.guestid);
+            const [full, meal] = await Promise.all([
+                getGuest(g.guestid),
+                guestKitchenMeal(g.guestid),
+            ]);
             attachedGuestId = g.guestid;
             salutation = full?.guestsalutation ?? "";
             firstName = full?.guestfirstname ?? g.guestfirstname ?? "";
@@ -88,6 +101,9 @@
             postal = full?.guestpczip ?? "";
             phone = full?.guestprimaryphone ?? g.guestprimaryphone ?? "";
             email = full?.guestemailaddress ?? g.guestemailaddress ?? "";
+            kitchenMealId = meal?.kitchenmealid ?? null;
+            diet = meal?.guestdiet ?? "";
+            kitchenNotes = meal?.kitchenmealnotes ?? "";
             guestQuery = "";
         } catch (e) {
             toast.error(
@@ -102,6 +118,8 @@
 
     function clearGuest() {
         attachedGuestId = null;
+        kitchenMealId = null;
+        diet = kitchenNotes = "";
         salutation =
             firstName =
             lastName =
@@ -117,25 +135,31 @@
     }
 
     // Reservation fields
-    let arrival = $state("");
-    let departure = $state("");
-    let adults = $state(2);
-    let children = $state(0);
-    let bedType = $state("Double");
+    let arrival = $state(src?.arrival ?? "");
+    let departure = $state(src?.departure ?? "");
+    let adults = $state(src?.numadults ?? 2);
+    let children = $state(src?.numchildren ?? 0);
+    let bedType = $state(src?.bedtype ?? "Double");
     let arrivalTime = $state("");
-    let groupName = $state("");
+    let groupName = $state(src?.groupname ?? "");
 
     // Booked-by initials (ypl.reservations.resbookedby), defaulted from the
     // signed-in staff account and editable before saving.
-    let bookedBy = $state("FD");
+    const BOOKED_BY_DEFAULT = "FD";
+    let bookedBy = $state(BOOKED_BY_DEFAULT);
     supabase.auth.getUser().then(({ data }) => {
         const email = data.user?.email;
-        if (email) bookedBy = email.slice(0, 2).toUpperCase();
+        // The account resolves after the screen is usable, so initials typed
+        // in the meantime are not overwritten.
+        if (email && bookedBy === BOOKED_BY_DEFAULT)
+            bookedBy = email.slice(0, 2).toUpperCase();
     });
 
     // Room
     const rooms = roomOptions();
-    let roomId = $state(rooms[0]?.value ?? "");
+    let roomId = $state(
+        src?.roomid ? String(src.roomid) : (rooms[0]?.value ?? ""),
+    );
     const salutationOptions = textOptions(SALUTATIONS);
     const bedTypeOptions = textOptions(BED_TYPES);
     const dietOptions = textOptions(GUEST_DIETS);
@@ -146,8 +170,12 @@
 
     // Housekeeping and diet notes are usually given while the booking is made,
     // so they are captured here and feed the same reports as later edits.
-    let diet = $state("");
-    let kitchenNotes = $state("");
+    // Diet is held against the guest, not the stay, so an attached guest shows
+    // what the kitchen already has and saving revises that record rather than
+    // adding a second one beside it.
+    let kitchenMealId = $state<number | null>(i.kitchenMealId);
+    let diet = $state(i.diet);
+    let kitchenNotes = $state(i.kitchenNotes);
     let housekeepingNotes = $state("");
 
     const nights = $derived(
@@ -200,6 +228,9 @@
                 groupname: groupName.trim() || null,
                 roomid: Number(roomId) || null,
                 numguests: adults + children,
+                // The stay this one was re-booked from, so the pair can be
+                // read back from either end.
+                notes: src ? `Re-booked from #${src.resnumber}` : null,
             });
             // Everything below happens after the reservation exists. If any
             // of it fails the booking still stands, so report what did not
@@ -226,6 +257,7 @@
                         guestid,
                         diet,
                         kitchenNotes.trim() || null,
+                        kitchenMealId,
                     );
                 } catch (e) {
                     problems.push(
@@ -274,7 +306,14 @@
 
 <div class="mb-5 flex items-center justify-between gap-3">
     <Button variant="ghost" size="sm" href="/"><ArrowLeftIcon /> Lookup</Button>
-    <h1 class="text-lg font-semibold">New reservation</h1>
+    <div class="text-center">
+        <h1 class="text-lg font-semibold">New reservation</h1>
+        {#if src}
+            <p class="text-muted-foreground text-xs">
+                Re-booked from #{src.resnumber}.
+            </p>
+        {/if}
+    </div>
     <Button onclick={save} disabled={!canSave}
         ><SaveIcon /> Save reservation</Button
     >

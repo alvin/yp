@@ -33,7 +33,9 @@ async function ensureStaffUser(): Promise<void> {
 }
 
 // Removes data left by previous test runs so day-scoped assertions start
-// clean. All test fixtures book as 'QA' and use ZZ-prefixed guest names.
+// clean. All test fixtures book as 'QA' and use ZZ-prefixed guest names — a
+// fixture that saves through a screen has to set the booked-by initials, or
+// its reservation survives this and pins its guest down.
 async function cleanPreviousRuns(): Promise<void> {
 	const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 		db: { schema: 'ypl' },
@@ -46,13 +48,11 @@ async function cleanPreviousRuns(): Promise<void> {
 			.or('resbookedby.eq.QA,resgroupname.like.explicit-%')
 			.limit(500);
 		if (!data?.length) break;
-		await db
-			.from('reservations')
-			.delete()
-			.in(
-				'reservationid',
-				data.map((r) => r.reservationid)
-			);
+		const ids = data.map((r) => r.reservationid);
+		// Left unchecked, a delete that cannot go through leaves this asking
+		// for the same rows for ever.
+		const { error } = await db.from('reservations').delete().in('reservationid', ids);
+		if (error) throw new Error(`could not clear ${ids.length} test reservations: ${error.message}`);
 	}
 	for (;;) {
 		const { data } = await db
@@ -63,7 +63,8 @@ async function cleanPreviousRuns(): Promise<void> {
 		if (!data?.length) break;
 		const ids = data.map((g) => g.guestid);
 		await db.from('kitchen_meals').delete().in('guestid', ids);
-		await db.from('guests').delete().in('guestid', ids);
+		const { error } = await db.from('guests').delete().in('guestid', ids);
+		if (error) throw new Error(`could not clear ${ids.length} test guests: ${error.message}`);
 	}
 }
 

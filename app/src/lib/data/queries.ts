@@ -151,6 +151,23 @@ export async function getGuest(guestid: number): Promise<Guest | undefined> {
 	return rows[0];
 }
 
+/** A guest's diet record. Kitchen meals are keyed by guest, not by stay, so
+ * this is what the kitchen already holds for them — one row, written once and
+ * revised, never a second row per booking (the kitchen report concatenates
+ * every row a guest has). */
+export async function guestKitchenMeal(guestid: number): Promise<KitchenMeal | undefined> {
+	const rows = unwrap(
+		await supabase
+			.from('kitchen_meals')
+			.select('*')
+			.eq('guestid', guestid)
+			.eq('kmarchive', false)
+			.order('kitchenmealid')
+			.limit(1)
+	) as KitchenMeal[];
+	return rows[0];
+}
+
 export async function reservationGuestSummaries(
 	reservationid: number
 ): Promise<ReservationGuestSummary[]> {

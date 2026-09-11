@@ -129,8 +129,8 @@ describe('record charges and deposits while booking', () => {
 
 	it('takes charges and a deposit while re-booking, onto the new stay', async () => {
 		const fx = await makeReservation({ nights: 2 });
-		// A deposit already held on the original stay: it transfers, and what
-		// is entered while re-booking lands beside it.
+		// A deposit already held on the stay being re-booked from: it stays
+		// there, and what is entered while re-booking lands on the new stay.
 		await rpc('record_payment', {
 			p_reservationguestid: fx.reservationguestid,
 			p_paymentcategory: 'Deposit (Received)',
@@ -141,21 +141,19 @@ describe('record charges and deposits while booking', () => {
 		});
 
 		await page.goto(APP_URL + `/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
-		await page.getByRole('button', { name: 'Re-book', exact: true }).click();
-		await page.locator('#rb-arr').waitFor({ timeout: 10_000 });
-		await page.fill('#rb-arr', addDays(fx.arrival, 30));
-		await page.fill('#rb-dep', addDays(fx.arrival, 33));
+		await page.getByRole('link', { name: 'Re-book', exact: true }).click();
+		await page.waitForURL(/\/reservations\/new\?from=\d+$/, { timeout: 20_000 });
+		await page.locator('#basket-add-payment').waitFor({ timeout: 10_000 });
+		await page.fill('#bb', 'QA');
 
-		const dialog = page.locator('[role=dialog]');
-		expect(await dialog.locator('#basket-add-item').isVisible()).toBe(true);
-		await dialog.locator('#basket-add-payment').click();
+		await page.click('#basket-add-payment');
 		await page.fill('#basket-amount', '60');
 		await page.getByRole('button', { name: /^Add Deposit/ }).click();
 		await expect
 			.poll(() => page.locator('[data-testid=basket-lines] li').count(), { timeout: 10_000 })
 			.toBe(1);
 
-		await dialog.getByRole('button', { name: 'Re-book', exact: true }).click();
+		await page.getByRole('button', { name: 'Save reservation' }).click();
 		await page.waitForURL(
 			(url) => /\/reservations\/\d+$/.test(url.pathname) && !url.pathname.endsWith(`/${fx.resnumber}`),
 			{ timeout: 30_000 }
@@ -164,7 +162,6 @@ describe('record charges and deposits while booking', () => {
 		const rebookedNumber = Number(page.url().split('/').pop());
 		const lines = await ledgerFor(await reservationIdOf(rebookedNumber));
 		const deposits = lines.filter((l) => l.line_type === 'Deposit (Received)');
-		// The transferred deposit and the one taken while re-booking.
-		expect(deposits.map((d) => Number(d.amount)).sort((a, b) => a - b)).toEqual([60, 80]);
+		expect(deposits.map((d) => Number(d.amount))).toEqual([60]);
 	});
 });

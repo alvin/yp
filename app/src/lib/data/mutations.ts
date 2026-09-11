@@ -187,23 +187,6 @@ export async function cancelReservation(
 	);
 }
 
-export async function rebookReservation(
-	reservationid: number,
-	arrival: string,
-	departure: string,
-	bookedby: string
-): Promise<{ reservationid: number; resnumber: number }> {
-	const rows = unwrap(
-		await supabase.rpc('rebook_reservation', {
-			p_reservationid: reservationid,
-			p_arrival: arrival,
-			p_departure: departure,
-			p_bookedby: bookedby
-		})
-	) as { reservationid: number; resnumber: number }[];
-	return rows[0];
-}
-
 // --- Rooms -------------------------------------------------------------------
 
 export async function assignRoom(

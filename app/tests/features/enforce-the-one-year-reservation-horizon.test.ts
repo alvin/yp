@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { addDays, makeReservation, rpc, staffClient, todayISO } from '../helpers/db';
 
 describe('enforce the one-year reservation horizon', () => {
-	it('rejects an arrival more than one year past the booking date', async () => {
+	it('rejects an arrival more than one year and a week ahead', async () => {
 		const guestid = await rpc<number>('create_guest', { p_lastname: `ZZHorizon-${Date.now()}` });
 		await expect(
 			rpc('create_reservation', {
@@ -30,6 +30,24 @@ describe('enforce the one-year reservation horizon', () => {
 		const fx = await makeReservation({
 			arrival: addDays(todayISO(), 300),
 			departure: addDays(todayISO(), 303)
+		});
+		expect(fx.resnumber).toBeGreaterThan(0);
+	});
+
+	it('allows the week of grace, so next season can be booked from mid-stay', async () => {
+		// 52 weeks on from an arrival a few days from now: past a bare year,
+		// inside the grace.
+		const fx = await makeReservation({
+			arrival: addDays(todayISO(), 370),
+			departure: addDays(todayISO(), 373)
+		});
+		expect(fx.resnumber).toBeGreaterThan(0);
+	});
+
+	it('checks the arrival date only, so a stay may run past the horizon', async () => {
+		const fx = await makeReservation({
+			arrival: addDays(todayISO(), 370),
+			departure: addDays(todayISO(), 420)
 		});
 		expect(fx.resnumber).toBeGreaterThan(0);
 	});
