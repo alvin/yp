@@ -4,9 +4,9 @@
 
 import type { ComboboxOption } from './components/ui/combobox/index.js';
 import {
+	BED_TYPES,
 	INVENTORY_ITEMS,
 	PAYMENT_CATEGORIES,
-	PAYMENT_CURRENCIES,
 	PAYMENT_TYPES,
 	ROOMS,
 	roomOptionLabel
@@ -14,9 +14,14 @@ import {
 import { itemLabel } from './inventory.js';
 import { money } from './format.js';
 
-/** Plain lookup values — salutations, diets, bed types. */
+/** Plain lookup values — salutations, diets. */
 export function textOptions(values: string[]): ComboboxOption[] {
 	return values.map((v) => ({ value: v, label: v }));
+}
+
+/** How the beds in the room are made up, in the lodge's words. */
+export function bedTypeOptions(): ComboboxOption[] {
+	return BED_TYPES.map((b) => ({ value: b.value, label: b.label }));
 }
 
 /** Every active room, in lodge order. */
@@ -41,9 +46,4 @@ export function paymentCategoryOptions(): ComboboxOption[] {
 /** How the money was tendered. */
 export function tenderTypeOptions(): ComboboxOption[] {
 	return textOptions(PAYMENT_TYPES.map((t) => t.paymenttype));
-}
-
-/** The funds a payment was taken in. */
-export function currencyOptions(): ComboboxOption[] {
-	return PAYMENT_CURRENCIES.map((c) => ({ value: c, label: `${c} dollars` }));
 }

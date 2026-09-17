@@ -1,5 +1,7 @@
 // Story: spec/features/represent-multi-name-reservation-participation-within-history-co.feature
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Page } from 'playwright';
+import { APP_URL, closeApp, openAppPage } from '../helpers/app';
 import { makeReservation, rpc, uid, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
@@ -29,5 +31,27 @@ describe('represent multi-name reservation participation within history context'
 			p_guestid: g2
 		});
 		expect(rows.find((r) => r.resnumber === fx.resnumber)?.co_guests).toContain(fx.lastname);
+	});
+
+	describe('on the guest history screen', () => {
+		let page: Page;
+
+		beforeAll(async () => {
+			page = await openAppPage();
+			await page.goto(`${APP_URL}/guests/${g2}`, { waitUntil: 'networkidle' });
+		});
+
+		afterAll(async () => {
+			await closeApp(page);
+		});
+
+		it('names the others on the stay, in the wording used beside a name match', async () => {
+			const row = page.locator('a', { hasText: `#${fx.resnumber}` }).first();
+			await row.waitFor({ timeout: 15_000 });
+			const text = (await row.textContent()) ?? '';
+			expect(text).toContain(`with ${fx.lastname}`);
+			// 'Shared' is reserved for a room two reservations hold at once.
+			expect(text).not.toContain('Shared');
+		});
 	});
 });

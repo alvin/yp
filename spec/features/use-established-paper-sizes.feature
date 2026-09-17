@@ -11,5 +11,6 @@ Feature: use established paper sizes
 
   Scenario: Acceptance criteria
     Then Each document type prints in its established paper size.
+    And Daily reports print on letter paper; guest slips and folios print on the smaller folio paper.
     And The printed output stays consistent with the document’s normal layout.
     And Staff do not need to adjust paper size manually for each print job.

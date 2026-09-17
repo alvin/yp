@@ -28,13 +28,17 @@
     import Money from "$lib/components/app/money.svelte";
     import StatusBadge from "$lib/components/app/status-badge.svelte";
     import ReservationLedger from "$lib/components/app/reservation-ledger.svelte";
+    import SharedRoomBadge from "$lib/components/app/shared-room-badge.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
     import { invalidateAll } from "$app/navigation";
     import { bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
-    import { ROOMS, roomById } from "$lib/data/reference.js";
+    import { ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
     import { roomOptions } from "$lib/options.js";
-    import { occupancySummaries } from "$lib/data/queries.js";
+    import {
+        occupancySummaries,
+        sharedRoomOccupancies,
+    } from "$lib/data/queries.js";
     import {
         addHousekeepingNote,
         addReservationGuest,
@@ -52,6 +56,7 @@
     import type {
         GuestSearchRow,
         OccupancySummary,
+        SharedRoom,
     } from "$lib/data/types.js";
 
     let { data } = $props();
@@ -63,6 +68,7 @@
         return {
             cancelled: d.summary.rescancelled,
             occupancy: d.occupancy,
+            shared: d.shared,
             mIn: d.today,
             mOut: d.summary.resdeparturedate,
             kitchenText: d.kitchen
@@ -178,7 +184,10 @@
                 description: `${dateMed(dArrival)} → ${dateMed(dDeparture)} · ${dNights} night${dNights === 1 ? "" : "s"}`,
             });
             await invalidateAll();
-            occupancy = await occupancySummaries(s.reservationid);
+            [occupancy, shared] = await Promise.all([
+                occupancySummaries(s.reservationid),
+                sharedRoomOccupancies(s.reservationid),
+            ]);
         } catch (e) {
             toast.error(
                 e instanceof Error ? e.message : "Could not change the dates.",
@@ -191,6 +200,19 @@
     // Rooms: mid-stay moves (split the current occupancy at the move date)
     // or an additional room for the same stay.
     let occupancy = $state<OccupancySummary[]>(i.occupancy);
+
+    // Rooms this stay holds at the same time as another reservation. The lodge
+    // does this deliberately as well as by accident, so it is shown, not barred.
+    let shared = $state<SharedRoom[]>(i.shared);
+    const sharedByOccupancy = $derived.by(() => {
+        const byId = new Map<number, SharedRoom[]>();
+        for (const sh of shared) {
+            const list = byId.get(sh.occupancyid);
+            if (list) list.push(sh);
+            else byId.set(sh.occupancyid, [sh]);
+        }
+        return byId;
+    });
     let moveOpen = $state(false);
     let mMode = $state<"move" | "add">("move");
     let mFrom = $state("");
@@ -247,7 +269,10 @@
                     mNotes || null,
                 );
             }
-            occupancy = await occupancySummaries(s.reservationid);
+            [occupancy, shared] = await Promise.all([
+                occupancySummaries(s.reservationid),
+                sharedRoomOccupancies(s.reservationid),
+            ]);
             moveOpen = false;
             toast.success(
                 `${mMode === "move" ? "Room move recorded" : "Room added"} — ${room.roomname}${room.roomnumber ? " " + room.roomnumber : ""}`,
@@ -542,7 +567,7 @@
                         label="Guests"
                         value={`${s.numadults} adult${s.numadults === 1 ? "" : "s"}${s.numchildren ? `, ${s.numchildren} child` : ""}`}
                     />
-                    <Field label="Bed type" value={s.bedtype} />
+                    <Field label="Beds" value={bedTypeLabel(s.bedtype)} />
                     <Field label="Arrival time" value={s.resarrivaltime} />
                     <Field label="Booked by" value={s.resbookedby} />
                     <Field
@@ -585,6 +610,9 @@
                                         >{o.roomshorthand}</span
                                     >{/if}
                                 <StatusBadge status={o.status_today} />
+                                {#if sharedByOccupancy.get(o.occupancyid)}
+                                    <SharedRoomBadge />
+                                {/if}
                             </div>
                             <div class="text-muted-foreground mt-0.5 text-xs">
                                 {dateShort(o.occupancyin)} → {dateShort(
@@ -595,6 +623,22 @@
                                     : "s"}
                                 {#if o.occupancynotes}· {o.occupancynotes}{/if}
                             </div>
+                            {#each sharedByOccupancy.get(o.occupancyid) ?? [] as sh (sh.other_reservationid)}
+                                <div
+                                    data-testid="shared-room"
+                                    class="text-destructive mt-0.5 text-xs"
+                                >
+                                    <a
+                                        class="hover:underline"
+                                        href="/reservations/{sh.other_resnumber}"
+                                        >#{sh.other_resnumber}
+                                        {sh.other_guest}</a
+                                    >
+                                    · {dateShort(sh.shared_in)} → {dateShort(
+                                        sh.shared_out,
+                                    )}
+                                </div>
+                            {/each}
                         </div>
                     </div>
                 {/each}
@@ -863,7 +907,7 @@
                     type="button"
                     class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {mMode ===
                     'move'
-                        ? 'bg-background shadow-sm'
+                        ? 'bg-field shadow-sm'
                         : 'text-muted-foreground'}"
                     onclick={() => (mMode = "move")}>Move rooms</button
                 >
@@ -871,7 +915,7 @@
                     type="button"
                     class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {mMode ===
                     'add'
-                        ? 'bg-background shadow-sm'
+                        ? 'bg-field shadow-sm'
                         : 'text-muted-foreground'}"
                     onclick={() => (mMode = "add")}>Add another room</button
                 >

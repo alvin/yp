@@ -10,6 +10,7 @@
 <svelte:head><title>Statement · #{h.resnumber}</title></svelte:head>
 
 <ReportShell
+	stock="a5"
 	title="Checkout Bill #{h.resnumber}"
 	tabs={guestDocTabs(h.resnumber, 'checkout-bill')}
 	backHref="/reservations/{h.resnumber}"

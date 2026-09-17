@@ -7,7 +7,6 @@ interface NameRow {
 	guestid: number;
 	guest_name: string;
 	guestlastname: string;
-	match_kind: 'name' | 'shared reservation';
 	other_names: string | null;
 }
 
@@ -18,6 +17,8 @@ function search(query: string): Promise<NameRow[]> {
 let fx: Fixture; // booked under the first partner's name
 let partnerLast: string;
 let partnerId: number;
+let doubleLast: string;
+let doubleId: number;
 
 beforeAll(async () => {
 	const u = uid();
@@ -32,42 +33,44 @@ beforeAll(async () => {
 		p_reservationid: fx.reservationid,
 		p_guestid: partnerId
 	});
+
+	// A double surname recorded in one field, the lodge's other way of holding
+	// a booking under two names. Guest last names are varchar(25), so the
+	// unique tail is trimmed to keep both halves inside it.
+	const t = u.slice(-4);
+	doubleLast = `ZZDoe${t} ZZRoe${t}`;
+	doubleId = await rpc<number>('create_guest', {
+		p_lastname: doubleLast,
+		p_firstname: 'Sam'
+	});
 });
 
 describe('include second reservation name in guest search', () => {
-	it('returns the party when the second name on the stay is searched', async () => {
-		const rows = await search(partnerLast);
-		const ids = rows.map((r) => r.guestid);
-		expect(ids).toContain(partnerId);
-		// The name the booking is actually filed under comes back too.
-		expect(ids).toContain(fx.guestid);
+	it('finds the person of that name from either name on the stay', async () => {
+		expect((await search(partnerLast)).map((r) => r.guestid)).toContain(partnerId);
+		expect((await search(fx.lastname)).map((r) => r.guestid)).toContain(fx.guestid);
 	});
 
-	it('returns the party when the name the booking is filed under is searched', async () => {
-		const ids = (await search(fx.lastname)).map((r) => r.guestid);
-		expect(ids).toContain(fx.guestid);
-		expect(ids).toContain(partnerId);
-	});
-
-	it('marks a guest reached through the other name on the stay', async () => {
-		const rows = await search(partnerLast);
-		expect(rows.find((r) => r.guestid === partnerId)!.match_kind).toBe('name');
-		expect(rows.find((r) => r.guestid === fx.guestid)!.match_kind).toBe('shared reservation');
-	});
-
-	it('lists direct name matches before names reached through a shared stay', async () => {
-		const rows = await search(partnerLast);
-		const direct = rows.findIndex((r) => r.guestid === partnerId);
-		const shared = rows.findIndex((r) => r.guestid === fx.guestid);
-		expect(direct).toBeLessThan(shared);
-		// No 'name' match may appear after a 'shared reservation' one.
-		const firstShared = rows.findIndex((r) => r.match_kind === 'shared reservation');
-		expect(rows.slice(firstShared).every((r) => r.match_kind === 'shared reservation')).toBe(true);
+	it('finds a double surname from either half of it', async () => {
+		const [first, second] = doubleLast.split(' ');
+		expect((await search(first)).map((r) => r.guestid)).toContain(doubleId);
+		expect((await search(second)).map((r) => r.guestid)).toContain(doubleId);
 	});
 
 	it('shows the other names each match is booked with', async () => {
+		const partner = (await search(partnerLast)).find((r) => r.guestid === partnerId)!;
+		expect(partner.other_names).toContain(fx.lastname);
+		const booked = (await search(fx.lastname)).find((r) => r.guestid === fx.guestid)!;
+		expect(booked.other_names).toContain(partnerLast);
+	});
+
+	it('returns the people it names and no one else', async () => {
+		// Searching one partner does not drag the other into the list: they are
+		// found by their own name, with the stay named beside it.
 		const rows = await search(partnerLast);
-		expect(rows.find((r) => r.guestid === partnerId)!.other_names).toContain(fx.lastname);
-		expect(rows.find((r) => r.guestid === fx.guestid)!.other_names).toContain(partnerLast);
+		expect(rows.map((r) => r.guestid)).not.toContain(fx.guestid);
+		for (const r of rows) {
+			expect(r.guest_name.toLowerCase()).toContain(partnerLast.toLowerCase());
+		}
 	});
 });

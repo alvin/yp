@@ -1,7 +1,8 @@
 -- =============================================================================
 -- business_logic_smoke.sql
--- End-to-end smoke test of the ypl business-logic layer (migration 0005).
--- Run against a database with migrations 0001–0005 and seed.sql applied:
+-- End-to-end smoke test of the ypl business-logic layer (migration 0005 and
+-- the refinements layered over it).
+-- Run against a database with migrations 0001–0010 and seed.sql applied:
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/business_logic_smoke.sql
 -- Everything runs in one transaction and rolls back — no data is left behind.
 -- =============================================================================
@@ -294,6 +295,59 @@ begin
     'removed payment was deleted rather than archived';
 
   ------------------------------------------------------------------
+  -- A room held by two reservations over nights they both occupy
+  --
+  -- Scoped to this run's own bookings throughout: the database this runs
+  -- against carries the lodge's real history, and rooms genuinely are shared.
+  ------------------------------------------------------------------
+  declare
+    v_shared_res integer;
+    v_turnover_res integer;
+    v_shared_room integer;
+    v_in date;
+    v_out date;
+  begin
+    select o.roomid, o.occupancyin::date, o.occupancyout::date
+      into strict v_shared_room, v_in, v_out
+      from ypl.room_assignments o
+      join ypl.reservation_guests rg on rg.reservationguestid = o.reservationguestid
+     where rg.reservationid = v_res.reservationid
+       and not o.occupancyarchive
+     limit 1;
+
+    -- The client's case: two parties in one cabin on the same dates.
+    select reservationid into strict v_shared_res
+      from ypl.create_reservation(v_guestid, v_in, v_out, 'QA', p_roomid => v_shared_room);
+    assert exists (
+      select 1 from ypl.shared_room_occupancies(v_res.reservationid)
+       where other_reservationid = v_shared_res
+    ), 'a second booking in the same room on the same dates was not reported as shared';
+    assert exists (
+      select 1 from ypl.shared_room_occupancies(v_shared_res)
+       where other_reservationid = v_res.reservationid
+    ), 'the second booking does not see the share from its own side';
+    assert (select shared_room from ypl.search_by_date(v_in, 'in_house')
+             where resnumber = v_res.resnumber),
+      'date search did not carry the shared-room flag';
+
+    -- A party arriving the day this one leaves only touches it.
+    select reservationid into strict v_turnover_res
+      from ypl.create_reservation(v_guestid, v_out, v_out + 2, 'QA', p_roomid => v_shared_room);
+    assert not exists (
+      select 1 from ypl.shared_room_occupancies(v_res.reservationid)
+       where other_reservationid = v_turnover_res
+    ), 'a turnover was reported as a shared room';
+
+    -- A cancelled booking does not make a room look shared.
+    perform ypl.cancel_reservation(v_shared_res, current_date);
+    assert not exists (
+      select 1 from ypl.shared_room_occupancies(v_res.reservationid)
+       where other_reservationid = v_shared_res
+    ), 'a cancelled booking still makes the room look shared';
+    perform ypl.cancel_reservation(v_turnover_res, current_date);
+  end;
+
+  ------------------------------------------------------------------
   -- Notes
   ------------------------------------------------------------------
   perform ypl.add_housekeeping_note(v_res.reservationguestid, 'Twin beds needed');
@@ -308,6 +362,8 @@ begin
   ------------------------------------------------------------------
   perform * from ypl.report_reservation_confirmation(v_res.reservationid);
   perform * from ypl.report_check_in_folio(v_res.reservationid);
+  perform * from ypl.report_stay_rooms(v_res.reservationid);
+  perform * from ypl.report_folio_receipts(v_res.reservationid);
   perform * from ypl.report_checkout_bill_header(v_res.reservationid);
   perform * from ypl.report_checkout_bill_lines(v_res.reservationid);
   perform * from ypl.report_cancellation_notice(v_res2.reservationid);
@@ -327,6 +383,9 @@ begin
   perform * from ypl.search_guests_by_name('-MOKE SMITH');
   perform * from ypl.search_all_fields('SMOKE');
   perform * from ypl.search_all_fields('SMOKE LADYSMITH');
+  perform * from ypl.search_all_fields('(250) 555-0199');
+  perform * from ypl.search_all_fields(v_guestid::text);
+  perform * from ypl.shared_room_occupancies(v_res.reservationid);
   perform * from ypl.search_by_date(current_date, 'in_house');
   perform * from ypl.search_by_date_range(current_date, current_date + 30, 'overlap');
   perform * from ypl.guest_history(v_guestid, current_date);

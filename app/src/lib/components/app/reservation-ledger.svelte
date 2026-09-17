@@ -20,7 +20,7 @@
         postRoomNights,
         recordPayment,
     } from "$lib/data/mutations.js";
-    import { round2, usdToCdn } from "$lib/charges.js";
+    import { round2 } from "$lib/charges.js";
     import {
         INV_TYPE_TO_TRANSTYPE,
         ROOMS,
@@ -28,7 +28,6 @@
         roomById,
     } from "$lib/data/reference.js";
     import {
-        currencyOptions,
         itemOptions,
         paymentCategoryOptions,
         roomOptions,
@@ -117,7 +116,6 @@
     const items = itemOptions();
     const categories = paymentCategoryOptions();
     const tenders = tenderTypeOptions();
-    const currencies = currencyOptions();
     const guestPickerOptions = $derived(
         reservationGuests.map((g) => ({
             value: String(g.reservationguestid),
@@ -176,9 +174,7 @@
     let payOpen = $state(false);
     let pCategory = $state("Payment (Regular)");
     let pType = $state("Visa");
-    let pCurrency = $state("Canadian");
     let pAmount = $state(0);
-    let pCdn = $state(0);
     let pDate = $state("");
     let pNotes = $state("");
     let pGuest = $state("");
@@ -186,19 +182,12 @@
     function openPayment() {
         pCategory = "Payment (Regular)";
         pType = "Visa";
-        pCurrency = "Canadian";
         pAmount = 0;
-        pCdn = 0;
         pDate = today;
         pNotes = "";
         pGuest = String(defaultGuest);
         payOpen = true;
     }
-
-    $effect(() => {
-        if (pCurrency === "US") pCdn = usdToCdn(Number(pAmount) || 0);
-        else pCdn = round2(Number(pAmount) || 0);
-    });
 
     async function savePayment() {
         const amount = round2(Number(pAmount) || 0);
@@ -212,7 +201,6 @@
                 pCategory,
                 pType,
                 amount,
-                pCurrency,
                 pDate,
                 pNotes.trim() || null,
             );
@@ -376,7 +364,7 @@
                     type="button"
                     class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {chargeKind ===
                     'room'
-                        ? 'bg-background shadow-sm'
+                        ? 'bg-field shadow-sm'
                         : 'text-muted-foreground'}"
                     onclick={() => (chargeKind = "room")}>Room night</button
                 >
@@ -384,7 +372,7 @@
                     type="button"
                     class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {chargeKind ===
                     'item'
-                        ? 'bg-background shadow-sm'
+                        ? 'bg-field shadow-sm'
                         : 'text-muted-foreground'}"
                     onclick={() => (chargeKind = "item")}>Item / extra</button
                 >
@@ -484,7 +472,7 @@
                     options={categories}
                 />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
                 <div class="space-y-1.5">
                     <Label for="p-type">Tender type</Label>
                     <Combobox
@@ -494,16 +482,6 @@
                     />
                 </div>
                 <div class="space-y-1.5">
-                    <Label for="p-cur">Funds</Label>
-                    <Combobox
-                        id="p-cur"
-                        bind:value={pCurrency}
-                        options={currencies}
-                    />
-                </div>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-                <div class="space-y-1.5">
                     <Label for="p-amt">Amount</Label>
                     <Input
                         id="p-amt"
@@ -511,17 +489,6 @@
                         step="0.01"
                         min="0"
                         bind:value={pAmount}
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="p-cdn">CDN value (est.)</Label>
-                    <Input
-                        id="p-cdn"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        bind:value={pCdn}
-                        disabled
                     />
                 </div>
                 <div class="space-y-1.5">

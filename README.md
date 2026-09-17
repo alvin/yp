@@ -8,7 +8,7 @@ operating habits.
 |---|---|
 | `app/` | The front desk web app (SvelteKit + Supabase). See `app/README.md` for setup and run instructions. |
 | `supabase/` | The production data layer: migrations (schema, views/RPCs, business-logic triggers), seed, Access migration tooling, and smoke tests. See `supabase/README.md`. |
-| `spec/` | The living product spec (personas, 114 features, 24 wireframes), synced with UserForge. |
+| `spec/` | The living product spec (personas, 122 features, 24 wireframes), synced with UserForge. |
 | `original_spec/` | The client's original requirements, wireframes, and printed report samples — the fidelity reference for every printed output. |
 | `features/` | The client's original feature/question files. |
 | `legacy-db/` | The Access source database (`.accdb`) and its exported schema. |

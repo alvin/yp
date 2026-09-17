@@ -13,3 +13,6 @@ Feature: show date match type
     Then Each result row shows whether the stay matches as an arrival, departure, or in-house occupancy.
     And The match type is visible without opening the reservation.
     And The match type corresponds to the reason the stay was returned in the search.
+    And A list holding more than one kind of match is broken into a section per kind, each under its own heading, in the order the day runs.
+    And A row under a heading is not labelled with its kind a second time.
+    And A list of a single kind is not broken into sections; the heading above it already says which it is.

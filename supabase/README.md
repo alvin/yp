@@ -30,6 +30,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0007_note_text.sql` | Converts Access rich-text notes to plain text and keeps them that way |
 | `migrations/0008_input_refinements.sql` | Front-desk input refinements from live use: forgiving search terms, multi-keyword and second-name search, stay dates that carry their rooms, loud removal of lines entered in error |
 | `migrations/0009_rebooking.sql` | Re-booking is next season's stay rather than a change to this one: `rebook_reservation` dropped, booking horizon narrowed to the arrival date with a week of grace |
+| `migrations/0010_output_refinements.sql` | Printed-output and lookup refinements from live use: every receipt and the diet on the check-in folio, the rooms of a stay on the folio and confirmation, room-named charges on the check-out bill, the In House report ordered for section headings, rooms two reservations hold at once, phone numbers matched however punctuated, guest number searchable, company no longer searched |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -51,6 +52,7 @@ Apply migrations in filename order:
 7. `0007_note_text.sql`
 8. `0008_input_refinements.sql`
 9. `0009_rebooking.sql`
+10. `0010_output_refinements.sql`
 
 Then load `seed.sql` for repeatable reference/configuration data.
 
@@ -96,6 +98,33 @@ and every report while the correction stays auditable. Both raise when the line
 is already gone rather than silently doing nothing.
 Notes: `add_housekeeping_note`, `archive_housekeeping_note`,
 `save_kitchen_meal`, `archive_kitchen_meal`.
+
+### Read helpers worth knowing (0010)
+
+`report_stay_rooms(p_reservationid)` — every room a stay occupies with its own
+dates and party size, in stay order. The check-in folio and the confirmation
+print it, so a party moving mid-stay reads the whole stay off the slip; a stay
+that never moves returns the single row those documents always showed.
+
+`report_folio_receipts(p_reservationid)` — deposits, prepayments and gift
+certificates received against a stay, oldest first. The check-in folio prints
+all of them, not the deposit alone.
+
+`shared_room_occupancies(p_reservationid)` — room windows on this stay that
+another live reservation also holds for at least one night, with the party
+sharing it. The lodge shares rooms on purpose as well as by accident, so this
+reports the fact and nothing prevents it. Two stays that only meet at a
+turnover — one leaving the day the next arrives — are not sharing; the overlap
+has to be a night both parties hold. `search_by_date` carries the same fact as
+a `shared_room` flag.
+
+`search_terms(p_query)` / `digits_only(text)` / `digits_pattern(text)` —
+keyword normalization behind `search_all_fields`. A telephone number matches
+however either side is punctuated; an entry that is nothing but a number is one
+search term, not one per space. `search_terms` is plpgsql with an explicit
+`rows 3` for a reason: an inlinable SQL function hands its body to the planner,
+`regexp_split_to_table`'s default guess of a thousand rows follows, and the
+resulting plan takes half a minute on a one-letter search.
 
 ### Smoke test
 
@@ -240,7 +269,7 @@ python3 tools/run_remote_sql.py <project-ref> \
   migrations/0003_views_and_reports.sql migrations/0004_security.sql \
   migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
   migrations/0007_note_text.sql migrations/0008_input_refinements.sql \
-  migrations/0009_rebooking.sql seed.sql
+  migrations/0009_rebooking.sql migrations/0010_output_refinements.sql seed.sql
 ```
 
 Two things the Management API cannot do, because they need a *direct* session:

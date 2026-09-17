@@ -108,4 +108,4 @@
 	<b>Total:</b><span class="blank"></span>
 </p>
 <p>GST # {h.gst_registration_number}</p>
-<p class="center" style="font-size: 26px; margin-top: 60px">Thank you for staying with us.</p>
+<p class="center standoff" style="font-size: 26px; --standoff: 60px">Thank you for staying with us.</p>

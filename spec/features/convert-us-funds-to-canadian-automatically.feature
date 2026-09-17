@@ -13,3 +13,4 @@ Feature: convert US funds to Canadian automatically
     And A Canadian payment carries its own amount as the Canadian value.
     And Changing the amount, currency, or date recalculates the Canadian value.
     And The payment code is derived from the payment category automatically.
+    And The payment screens take Canadian funds only; the conversion stands for records already on file and for rows written directly to the database.

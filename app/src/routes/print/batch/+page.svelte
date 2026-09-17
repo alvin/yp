@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -12,14 +13,16 @@
 	import KitchenBody from '$lib/components/reports/kitchen-body.svelte';
 	import ManualSalesBody from '$lib/components/reports/manual-sales-body.svelte';
 	import { dateMed } from '$lib/format.js';
+	import { STOCK_LABEL, type PaperStock } from '$lib/print-stock.js';
 	import '$lib/report.css';
 
 	let { data } = $props();
 
 	const reportCount = $derived(data.reports ? 4 : 0);
-	const totalPages = $derived(
-		reportCount + data.confirmations.length + data.folios.length + data.bills.length
+	const guestDocCount = $derived(
+		data.confirmations.length + data.folios.length + data.bills.length
 	);
+	const totalPages = $derived(reportCount + guestDocCount);
 
 	const countLine = $derived.by(() => {
 		if (!totalPages) return 'Nothing to print';
@@ -34,6 +37,26 @@
 		return `${totalPages} page${totalPages === 1 ? '' : 's'} ready: ${parts.join(' · ')}`;
 	});
 
+	const pagesIn: Record<PaperStock, number> = $derived({
+		letter: reportCount,
+		a5: guestDocCount
+	});
+
+	// A browser cannot pick a printer, so each stock prints on its own: the
+	// print action carries that stock's page size and hides the other group,
+	// and the operator sends it to the tray holding that paper.
+	let printing = $state<PaperStock | null>(null);
+
+	async function printStock(stock: PaperStock) {
+		printing = stock;
+		await tick();
+		try {
+			window.print();
+		} finally {
+			printing = null;
+		}
+	}
+
 	function changeDate(d: string) {
 		if (!d) return;
 		const params = new URLSearchParams(page.url.searchParams);
@@ -44,16 +67,17 @@
 
 <svelte:head>
 	<title>Batch print · {dateMed(data.date)}</title>
-	<!-- One @page for the whole batch: per-page orientation is unreliable across
-	     browsers, so landscape reports reflow into portrait letter. Footers must
-	     also leave print's fixed positioning, or every report's footer would
-	     repeat on every sheet of the batch. -->
+	<!-- One @page per print action: per-page orientation is unreliable across
+	     browsers, so landscape reports reflow into portrait. Footers must also
+	     leave print's fixed positioning, or every report's footer would repeat
+	     on every sheet of the batch. -->
 	{@html `<style>
-		@page { size: letter; margin: 0.5in; }
+		@page { size: ${printing === 'a5' ? 'A5' : 'letter'}; margin: 0.5in; }
 		@media print {
 			.report-page { page-break-after: always; }
 			.report-page:last-child { page-break-after: auto; }
 			.report-page .footer { position: static; margin-top: 24px; }
+			${printing ? `.batch-group:not([data-stock="${printing}"]) { display: none !important; }` : ''}
 		}
 	</style>`}
 </svelte:head>
@@ -75,10 +99,23 @@
 					type="date"
 					value={data.date}
 					onchange={(e) => changeDate(e.currentTarget.value)}
-					class="h-8 rounded-md border bg-background px-2 text-sm shadow-xs"
+					class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
 				/>
-				<Button size="sm" disabled={!totalPages} onclick={() => window.print()}>
-					<PrinterIcon /> Print
+				<Button
+					size="sm"
+					data-testid="print-letter"
+					disabled={!pagesIn.letter}
+					onclick={() => printStock('letter')}
+				>
+					<PrinterIcon /> {STOCK_LABEL.letter}
+				</Button>
+				<Button
+					size="sm"
+					data-testid="print-a5"
+					disabled={!pagesIn.a5}
+					onclick={() => printStock('a5')}
+				>
+					<PrinterIcon /> {STOCK_LABEL.a5}
 				</Button>
 			</div>
 		</div>
@@ -86,7 +123,7 @@
 
 	{#if !totalPages}
 		<div
-			class="no-print mx-auto mt-24 max-w-md rounded-lg border border-dashed bg-background p-8 text-center"
+			class="no-print mx-auto mt-24 max-w-md rounded-lg border border-dashed bg-card p-8 text-center"
 		>
 			<p class="text-sm font-medium">Nothing to print for {dateMed(data.date)}</p>
 			<p class="text-muted-foreground mt-1 text-sm">
@@ -95,41 +132,59 @@
 		</div>
 	{:else}
 		{#if data.reports}
-			<div class="batch-caption landscape no-print">Housekeeping Report</div>
-			<div class="report-page landscape">
-				<HousekeepingBody date={data.date} rows={data.reports.housekeeping} />
-			</div>
-			<div class="batch-caption landscape no-print">In House Report</div>
-			<div class="report-page landscape">
-				<InHouseBody date={data.date} rows={data.reports.inHouse} />
-			</div>
-			<div class="batch-caption landscape no-print">Kitchen/Meal Report</div>
-			<div class="report-page landscape">
-				<KitchenBody
-					date={data.date}
-					rows={data.reports.kitchenRows}
-					totalGuests={data.reports.kitchenTotalGuests}
-				/>
-			</div>
-			<div class="batch-caption no-print">Manual Sales List</div>
-			<div class="report-page">
-				<ManualSalesBody date={data.date} rows={data.reports.manualSales} />
+			<div class="batch-group" data-stock="letter" data-testid="group-letter">
+				<div class="batch-heading no-print">
+					{STOCK_LABEL.letter} · letter · {pagesIn.letter} pages
+				</div>
+				<div class="batch-caption landscape no-print">Housekeeping Report</div>
+				<div class="report-page landscape">
+					<HousekeepingBody date={data.date} rows={data.reports.housekeeping} />
+				</div>
+				<div class="batch-caption landscape no-print">In House Report</div>
+				<div class="report-page landscape">
+					<InHouseBody date={data.date} rows={data.reports.inHouse} />
+				</div>
+				<div class="batch-caption landscape no-print">Kitchen/Meal Report</div>
+				<div class="report-page landscape">
+					<KitchenBody
+						date={data.date}
+						rows={data.reports.kitchenRows}
+						totalGuests={data.reports.kitchenTotalGuests}
+					/>
+				</div>
+				<div class="batch-caption no-print">Manual Sales List</div>
+				<div class="report-page">
+					<ManualSalesBody date={data.date} rows={data.reports.manualSales} />
+				</div>
 			</div>
 		{/if}
-		{#each data.confirmations as r (r.resnumber)}
-			<div class="batch-caption no-print">Confirmation #{r.resnumber} — {r.guest}</div>
-			<div class="report-page"><ConfirmationBody {r} /></div>
-		{/each}
-		{#each data.folios as r (r.resnumber)}
-			<div class="batch-caption no-print">Check-in Folio #{r.resnumber} — {r.guest}</div>
-			<div class="report-page"><CheckInFolioBody {r} /></div>
-		{/each}
-		{#each data.bills as bill (bill.header.resnumber)}
-			<div class="batch-caption no-print">
-				Checkout Bill #{bill.header.resnumber} — {bill.header.guest}
+		{#if guestDocCount}
+			<div class="batch-group" data-stock="a5" data-testid="group-a5">
+				<div class="batch-heading no-print">
+					{STOCK_LABEL.a5} · A5 · {pagesIn.a5} pages
+				</div>
+				{#each data.confirmations as c (c.report.resnumber)}
+					<div class="batch-caption no-print">
+						Confirmation #{c.report.resnumber} — {c.report.guest}
+					</div>
+					<div class="report-page a5"><ConfirmationBody r={c.report} rooms={c.rooms} /></div>
+				{/each}
+				{#each data.folios as f (f.report.resnumber)}
+					<div class="batch-caption no-print">
+						Check-in Folio #{f.report.resnumber} — {f.report.guest}
+					</div>
+					<div class="report-page a5">
+						<CheckInFolioBody r={f.report} rooms={f.rooms} receipts={f.receipts} />
+					</div>
+				{/each}
+				{#each data.bills as bill (bill.header.resnumber)}
+					<div class="batch-caption no-print">
+						Checkout Bill #{bill.header.resnumber} — {bill.header.guest}
+					</div>
+					<div class="report-page a5"><CheckoutBillBody h={bill.header} lines={bill.lines} /></div>
+				{/each}
 			</div>
-			<div class="report-page"><CheckoutBillBody h={bill.header} lines={bill.lines} /></div>
-		{/each}
+		{/if}
 	{/if}
 </div>
 
@@ -143,5 +198,12 @@
 	}
 	.batch-caption.landscape {
 		width: 1220px;
+	}
+	.batch-heading {
+		width: 1220px;
+		margin: 36px auto -8px;
+		font-size: 13px;
+		font-weight: 600;
+		color: #333;
 	}
 </style>

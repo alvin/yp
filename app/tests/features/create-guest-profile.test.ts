@@ -51,4 +51,14 @@ describe('create guest profile', () => {
 	it('keeps the workflow focused on the reservation (lands on the transaction screen)', async () => {
 		expect(page.url()).toMatch(/\/reservations\/\d+$/);
 	});
+
+	it('asks for the details the lodge writes to and calls, and nothing it does not use', async () => {
+		await page.goto(`${APP_URL}/reservations/new`, { waitUntil: 'networkidle' });
+		await page.waitForSelector('#ln');
+		for (const id of ['#fn', '#ad', '#ci', '#rg', '#pc', '#cn', '#ph', '#em']) {
+			expect(await page.locator(id).count(), id).toBe(1);
+		}
+		expect(await page.locator('#co').count()).toBe(0);
+		expect(await page.textContent('body')).not.toMatch(/Company/i);
+	});
 });

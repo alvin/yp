@@ -25,7 +25,6 @@ export interface PendingPaymentLine {
 	kind: 'payment';
 	category: string;
 	paymenttype: string;
-	currency: string;
 	amount: number;
 }
 
@@ -39,7 +38,7 @@ export function pendingLineId(): number {
 	return nextId;
 }
 
-/** What the line is worth in the currency it was entered in. */
+/** What the line is worth. */
 export function pendingLineAmount(line: PendingLine): number {
 	return line.kind === 'item' ? round2(line.unit * line.quantity) : round2(line.amount);
 }
@@ -76,7 +75,6 @@ export async function postPendingLines(
 				line.category,
 				line.paymenttype,
 				round2(line.amount),
-				line.currency,
 				date
 			);
 		}

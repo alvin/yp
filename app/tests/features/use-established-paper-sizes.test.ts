@@ -26,11 +26,13 @@ afterAll(async () => {
 });
 
 describe('use established paper sizes', () => {
-	it('prints guest documents on standard letter portrait', async () => {
-		await page.goto(`${APP_URL}/reports/confirmation/${fx.resnumber}`, {
-			waitUntil: 'networkidle'
-		});
-		expect(await pageRule(page)).toContain('size: letter portrait');
+	it('prints guest slips and folios on the smaller folio page', async () => {
+		for (const doc of ['confirmation', 'check-in-folio', 'checkout-bill', 'cancellation']) {
+			await page.goto(`${APP_URL}/reports/${doc}/${fx.resnumber}`, {
+				waitUntil: 'networkidle'
+			});
+			expect(await pageRule(page), doc).toContain('size: A5 portrait');
+		}
 	});
 
 	it('prints wide operational reports on letter landscape', async () => {

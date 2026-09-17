@@ -7,6 +7,11 @@ refund/kept handling — live in the `ypl` database schema (triggers +
 RPCs), so the data stays consistent even when rows are edited directly in
 Supabase.
 
+The desk takes Canadian funds only: the payment screens offer no choice of
+currency and no US tender type. The conversion is untouched in the database,
+so records already on file and rows written directly still carry their CDN
+value, and the Daily Cash Activity Report still reports it.
+
 ## Setup
 
 1. Start (or connect to) the Supabase project. Locally:
@@ -97,11 +102,17 @@ npm run cf:preview   # build and serve locally through workerd
 - `src/lib/data/client.ts` — Supabase client bound to the `ypl` schema.
 - `src/lib/data/queries.ts` — one exported function per `ypl` view/RPC (reads).
 - `src/lib/data/mutations.ts` — one exported function per workflow write RPC.
-- `src/lib/data/reference.ts` — rooms, inventory, lookups, and current
-  tax/exchange rates, loaded from the database once per session.
+- `src/lib/data/reference.ts` — rooms, inventory, lookups, and the current tax
+  rates, loaded from the database once per session. It also holds the bed-layout
+  labels: the lodge reads the choice as Regular or Split, the Access vocabulary
+  `Double`/`Twin` is what is stored, and only the label changes.
 - `src/lib/report.css` + `src/routes/reports/**` — printed outputs cloned
   from the client's original designs in `original_spec/reports/`; the markup
   and CSS classes match the originals so printed pages are identical.
+- `src/lib/print-stock.ts` — the paper each output goes on: daily reports on
+  letter, guest slips and folios on A5. A browser cannot choose a printer, so
+  `/print/batch` groups the run by stock and prints one group at a time, each
+  print action carrying its own page size.
 - `src/lib/components/ui/combobox/` — the one dropdown. A plain select button
   whose list can be narrowed by typing any part of an entry; used for every
   choice on every screen, which is what makes rooms and the priced-item list
@@ -112,6 +123,10 @@ npm run cf:preview   # build and serve locally through workerd
 - `src/lib/components/app/guest-search.svelte` — the one guest lookup, shared by
   the lookup screen, the new-reservation guest panel, the add-a-name dialog and
   the Print Center, so partial-name search behaves the same everywhere.
+- `src/lib/components/app/shared-room-badge.svelte` — the red *Shared* mark for
+  a room two live reservations hold at once, on the date search results and on
+  the reservation screen. "Shared" means a shared *room*; the other names on a
+  booking are introduced with "with …".
 
 Screens are intentionally minimal: Lookup (home), Name/Date/All-fields search
 results, Guest history, the Reservation transaction screen, the Print Center,

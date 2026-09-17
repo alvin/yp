@@ -10,6 +10,7 @@ Feature: represent multi-name reservation participation within history context
     Given when staff review a guest tied to a reservation shared with other names
 
   Scenario: Acceptance criteria
-    Then Shared reservations indicate that the guest is part of a multi-name booking when applicable.
+    Then A stay booked under more than one name names the others alongside it.
     And The history view makes the guest’s participation understandable in context.
     And The display does not imply the guest is the only person attached to the reservation when that is not true.
+    And The wording is the same one used beside a name search match, and is not the wording used for a room two reservations hold at once.

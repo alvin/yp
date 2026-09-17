@@ -103,10 +103,7 @@
                     <Card.Title class="text-lg"
                         >{g.guestlastname}, {g.guestfirstname ?? ""}</Card.Title
                     >
-                    <Card.Description
-                        >Guest #{g.guestid}{#if g.guestcompany}
-                            · {g.guestcompany}{/if}</Card.Description
-                    >
+                    <Card.Description>Guest #{g.guestid}</Card.Description>
                 </div>
                 {#if g.guestsalutation}<Badge variant="secondary"
                         >{g.guestsalutation}</Badge
@@ -228,7 +225,7 @@
                                             <UsersIcon
                                                 class="size-3 shrink-0"
                                             />
-                                            Shared with {r.co_guests}
+                                            with {r.co_guests}
                                         </div>
                                     {/if}
                                 </div>

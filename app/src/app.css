@@ -9,11 +9,17 @@
 :root {
 	--radius: 0.625rem;
 
-	--background: oklch(0.994 0.002 106.42);
+	/* Three tiers, evenly spaced, warm to cool as they come forward:
+	     --background  ivory page
+	     --card        the card or panel a group of fields sits in
+	     --field       what a clerk types into or clicks — white, so it lifts
+	   Each step is about the same size, which is what keeps it quiet. */
+	--background: oklch(0.971 0.016 95);
 	--foreground: oklch(0.255 0.012 56.04);
 
-	--card: oklch(1 0 0);
+	--card: oklch(0.987 0.007 95);
 	--card-foreground: oklch(0.255 0.012 56.04);
+	--field: oklch(1 0 0);
 	--popover: oklch(1 0 0);
 	--popover-foreground: oklch(0.255 0.012 56.04);
 
@@ -21,10 +27,12 @@
 	--primary: oklch(0.43 0.058 158);
 	--primary-foreground: oklch(0.985 0.005 106.42);
 
-	--secondary: oklch(0.968 0.004 106.42);
+	/* Quiet tints on a card: chips, badges, the softer buttons. */
+	--secondary: oklch(0.958 0.008 100);
 	--secondary-foreground: oklch(0.31 0.014 56.04);
 
-	--muted: oklch(0.967 0.004 106.42);
+	/* Recessed: the track a toggle sits in, a well inside a card. */
+	--muted: oklch(0.948 0.009 100);
 	--muted-foreground: oklch(0.553 0.013 58.07);
 
 	/* Soft sage */
@@ -49,7 +57,8 @@
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
 
-	--sidebar: oklch(0.985 0.002 106.42);
+	--sidebar: oklch(0.982 0.01 95);
+	/* --field has no sidebar twin; the sidebar is not a form surface. */
 	--sidebar-foreground: oklch(0.255 0.012 56.04);
 	--sidebar-primary: oklch(0.43 0.058 158);
 	--sidebar-primary-foreground: oklch(0.985 0.005 106.42);
@@ -64,6 +73,7 @@
 	--foreground: oklch(0.985 0.001 106.42);
 	--card: oklch(0.255 0.008 56.04);
 	--card-foreground: oklch(0.985 0.001 106.42);
+	--field: oklch(0.288 0.008 56.04);
 	--popover: oklch(0.255 0.008 56.04);
 	--popover-foreground: oklch(0.985 0.001 106.42);
 	--primary: oklch(0.72 0.07 158);
@@ -107,6 +117,7 @@
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
 	--color-card-foreground: var(--card-foreground);
+	--color-field: var(--field);
 	--color-popover: var(--popover);
 	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);

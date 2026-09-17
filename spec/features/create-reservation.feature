@@ -13,4 +13,5 @@ Feature: create reservation
     Then The clerk can begin a new reservation from the transaction screen.
     And The reservation captures the stay details needed to hold the booking.
     And The reservation can be associated with the correct guest and dates.
+    And The bed layout is offered in the lodge's own words rather than as a bed count the rooms do not all have.
     And The user can review the reservation before moving on to other actions.

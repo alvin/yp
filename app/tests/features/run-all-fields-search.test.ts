@@ -20,6 +20,8 @@ let karenId: number;
 let neighbourId: number;
 let city: string;
 let firstname: string;
+let firmName: string;
+let firmGuestId: number;
 
 beforeAll(async () => {
 	guestid = await rpc<number>('create_guest', {
@@ -43,6 +45,12 @@ beforeAll(async () => {
 		p_firstname: 'Sam',
 		p_city: city,
 		p_region: 'BC'
+	});
+	firmName = `ZZFirm${u}`;
+	firmGuestId = await rpc<number>('create_guest', {
+		p_lastname: `ZZEmployee-${u}`,
+		p_firstname: 'Dana',
+		p_company: firmName
 	});
 });
 
@@ -92,6 +100,19 @@ describe('run all-fields search', () => {
 			p_query: `${firstname} ${city}`
 		});
 		expect(rows.filter((r) => r.guestid === karenId)).toHaveLength(1);
+	});
+
+	it('searches the details the office files a record under, and no others', async () => {
+		// Name, guest number, phones, address and email on a guest; number and
+		// group on a reservation. A company filed against a guest is not one.
+		const rows = await rpc<AllFieldsRow[]>('search_all_fields', { p_query: firmName });
+		expect(rows.map((r) => r.guestid)).not.toContain(firmGuestId);
+		for (const q of ['Unique Test Lane', '555-0199', String(guestid)]) {
+			const hit = (await rpc<AllFieldsRow[]>('search_all_fields', { p_query: q })).find(
+				(r) => r.guestid === guestid && r.resnumber == null
+			);
+			expect(hit, q).toBeDefined();
+		}
 	});
 
 	it('returns an openable reservation for a reservation-number match', async () => {

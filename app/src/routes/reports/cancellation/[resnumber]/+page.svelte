@@ -17,6 +17,7 @@
 <svelte:head><title>Cancellation · #{r.resnumber}</title></svelte:head>
 
 <ReportShell
+	stock="a5"
 	title="Cancellation Notice #{r.resnumber}"
 	tabs={guestDocTabs(r.resnumber, 'cancellation')}
 	backHref="/reservations/{r.resnumber}"
@@ -38,7 +39,7 @@
 			Res. No. {r.resnumber}
 		</div>
 	</div>
-	<p class="center" style="margin-top: 55px">
+	<p class="center standoff" style="--standoff: 55px">
 		We are sorry that you won't be able to visit us. Please check the information<br />below for
 		accuracy and call us immediately if there are any problems.
 	</p>
@@ -78,11 +79,11 @@
 	{#if r.cancellation_notes}
 		<p class="note">{r.cancellation_notes}</p>
 	{/if}
-	<p class="center" style="margin-top: 120px">
+	<p class="center standoff" style="--standoff: 120px">
 		Our office is open from 8:00 AM to 10:30 PM every day for your calls.<br />We hope we will be
 		able to welcome you again soon.
 	</p>
-	<p class="center" style="margin-top: 250px; font-family: Georgia, serif; font-size: 24px">
+	<p class="center standoff" style="--standoff: 250px; font-family: Georgia, serif; font-size: 24px">
 		Phone (250) 245-7422
 	</p>
 </ReportShell>

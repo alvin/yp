@@ -1,6 +1,8 @@
 // Story: spec/features/create-reservation.feature
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Page } from 'playwright';
+import { APP_URL, closeApp, openAppPage } from '../helpers/app';
 import { addDays, firstRoomId, isolatedDate, rpc, uid } from '../helpers/db';
 
 interface ReservationSummary {
@@ -87,5 +89,32 @@ describe('create reservation', () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0].reservationid).toBe(created.reservationid);
 		expect(rows[0].rescancelled).toBe(false);
+	});
+
+	describe('bed layout', () => {
+		let page: Page;
+
+		beforeAll(async () => {
+			page = await openAppPage();
+			await page.goto(`${APP_URL}/reservations/new`, { waitUntil: 'networkidle' });
+			await page.click('#bed');
+		});
+
+		afterAll(async () => {
+			await closeApp(page);
+		});
+
+		it('offers the lodge\u2019s own words rather than a bed count', async () => {
+			const options = await page.locator('[role=option]').allTextContents();
+			expect(options.map((o) => o.trim())).toEqual(['Regular', 'Split']);
+		});
+
+		it('shows the same words back on the reservation', async () => {
+			await page.goto(`${APP_URL}/reservations/${created.resnumber}`, {
+				waitUntil: 'networkidle'
+			});
+			// The stay was booked with the stored 'Twin' vocabulary.
+			expect(await page.textContent('body')).toMatch(/Beds\s*Split/);
+		});
 	});
 });

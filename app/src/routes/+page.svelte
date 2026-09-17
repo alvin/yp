@@ -123,7 +123,7 @@
 				</GuestSearch>
 				{#if !nameQuery.trim()}
 					<p class="text-muted-foreground mt-2 px-1 text-xs">
-						Matches any part of a name — first, last, or company.
+						Matches any part of a name — first or last.
 					</p>
 				{/if}
 			</Tabs.Content>

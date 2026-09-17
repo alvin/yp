@@ -1,8 +1,12 @@
 <script lang="ts">
-	import type { FolioReport } from '$lib/data/types.js';
+	import type { FolioReceipt, FolioReport, StayRoomRow } from '$lib/data/types.js';
 	import { dateShort, money } from '$lib/format.js';
 
-	let { r }: { r: FolioReport } = $props();
+	let {
+		r,
+		rooms = [],
+		receipts = []
+	}: { r: FolioReport; rooms?: StayRoomRow[]; receipts?: FolioReceipt[] } = $props();
 
 	// "PORT MOODY, BC CAN" — city, region then country, as on the original folio.
 	const cityLine = $derived(
@@ -13,6 +17,22 @@
 
 	const vehicle = $derived(
 		[r.vehicle_description, r.vehicle_license_plate].filter(Boolean).join(' ')
+	);
+
+	// A stay that never moves rooms prints the one row it always did; a stay
+	// that moves prints a row per room, in the order it occupies them.
+	const stayRooms = $derived(
+		rooms.length
+			? rooms
+			: [
+					{
+						occupancyid: 0,
+						room: r.room ?? '',
+						in_date: r.in_date ?? r.arrival_date,
+						out_date: r.out_date ?? r.departure_date,
+						guest_count: r.guest_count
+					}
+				]
 	);
 </script>
 
@@ -38,28 +58,35 @@
 </div>
 <table>
 	<tbody>
-		<tr>
-			<td><b>Room:</b><br />{r.room}</td>
-			<td><b>In:</b><br />{dateShort(r.in_date ?? r.arrival_date)}</td>
-			<td><b>Out:</b><br />{dateShort(r.out_date ?? r.departure_date)}</td>
-			<td><b># Guests</b><br />{r.guest_count}</td>
-		</tr>
+		{#each stayRooms as o, n (o.occupancyid)}
+			<tr>
+				<td>{#if n === 0}<b>Room:</b><br />{/if}{o.room}</td>
+				<td>{#if n === 0}<b>In:</b><br />{/if}{dateShort(o.in_date)}</td>
+				<td>{#if n === 0}<b>Out:</b><br />{/if}{dateShort(o.out_date)}</td>
+				<td>{#if n === 0}<b># Guests</b><br />{/if}{o.guest_count}</td>
+			</tr>
+		{/each}
 	</tbody>
 </table>
-{#if r.deposit_amount != null}
+{#if receipts.length}
 	<table>
 		<tbody>
-			<tr>
-				<td>Deposit (Received){#if r.deposit_type}<br />{r.deposit_type}{/if}</td>
-				<td class="money"><b>{money(r.deposit_amount)}</b></td>
-			</tr>
+			{#each receipts as p (p.paymentid)}
+				<tr>
+					<td>{p.category}{#if p.paymenttype}<br />{p.paymenttype}{/if}</td>
+					<td class="money"><b>{money(p.amount)}</b></td>
+				</tr>
+			{/each}
 		</tbody>
 	</table>
 {/if}
-<p style="margin-top: 120px"><b>Vehicle:</b>{#if vehicle}&nbsp;{vehicle}{/if}</p>
-<p style="margin-top: 330px">
+{#if r.diet_notes}
+	<p><b>Diet:</b>&nbsp;<span class="note">{r.diet_notes}</span></p>
+{/if}
+<p class="standoff" style="--standoff: 120px"><b>Vehicle:</b>{#if vehicle}&nbsp;{vehicle}{/if}</p>
+<p class="standoff" style="--standoff: 330px">
 	Signature:<span class="blank" style="min-width: 720px"></span>
 </p>
-<p class="center" style="margin-top: 70px; font-family: Georgia, serif; font-size: 24px">
+<p class="center standoff" style="--standoff: 70px; font-family: Georgia, serif; font-size: 24px">
 	Phone (250) 245-7422
 </p>

@@ -11,5 +11,5 @@ Feature: batch print the daily print run
   Scenario: Acceptance criteria
     Then A batch action gathers the day's operational reports and queued guest documents together.
     And The batch shows how many pages are ready, broken down by type.
-    And One print action prints the whole set, each item on its own page.
+    And The set is grouped by the paper it prints on, and each group prints in one action, each item on its own page.
     And A document that fails to load is skipped without losing the rest of the batch.

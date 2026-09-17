@@ -12,4 +12,7 @@ Feature: print in-house occupancy report
   Scenario: Acceptance criteria
     Then Report prints for the selected date.
     And Printed output includes arrivals, departures, room moves, and in-house sections.
+    And Each section prints under its own heading, in the order the day runs, separated from the one before it.
+    And A row is not labelled with its section a second time, the heading it sits under says which it is.
+    And A section with nothing in it is left out rather than printed empty.
     And Printed output shows the section counts and total guests summary, matching the lodge's established report.

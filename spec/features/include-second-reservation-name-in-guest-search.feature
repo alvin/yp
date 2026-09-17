@@ -9,7 +9,7 @@ Feature: include second reservation name in guest search
     Given a reservation records more than one name — partners, or a second surname
 
   Scenario: Acceptance criteria
-    Then Searching either name on the stay returns that party.
-    And A guest reached through the other name on the stay is marked as such, not confused with a direct name match.
-    And Direct name matches are listed before names reached through a shared stay.
-    And Each match shows the other names its stays are booked under.
+    Then Searching either name on the stay finds the person of that name.
+    And A double surname recorded in one field is found from either half of it.
+    And Each match shows the other names its stays are booked under, so the stay is recognised from the name that was searched.
+    And A search returns the people it names and no one else: travelling with a match is not itself a match.

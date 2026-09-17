@@ -16,3 +16,4 @@ Feature: run all-fields search
     And Several keywords can be entered at once, and only records carrying all of them are returned.
     And A keyword may land in a different field from the others — a name and a city together still match one record.
     And Each matching record comes back once, naming the fields the keywords matched.
+    And The searched details are the guest's name, number, telephone numbers, address and email, and a reservation's number and group.

@@ -197,8 +197,6 @@ export interface GuestSearchRow {
 	guestregion: string | null;
 	guestprimaryphone: string | null;
 	guestemailaddress: string | null;
-	/** 'name' matched the guest directly; 'shared reservation' matched a name they share a stay with. */
-	match_kind: 'name' | 'shared reservation';
 	/** Other names recorded on this guest's stays — the second name a booking is held under. */
 	other_names: string | null;
 }
@@ -230,6 +228,8 @@ export interface DateSearchRow {
 	pax: number;
 	deposit_cdn: number;
 	rescancelled: boolean;
+	/** Another live reservation holds one of this stay's rooms over nights it also holds. */
+	shared_room: boolean;
 }
 
 export interface DateRangeRow {
@@ -394,10 +394,39 @@ export interface FolioReport {
 	in_date: string | null;
 	out_date: string | null;
 	guest_count: number;
-	deposit_amount: number | null;
-	deposit_type: string | null;
+	diet_notes: string | null;
 	vehicle_description: string | null;
 	vehicle_license_plate: string | null;
+}
+
+/** One room of a stay, with the dates and party size it was held for. */
+export interface StayRoomRow {
+	occupancyid: number;
+	room: string;
+	in_date: string;
+	out_date: string;
+	guest_count: number;
+}
+
+/** Money already received against a stay: deposit, prepayment, gift certificate. */
+export interface FolioReceipt {
+	paymentid: number;
+	receipt_date: string;
+	category: string;
+	paymenttype: string | null;
+	amount: number;
+}
+
+/** A room window this stay holds at the same time as another reservation. */
+export interface SharedRoom {
+	occupancyid: number;
+	roomid: number;
+	room: string;
+	other_reservationid: number;
+	other_resnumber: number;
+	other_guest: string;
+	shared_in: string;
+	shared_out: string;
 }
 
 export interface CheckoutBillHeader {

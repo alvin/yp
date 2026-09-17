@@ -22,7 +22,7 @@
 >
 	{#snippet toolbar()}
 		<div
-			class="flex h-8 items-center rounded-md border bg-background p-0.5 shadow-xs"
+			class="flex h-8 items-center rounded-md border bg-field p-0.5 shadow-xs"
 			role="group"
 			aria-label="Report mode"
 		>

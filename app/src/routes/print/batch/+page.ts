@@ -1,6 +1,6 @@
 // Batch print loader. Gathers everything queued for one business date — the
 // four daily operational reports plus every guest document the queue RPC says
-// is due — so the whole set prints with a single browser print action.
+// is due — so the whole set prints from one screen, one paper stock at a time.
 
 import {
 	TODAY,
@@ -8,22 +8,26 @@ import {
 	reportCheckoutBillHeader,
 	reportCheckoutBillLines,
 	reportConfirmation,
+	reportFolioReceipts,
 	reportGuestDocumentQueue,
 	reportHousekeeping,
 	reportInHouse,
 	reportKitchenMeal,
 	reportKitchenMealTotalGuests,
-	reportManualSales
+	reportManualSales,
+	reportStayRooms
 } from '$lib/data/queries.js';
 import type {
 	CheckoutBillHeader,
 	CheckoutBillLine,
 	ConfirmationReport,
+	FolioReceipt,
 	FolioReport,
 	HousekeepingRow,
 	InHouseRow,
 	KitchenMealRow,
-	ManualSalesRow
+	ManualSalesRow,
+	StayRoomRow
 } from '$lib/data/types.js';
 import { addDays } from '$lib/format.js';
 import type { PageLoad } from './$types.js';
@@ -39,6 +43,19 @@ export interface BatchReports {
 export interface BatchBill {
 	header: CheckoutBillHeader;
 	lines: CheckoutBillLine[];
+}
+
+/** A confirmation slip with the rooms the stay runs through. */
+export interface BatchConfirmation {
+	report: ConfirmationReport;
+	rooms: StayRoomRow[];
+}
+
+/** A folio with the stay's rooms and the money already received for it. */
+export interface BatchFolio {
+	report: FolioReport;
+	rooms: StayRoomRow[];
+	receipts: FolioReceipt[];
 }
 
 const DEFAULT_INCLUDE = 'reports,confirmations,folios,bills';
@@ -63,16 +80,35 @@ async function loadReports(date: string): Promise<BatchReports> {
 	return { housekeeping, inHouse, kitchenRows, kitchenTotalGuests, manualSales };
 }
 
-async function loadConfirmations(date: string): Promise<ConfirmationReport[]> {
+async function loadConfirmations(date: string): Promise<BatchConfirmation[]> {
 	const queue = await reportGuestDocumentQueue('confirmation', date);
-	const docs = await Promise.all(queue.map((q) => orNull(reportConfirmation(q.reservationid))));
-	return docs.filter((r): r is ConfirmationReport => r != null);
+	const docs = await Promise.all(
+		queue.map((q) =>
+			orNull(
+				Promise.all([
+					reportConfirmation(q.reservationid),
+					reportStayRooms(q.reservationid)
+				]).then(([report, rooms]) => (report ? { report, rooms } : null))
+			)
+		)
+	);
+	return docs.filter((r): r is BatchConfirmation => r != null);
 }
 
-async function loadFolios(date: string): Promise<FolioReport[]> {
+async function loadFolios(date: string): Promise<BatchFolio[]> {
 	const queue = await reportGuestDocumentQueue('check_in_folio', date);
-	const docs = await Promise.all(queue.map((q) => orNull(reportCheckInFolio(q.reservationid))));
-	return docs.filter((r): r is FolioReport => r != null);
+	const docs = await Promise.all(
+		queue.map((q) =>
+			orNull(
+				Promise.all([
+					reportCheckInFolio(q.reservationid),
+					reportStayRooms(q.reservationid),
+					reportFolioReceipts(q.reservationid)
+				]).then(([report, rooms, receipts]) => (report ? { report, rooms, receipts } : null))
+			)
+		)
+	);
+	return docs.filter((r): r is BatchFolio => r != null);
 }
 
 async function loadBills(date: string): Promise<BatchBill[]> {

@@ -1,6 +1,8 @@
 // Story: spec/features/convert-us-funds-to-canadian-automatically.feature
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Page } from 'playwright';
+import { APP_URL, closeApp, openAppPage } from '../helpers/app';
 import { makeReservation, rpc, staffClient, todayISO, unwrap, type Fixture } from '../helpers/db';
 
 interface Pay {
@@ -79,5 +81,45 @@ describe('convert US funds to Canadian automatically', () => {
 			p_paymentdate: today
 		});
 		expect((await getPay(id)).paymentcode).toBe('D01');
+	});
+
+	describe('at the desk', () => {
+		let page: Page;
+
+		beforeAll(async () => {
+			page = await openAppPage();
+			await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+			await page.click('text=Payment');
+			await page.waitForSelector('#p-amt');
+		});
+
+		afterAll(async () => {
+			await closeApp(page);
+		});
+
+		it('offers no choice of funds when a receipt is taken', async () => {
+			const dialog = await page.textContent('[role=dialog]');
+			expect(dialog).not.toContain('Funds');
+			expect(dialog).not.toContain('CDN value');
+			expect(await page.locator('#p-cur').count()).toBe(0);
+		});
+
+		it('offers no US tender type', async () => {
+			await page.click('#p-type');
+			const tenders = await page.locator('[role=option]').allTextContents();
+			expect(tenders.length).toBeGreaterThan(0);
+			expect(tenders.some((t) => t.includes('U.S.'))).toBe(false);
+		});
+
+		it('records what the desk takes in Canadian funds', async () => {
+			const id = await rpc<number>('record_payment', {
+				p_reservationguestid: fx.reservationguestid,
+				p_paymentcategory: 'Payment (Regular)',
+				p_paymenttype: 'Visa',
+				p_amount: 25,
+				p_paymentdate: today
+			});
+			expect((await getPay(id)).paymentamountcdn).toBe(25);
+		});
 	});
 });

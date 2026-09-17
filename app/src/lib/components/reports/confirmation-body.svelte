@@ -1,14 +1,30 @@
 <script lang="ts">
-	import type { ConfirmationReport } from '$lib/data/types.js';
+	import type { ConfirmationReport, StayRoomRow } from '$lib/data/types.js';
 	import { dateShort, money } from '$lib/format.js';
 
-	let { r }: { r: ConfirmationReport } = $props();
+	let { r, rooms = [] }: { r: ConfirmationReport; rooms?: StayRoomRow[] } = $props();
 
 	// "VICTORIA, BC CAN" — city, region then country, as on the original slip.
 	const cityLine = $derived(
 		[[r.guestcity, r.guestregion].filter(Boolean).join(', '), r.guestcountry]
 			.filter(Boolean)
 			.join(' ')
+	);
+
+	// A stay that never moves rooms prints the one row it always did; a stay
+	// that moves prints a row per room, in the order it occupies them.
+	const stayRooms = $derived(
+		rooms.length
+			? rooms
+			: [
+					{
+						occupancyid: 0,
+						room: r.room ?? '',
+						in_date: r.in_date ?? r.arrival_date,
+						out_date: r.out_date ?? r.departure_date,
+						guest_count: r.guest_count
+					}
+				]
 	);
 </script>
 
@@ -39,12 +55,14 @@
 </div>
 <table>
 	<tbody>
-		<tr>
-			<td><b>Room:</b> {r.room}</td>
-			<td><b>In:</b> {dateShort(r.in_date ?? r.arrival_date)}</td>
-			<td><b>Out:</b> {dateShort(r.out_date ?? r.departure_date)}</td>
-			<td><b># Guests</b> {r.guest_count}</td>
-		</tr>
+		{#each stayRooms as o, n (o.occupancyid)}
+			<tr>
+				<td>{#if n === 0}<b>Room:</b>{/if} {o.room}</td>
+				<td>{#if n === 0}<b>In:</b>{/if} {dateShort(o.in_date)}</td>
+				<td>{#if n === 0}<b>Out:</b>{/if} {dateShort(o.out_date)}</td>
+				<td>{#if n === 0}<b># Guests</b>{/if} {o.guest_count}</td>
+			</tr>
+		{/each}
 	</tbody>
 </table>
 {#if r.reservation_notes}
@@ -61,10 +79,10 @@
 		</tbody>
 	</table>
 {/if}
-<p class="center" style="margin-top: 190px">
+<p class="center standoff" style="--standoff: 190px">
 	Our office is open from 8:00 AM to 10:30 PM every day for your calls.<br />Please check out
 	the information on the back of this confirmation.<br />We look forward to your visit.
 </p>
-<p class="center" style="margin-top: 210px; font-family: Georgia, serif; font-size: 24px">
+<p class="center standoff" style="--standoff: 210px; font-family: Georgia, serif; font-size: 24px">
 	Phone (250) 245-7422
 </p>

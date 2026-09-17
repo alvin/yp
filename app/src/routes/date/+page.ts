@@ -14,6 +14,7 @@ export interface DateResultRow {
 	pax: number | null;
 	deposit_cdn: number | null;
 	rescancelled: boolean;
+	shared_room: boolean;
 }
 
 export const load: PageLoad = async ({ url }) => {
@@ -35,7 +36,8 @@ export const load: PageLoad = async ({ url }) => {
 			nights: null,
 			pax: null,
 			deposit_cdn: null,
-			rescancelled: false
+			rescancelled: false,
+			shared_room: false
 		}));
 		return { kind: 'range' as const, from, to, mode, rows };
 	}
@@ -51,7 +53,8 @@ export const load: PageLoad = async ({ url }) => {
 		nights: r.numnights,
 		pax: r.pax,
 		deposit_cdn: r.deposit_cdn,
-		rescancelled: r.rescancelled
+		rescancelled: r.rescancelled,
+		shared_room: r.shared_room
 	}));
 	return { kind: 'single' as const, date, mode, rows };
 };

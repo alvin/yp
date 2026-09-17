@@ -12,5 +12,6 @@ Feature: create guest profile
   Scenario: Acceptance criteria
     Then A new guest profile can be started from the reservation workspace.
     And The clerk can enter the guest's name and contact details before saving the stay.
+    And The form asks for the details the lodge writes to and calls, and nothing it does not use.
     And The guest profile is available for use in the reservation being created.
     And The workflow stays focused on reservation handling rather than a separate guest-management process.

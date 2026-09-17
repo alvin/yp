@@ -41,10 +41,40 @@ describe('print in-house occupancy report', () => {
 		}
 	});
 
+	it('orders the day the way it runs — arrivals, moves, in house, departures', async () => {
+		const rows = await rpc<{ section: string }[]>('report_in_house', { p_date: date });
+		const rank = ['Arrive Today', 'Move In', 'In House', 'Depart Today'];
+		const seen = rows.map((r) => rank.indexOf(r.section));
+		expect(seen).toEqual([...seen].sort((a, b) => a - b));
+	});
+
 	it('prints section counts and total guests', async () => {
 		await page.goto(`${APP_URL}/reports/in-house?date=${date}`, { waitUntil: 'networkidle' });
 		const sheet = await page.textContent('.report-page');
 		expect(sheet).toContain('Arrive Today');
 		expect(sheet).toContain('Total Guests');
+	});
+
+	it('prints each section under its own heading, in the order the day runs', async () => {
+		await page.goto(`${APP_URL}/reports/in-house?date=${date}`, { waitUntil: 'networkidle' });
+		const headings = await page.locator('.report-page h2').allTextContents();
+		expect(headings).toEqual(['Arrive Today', 'In House', 'Depart Today']);
+		// One table per section, so each starts under its own heading.
+		expect(await page.locator('.report-page table').count()).toBe(headings.length);
+	});
+
+	it('does not label a row with its section a second time', async () => {
+		await page.goto(`${APP_URL}/reports/in-house?date=${date}`, { waitUntil: 'networkidle' });
+		const columns = await page.locator('.report-page thead th').first().textContent();
+		expect(columns).not.toContain('Section');
+		const firstRow = await page.locator('.report-page tbody tr').first().locator('td').first().textContent();
+		expect(firstRow).not.toContain('Arrive Today');
+	});
+
+	it('leaves out a section with nothing in it', async () => {
+		// Nobody moves rooms on this date, so no Move In section is printed.
+		await page.goto(`${APP_URL}/reports/in-house?date=${date}`, { waitUntil: 'networkidle' });
+		const headings = await page.locator('.report-page h2').allTextContents();
+		expect(headings).not.toContain('Move In');
 	});
 });

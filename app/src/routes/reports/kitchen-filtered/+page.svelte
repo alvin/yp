@@ -30,7 +30,7 @@
 			type="date"
 			value={data.from}
 			onchange={(e) => changeRange(e.currentTarget.value, data.to)}
-			class="h-8 rounded-md border bg-background px-2 text-sm shadow-xs"
+			class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
 		/>
 		<label class="text-muted-foreground text-xs" for="kitchen-to">To</label>
 		<input
@@ -38,7 +38,7 @@
 			type="date"
 			value={data.to}
 			onchange={(e) => changeRange(data.from, e.currentTarget.value)}
-			class="h-8 rounded-md border bg-background px-2 text-sm shadow-xs"
+			class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
 		/>
 	{/snippet}
 	<div class="blackbar">Yellow Point Lodge</div>

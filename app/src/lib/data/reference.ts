@@ -1,5 +1,5 @@
 // Reference / configuration data, loaded once per session from the `ypl`
-// lookup, room, inventory, tax and exchange tables. The database is the source
+// lookup, room, inventory and tax tables. The database is the source
 // of truth: edits made in Supabase show up here on the next app load.
 
 import { supabase, unwrap } from './client';
@@ -23,10 +23,24 @@ export const LODGE = {
 	gstRegistration: 'R1105763445'
 };
 
-// Access column comment: "Bed Type is always either Double or Twin."
-export const BED_TYPES = ['Double', 'Twin'];
+// Access column comment: "Bed Type is always either Double or Twin." Not every
+// room at the lodge has two beds to choose between, so the front desk reads the
+// choice as how the beds in the room are made up. The stored vocabulary is left
+// alone — the Access import and direct Supabase edits both speak it — and only
+// the label the clerk reads changes.
+export const BED_TYPES: { value: string; label: string }[] = [
+	{ value: 'Double', label: 'Regular' },
+	{ value: 'Twin', label: 'Split' }
+];
 
-export const PAYMENT_CURRENCIES = ['Canadian', 'US'];
+export function bedTypeLabel(value: string | null | undefined): string {
+	if (!value) return '';
+	return BED_TYPES.find((b) => b.value === value)?.label ?? value;
+}
+
+// Tender types the lodge takes. US variants stay in the database for the
+// records that carry them and for the daily cash report; they are not offered.
+const HIDDEN_TENDER_PREFIX = 'U.S.';
 
 // Populated by loadReference(); exported arrays are filled in place so every
 // importer sees the loaded data.
@@ -38,8 +52,6 @@ export const PAYMENT_CATEGORIES: PaymentCategory[] = [];
 export const PAYMENT_TYPES: PaymentType[] = [];
 export const ROOMS: Room[] = [];
 export const INVENTORY_ITEMS: InventoryItem[] = [];
-
-export let CURRENT_EXCHANGE_RATE = 1.0;
 
 export const CURRENT_TAX_RATES = {
 	gst: 0,
@@ -62,7 +74,7 @@ export async function loadReference(): Promise<void> {
 	if (loaded) return;
 	const today = new Date().toLocaleDateString('en-CA');
 
-	const [salutations, diets, roomTypes, transTypes, payCats, payTypes, rooms, inventory, taxes, exchange] =
+	const [salutations, diets, roomTypes, transTypes, payCats, payTypes, rooms, inventory, taxes] =
 		await Promise.all([
 			supabase.from('lookup_salutations').select('salutation').order('salutation').then(unwrap),
 			supabase.from('lookup_guest_diets').select('guestdiet').order('guestdiet').then(unwrap),
@@ -97,14 +109,6 @@ export async function loadReference(): Promise<void> {
 				.lte('taxratestartdate', today)
 				.gte('taxrateenddate', today)
 				.order('taxratestartdate', { ascending: false })
-				.then(unwrap),
-			supabase
-				.from('exchange_rates')
-				.select('exchangerate, exchangeratestartdate')
-				.eq('exchangeratearchive', false)
-				.lte('exchangeratestartdate', today)
-				.order('exchangeratestartdate', { ascending: false })
-				.limit(1)
 				.then(unwrap)
 		]);
 
@@ -113,7 +117,10 @@ export async function loadReference(): Promise<void> {
 	fill(ROOM_TYPES, (roomTypes as { roomtype: string }[]).map((r) => r.roomtype));
 	fill(TRANSACTION_TYPES, transTypes as TransactionType[]);
 	fill(PAYMENT_CATEGORIES, payCats as PaymentCategory[]);
-	fill(PAYMENT_TYPES, payTypes as PaymentType[]);
+	fill(
+		PAYMENT_TYPES,
+		(payTypes as PaymentType[]).filter((t) => !t.paymenttype.startsWith(HIDDEN_TENDER_PREFIX))
+	);
 	fill(ROOMS, rooms as Room[]);
 	// Item-code order — the order the front desk reads the price list in, and
 	// the order the charge-item picker presents.
@@ -131,9 +138,6 @@ export async function loadReference(): Promise<void> {
 	CURRENT_TAX_RATES.room = taxByType['Room'] ?? 0;
 	CURRENT_TAX_RATES.hotel = taxByType['Hotel'] ?? 0;
 	CURRENT_TAX_RATES.dmt = taxByType['DMT'] ?? 0;
-
-	const ex = (exchange as { exchangerate: number }[])[0];
-	if (ex) CURRENT_EXCHANGE_RATE = Number(ex.exchangerate);
 
 	loaded = true;
 }

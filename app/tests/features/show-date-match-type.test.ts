@@ -1,6 +1,8 @@
 // Story: spec/features/show-date-match-type.feature
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Page } from 'playwright';
+import { APP_URL, closeApp, openAppPage } from '../helpers/app';
 import { addDays, isolatedDate, makeReservation, rpc, type Fixture } from '../helpers/db';
 
 interface DateRow {
@@ -34,6 +36,32 @@ describe('show date match type', () => {
 		expect(rows.length).toBeGreaterThanOrEqual(2);
 		for (const row of rows) {
 			expect(['arrival', 'departure', 'in_house']).toContain(row.match_type);
+		}
+	});
+
+	it('breaks a list of several kinds into a section per kind, in the order the day runs', async () => {
+		const page = await openAppPage();
+		try {
+			await page.goto(`${APP_URL}/date?date=${date}&mode=both`, { waitUntil: 'networkidle' });
+			expect(await page.locator('h2').allTextContents()).toEqual(['Arrivals', 'Departures']);
+			// The heading says which kind a row is, so the row does not repeat it.
+			const headers = await page.locator('thead th').allTextContents();
+			expect(headers).not.toContain('Match');
+		} finally {
+			await closeApp(page);
+		}
+	});
+
+	it('leaves a list of one kind unsectioned, labelling the rows instead', async () => {
+		const page = await openAppPage();
+		try {
+			await page.goto(`${APP_URL}/date?date=${date}&mode=arrivals`, {
+				waitUntil: 'networkidle'
+			});
+			expect(await page.locator('h2').count()).toBe(0);
+			expect(await page.locator('thead th').allTextContents()).toContain('Match');
+		} finally {
+			await closeApp(page);
 		}
 	});
 

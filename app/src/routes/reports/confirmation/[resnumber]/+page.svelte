@@ -10,10 +10,11 @@
 <svelte:head><title>Confirmation · #{r.resnumber}</title></svelte:head>
 
 <ReportShell
+	stock="a5"
 	title="Reservation Confirmation #{r.resnumber}"
 	tabs={guestDocTabs(r.resnumber, 'confirmation')}
 	backHref="/reservations/{r.resnumber}"
 	backLabel="Reservation"
 >
-	<ConfirmationBody {r} />
+	<ConfirmationBody {r} rooms={data.rooms} />
 </ReportShell>

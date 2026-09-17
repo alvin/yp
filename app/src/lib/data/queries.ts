@@ -35,7 +35,10 @@ import type {
 	ManualSalesRow,
 	OccupancySummary,
 	ReservationGuestSummary,
-	ReservationSummary
+	ReservationSummary,
+	FolioReceipt,
+	SharedRoom,
+	StayRoomRow
 } from './types';
 
 /** Today's business date (YYYY-MM-DD, local time). */
@@ -190,6 +193,14 @@ export async function reservationGuestSummaries(
 	}));
 }
 
+/** Room windows on this stay that another live reservation also holds. */
+export async function sharedRoomOccupancies(reservationid: number): Promise<SharedRoom[]> {
+	const rows = unwrap(
+		await supabase.rpc('shared_room_occupancies', { p_reservationid: reservationid })
+	) as SharedRoom[];
+	return rows.map((r) => ({ ...r, shared_in: d(r.shared_in)!, shared_out: d(r.shared_out)! }));
+}
+
 export async function occupancySummaries(reservationid: number): Promise<OccupancySummary[]> {
 	const rows = unwrap(
 		await supabase
@@ -278,6 +289,19 @@ export async function reportCheckInFolio(reservationid: number): Promise<FolioRe
 		await supabase.rpc('report_check_in_folio', { p_reservationid: reservationid })
 	);
 	return rows[0] ?? null;
+}
+
+/** Every room of a stay, in stay order — the room moves a folio or slip lists. */
+export async function reportStayRooms(reservationid: number): Promise<StayRoomRow[]> {
+	return unwrap(await supabase.rpc('report_stay_rooms', { p_reservationid: reservationid }));
+}
+
+/** Deposits, prepayments and gift certificates already received for a stay. */
+export async function reportFolioReceipts(reservationid: number): Promise<FolioReceipt[]> {
+	const rows = unwrap(
+		await supabase.rpc('report_folio_receipts', { p_reservationid: reservationid })
+	) as FolioReceipt[];
+	return rows.map((r) => ({ ...r, amount: num(r.amount) }));
 }
 
 export async function reportCheckoutBillHeader(

@@ -14,3 +14,4 @@ Feature: search guests by partial name
     And Typing more characters narrows the list rather than losing the match.
     And Every keyword typed must appear in the name, so a first and last name together find one guest.
     And The same partial-name search is used wherever a guest is looked up, including the guest lookup on a new reservation.
+    And The search reads the names on the guest record and nothing else.

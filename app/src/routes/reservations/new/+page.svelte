@@ -16,8 +16,9 @@
     import { Textarea } from "$lib/components/ui/textarea/index.js";
     import ChargeBasket from "$lib/components/app/charge-basket.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
-    import { BED_TYPES, GUEST_DIETS, SALUTATIONS } from "$lib/data/reference.js";
-    import { roomOptions, textOptions } from "$lib/options.js";
+    import PhoneInput from "$lib/components/app/phone-input.svelte";
+    import { GUEST_DIETS, SALUTATIONS } from "$lib/data/reference.js";
+    import { bedTypeOptions, roomOptions, textOptions } from "$lib/options.js";
     import { getGuest, guestKitchenMeal } from "$lib/data/queries.js";
     import {
         addHousekeepingNote,
@@ -40,7 +41,6 @@
             salutation: g?.guestsalutation ?? "",
             firstName: g?.guestfirstname ?? "",
             lastName: g?.guestlastname ?? "",
-            company: g?.guestcompany ?? "",
             address: g?.guestaddress ?? "",
             city: g?.guestcity ?? "",
             region: g?.guestregion ?? "",
@@ -66,7 +66,6 @@
     let salutation = $state(i.salutation);
     let firstName = $state(i.firstName);
     let lastName = $state(i.lastName);
-    let company = $state(i.company);
     let address = $state(i.address);
     let city = $state(i.city);
     let region = $state(i.region);
@@ -93,7 +92,6 @@
             salutation = full?.guestsalutation ?? "";
             firstName = full?.guestfirstname ?? g.guestfirstname ?? "";
             lastName = full?.guestlastname ?? g.guestlastname;
-            company = full?.guestcompany ?? "";
             address = full?.guestaddress ?? "";
             city = full?.guestcity ?? g.guestcity ?? "";
             region = full?.guestregion ?? g.guestregion ?? "";
@@ -123,7 +121,6 @@
         salutation =
             firstName =
             lastName =
-            company =
             address =
             city =
             region =
@@ -161,7 +158,7 @@
         src?.roomid ? String(src.roomid) : (rooms[0]?.value ?? ""),
     );
     const salutationOptions = textOptions(SALUTATIONS);
-    const bedTypeOptions = textOptions(BED_TYPES);
+    const bedTypes = bedTypeOptions();
     const dietOptions = textOptions(GUEST_DIETS);
 
     // Charges and the deposit taken while booking. Held until the reservation
@@ -214,7 +211,6 @@
                     pczip: postal.trim() || null,
                     primaryphone: phone.trim() || null,
                     email: email.trim() || null,
-                    company: company.trim() || null,
                 }));
             const created = await createReservation({
                 guestid,
@@ -389,12 +385,6 @@
                     />
                 </div>
                 <div class="space-y-1.5">
-                    <Label for="co">Company (optional)</Label><Input
-                        id="co"
-                        bind:value={company}
-                    />
-                </div>
-                <div class="space-y-1.5">
                     <Label for="ad">Address</Label><Input
                         id="ad"
                         bind:value={address}
@@ -432,7 +422,7 @@
                         />
                     </div>
                     <div class="space-y-1.5">
-                        <Label for="ph">Phone</Label><Input
+                        <Label for="ph">Phone</Label><PhoneInput
                             id="ph"
                             bind:value={phone}
                         />
@@ -561,11 +551,11 @@
                         />
                     </div>
                     <div class="space-y-1.5">
-                        <Label for="bed">Bed type</Label>
+                        <Label for="bed">Beds</Label>
                         <Combobox
                             id="bed"
                             bind:value={bedType}
-                            options={bedTypeOptions}
+                            options={bedTypes}
                         />
                     </div>
                 </div>

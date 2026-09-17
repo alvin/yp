@@ -19,7 +19,6 @@ export interface NewGuestInput {
 	secondaryphone?: string | null;
 	secondaryphonetype?: string | null;
 	email?: string | null;
-	company?: string | null;
 	notes?: string | null;
 }
 
@@ -39,7 +38,6 @@ export async function createGuest(input: NewGuestInput): Promise<number> {
 			p_secondaryphone: input.secondaryphone ?? null,
 			p_secondaryphonetype: input.secondaryphonetype ?? null,
 			p_email: input.email ?? null,
-			p_company: input.company ?? null,
 			p_notes: input.notes ?? null
 		})
 	);
@@ -277,12 +275,13 @@ export async function archiveTransaction(transactionid: number): Promise<void> {
 	unwrap(await supabase.rpc('archive_transaction', { p_transactionid: transactionid }));
 }
 
+/** Records a receipt in Canadian funds — the only funds the desk takes. The
+ * database still converts US amounts for records that carry them. */
 export async function recordPayment(
 	reservationguestid: number,
 	paymentcategory: string,
 	paymenttype: string,
 	amount: number,
-	currency: string,
 	paymentdate: string,
 	notes?: string | null
 ): Promise<number> {
@@ -292,7 +291,6 @@ export async function recordPayment(
 			p_paymentcategory: paymentcategory,
 			p_paymenttype: paymenttype,
 			p_amount: amount,
-			p_currency: currency,
 			p_paymentdate: paymentdate,
 			p_notes: notes ?? null
 		})

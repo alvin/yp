@@ -34,7 +34,14 @@ describe('print check-in folios for a selected day', () => {
 		expect(folio.arrival_date).toBe(fx.arrival);
 		expect(folio.departure_date).toBe(fx.departure);
 		expect(Number(folio.guest_count)).toBeGreaterThan(0);
-		expect(Number(folio.deposit_amount)).toBe(75);
+
+		const receipts = await rpc<{ category: string; amount: number }[]>('report_folio_receipts', {
+			p_reservationid: fx.reservationid
+		});
+		expect(receipts.map((r) => [r.category, Number(r.amount)])).toContainEqual([
+			'Deposit (Received)',
+			75
+		]);
 	});
 
 	it('does not queue folios for other days', async () => {

@@ -2,7 +2,7 @@
 // dialogs. Mirrors the tax computation used to build mock transactions so on-screen
 // edits stay consistent with stored data and the reports.
 
-import { CURRENT_EXCHANGE_RATE, CURRENT_TAX_RATES } from './data/reference.js';
+import { CURRENT_TAX_RATES } from './data/reference.js';
 
 export interface TaxFlags {
 	gst: boolean;
@@ -29,10 +29,6 @@ export function taxTotal(amount: number, f: TaxFlags): number {
 			(f.ht ? amount * r.hotel : 0) +
 			(f.dmt ? amount * r.dmt : 0)
 	);
-}
-
-export function usdToCdn(usd: number): number {
-	return round2(usd * CURRENT_EXCHANGE_RATE);
 }
 
 // Categories that move money out (reduce receipts, increase guest balance).

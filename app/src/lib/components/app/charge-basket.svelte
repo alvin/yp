@@ -12,13 +12,12 @@
     import { Label } from "$lib/components/ui/label/index.js";
     import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
-    import { round2, usdToCdn } from "$lib/charges.js";
+    import { round2 } from "$lib/charges.js";
     import {
         INV_TYPE_TO_TRANSTYPE,
         inventoryById,
     } from "$lib/data/reference.js";
     import {
-        currencyOptions,
         itemOptions,
         paymentCategoryOptions,
         tenderTypeOptions,
@@ -36,7 +35,6 @@
     const items = itemOptions();
     const categories = paymentCategoryOptions();
     const tenders = tenderTypeOptions();
-    const currencies = currencyOptions();
 
     // --- item line ---
     let itemId = $state("");
@@ -72,13 +70,7 @@
     // --- deposit / prepayment line ---
     let category = $state("Deposit (Received)");
     let tender = $state("Visa");
-    let currency = $state("Canadian");
     let amount = $state(0);
-    const cdn = $derived(
-        currency === "US"
-            ? usdToCdn(Number(amount) || 0)
-            : round2(Number(amount) || 0),
-    );
 
     function addPayment() {
         const value = round2(Number(amount) || 0);
@@ -90,7 +82,6 @@
                 kind: "payment",
                 category,
                 paymenttype: tender,
-                currency,
                 amount: value,
             },
         ];
@@ -136,13 +127,11 @@
                         <span class="block truncate font-medium"
                             >{pendingLineLabel(l)}</span
                         >
-                        <span class="text-muted-foreground block text-xs">
-                            {#if l.kind === "item"}
+                        {#if l.kind === "item"}
+                            <span class="text-muted-foreground block text-xs">
                                 {l.quantity} × ${l.unit.toFixed(2)}
-                            {:else}
-                                {l.currency} funds
-                            {/if}
-                        </span>
+                            </span>
+                        {/if}
                     </span>
                     <Money value={pendingLineAmount(l)} class="tabular-nums" />
                     <Button
@@ -230,16 +219,6 @@
                     />
                 </div>
                 <div class="space-y-1.5">
-                    <Label for="basket-funds">Funds</Label>
-                    <Combobox
-                        id="basket-funds"
-                        bind:value={currency}
-                        options={currencies}
-                    />
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
                     <Label for="basket-amount">Amount</Label>
                     <Input
                         id="basket-amount"
@@ -248,10 +227,6 @@
                         min="0"
                         bind:value={amount}
                     />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="basket-cdn">CDN value (est.)</Label>
-                    <Input id="basket-cdn" value={cdn.toFixed(2)} disabled />
                 </div>
             </div>
             <div class="flex justify-end gap-2">

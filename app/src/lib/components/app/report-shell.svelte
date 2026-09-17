@@ -6,11 +6,13 @@
 	import PrinterIcon from '@lucide/svelte/icons/printer';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import type { ReportTab } from '$lib/report-nav.js';
+	import { pageSize, type PaperStock } from '$lib/print-stock.js';
 	import '$lib/report.css';
 
 	let {
 		title,
 		orientation = 'portrait',
+		stock = 'letter',
 		backHref,
 		backLabel = 'Back',
 		tabs,
@@ -20,6 +22,8 @@
 	}: {
 		title: string;
 		orientation?: 'portrait' | 'landscape';
+		/** The paper this document prints on. */
+		stock?: PaperStock;
 		backHref?: string;
 		backLabel?: string;
 		/** Sibling reports in the same workflow, shown as tabs. */
@@ -44,7 +48,7 @@
 </script>
 
 <svelte:head>
-	{@html `<style>@page { size: letter ${orientation}; margin: 0.5in; }</style>`}
+	{@html `<style>@page { size: ${pageSize(stock, orientation)}; margin: 0.5in; }</style>`}
 </svelte:head>
 
 <div class="report-root min-h-screen pb-16">
@@ -62,7 +66,7 @@
 						type="date"
 						value={date}
 						onchange={(e) => changeDate(e.currentTarget.value)}
-						class="h-8 rounded-md border bg-background px-2 text-sm shadow-xs"
+						class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
 					/>
 				{/if}
 				{#if toolbar}{@render toolbar()}{/if}
@@ -91,7 +95,11 @@
 		{/if}
 	</div>
 
-	<div class="report-page" class:landscape={orientation === 'landscape'}>
+	<div
+		class="report-page"
+		class:landscape={orientation === 'landscape'}
+		class:a5={stock === 'a5'}
+	>
 		{@render children()}
 	</div>
 </div>

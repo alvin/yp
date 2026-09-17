@@ -9,7 +9,6 @@ interface NameRow {
 	guestid: number;
 	guest_name: string;
 	guestlastname: string;
-	match_kind: string;
 }
 
 function search(query: string): Promise<NameRow[]> {
@@ -23,6 +22,8 @@ let u: string;
 let surname: string; // ZZillington… — the client's "-illington" case
 let cousin: string; // shares the stem, differs after it
 let guestid: number;
+let firmName: string; // filed against a guest, but not part of their name
+let firmGuestId: number;
 
 beforeAll(async () => {
 	u = uid();
@@ -35,6 +36,12 @@ beforeAll(async () => {
 		p_region: 'BC'
 	});
 	await rpc<number>('create_guest', { p_lastname: cousin, p_firstname: 'Ray' });
+	firmName = `ZZFirm${u}`;
+	firmGuestId = await rpc<number>('create_guest', {
+		p_lastname: `ZZEmployee${u}`,
+		p_firstname: 'Dana',
+		p_company: firmName
+	});
 	page = await openAppPage();
 });
 
@@ -69,6 +76,12 @@ describe('search guests by partial name', () => {
 		expect(both.map((r) => r.guestid)).toContain(guestid);
 		// 'Ray' belongs to the other guest, so the pair matches nobody.
 		expect(await search(`${surname} Ray`)).toEqual([]);
+	});
+
+	it('reads the names on the guest record and nothing else', async () => {
+		// The record carries a company, but a name search is a search of names.
+		expect((await search(firmName)).map((r) => r.guestid)).not.toContain(firmGuestId);
+		expect((await search(`ZZEmployee${u}`)).map((r) => r.guestid)).toContain(firmGuestId);
 	});
 
 	it('searches the same way from the lookup screen', async () => {

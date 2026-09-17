@@ -37,9 +37,15 @@ describe('batch print the daily print run', () => {
 		expect(toolbar).toMatch(/folio/i);
 	});
 
-	it('prints the whole set with one action, each item on its own page', async () => {
+	it('groups the set by paper, each group printing in one action', async () => {
 		await page.goto(`${APP_URL}/print/batch?date=${today}`, { waitUntil: 'networkidle' });
-		await expect(page.locator('button:has-text("Print")').first()).toBeDefined();
+		// One print action per stock: reports on letter, guest documents on A5.
+		await page.locator('[data-testid=print-letter]').waitFor({ timeout: 15_000 });
+		await page.locator('[data-testid=print-a5]').waitFor({ timeout: 15_000 });
+		expect(await page.locator('[data-testid=group-letter] .report-page').count()).toBe(4);
+		expect(
+			await page.locator('[data-testid=group-a5] .report-page').count()
+		).toBeGreaterThanOrEqual(1);
 		// Page-break styling gives each document its own sheet.
 		const css = await page.evaluate(() =>
 			Array.from(document.querySelectorAll('style'))

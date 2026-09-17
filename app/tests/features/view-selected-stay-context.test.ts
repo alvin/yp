@@ -31,10 +31,10 @@ describe('view selected stay context', () => {
 		expect(body).toMatch(/Nights\s*4/);
 	});
 
-	it('shows party, bed type, and booked-by context', async () => {
+	it('shows party, bed layout, and booked-by context', async () => {
 		const body = await page.textContent('body');
 		expect(body).toMatch(/2 adults/);
-		expect(body).toContain('Bed type');
+		expect(body).toMatch(/Beds\s*(Regular|Split)/);
 		expect(body).toContain('QA');
 	});
 });
