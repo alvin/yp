@@ -2,7 +2,7 @@
 
 This folder defines the new Supabase/PostgreSQL data layer for Yellow Point Lodge.
 
-The production database uses **one application schema: `ypl`**. There is no second storage schema and no separate query layer. The old Access database is only the source for migration/import shape.
+Every database — local and hosted alike — uses **one application schema: `ypl`**. There is no second storage schema and no separate query layer. ("Production" throughout this README means the live data layer, not a separate environment; there is only one hosted project — see [Environments](#environments).) The old Access database is only the source for migration/import shape.
 
 ## Naming and architecture
 
@@ -257,14 +257,31 @@ import uses) is authoritative.
 
 Do not commit generated full-import SQL.
 
-## Deploying to a hosted Supabase project
+## Environments
 
-`tools/run_remote_sql.py` applies SQL files to a hosted project through the
-Management API, so no direct database password is needed for schema work:
+There are two, and only two:
+
+| | What it is |
+|---|---|
+| **Local** | `supabase start` from the repo root. Migrations plus `seed.sql`; the test suite runs against it. |
+| **YP Test** — `evapfimnlxwckgbllzys`, ca-central-1 | The one hosted Supabase project. The deployed app and the client's review both point at it, and it carries the full Access import including guest PII. |
+
+**There is no separate production project.** A migration is live once it has been
+applied to `evapfimnlxwckgbllzys`; there is nowhere else to promote it to. The
+project is named "YP Test" for historical reasons — treat it as the real thing,
+because the lodge does.
+
+To check what a migration's objects look like there without a database password,
+send a read query through the same Management API that `run_remote_sql.py` uses.
+
+## Deploying to the hosted project
+
+`tools/run_remote_sql.py` applies SQL files through the Management API, so no
+direct database password is needed for schema work:
 
 ```sh
-export SUPABASE_ACCESS_TOKEN=…
-python3 tools/run_remote_sql.py <project-ref> \
+export SUPABASE_ACCESS_TOKEN=…   # app/.env carries one
+python3 tools/run_remote_sql.py evapfimnlxwckgbllzys \
   migrations/0001_extensions.sql migrations/0002_schema.sql \
   migrations/0003_views_and_reports.sql migrations/0004_security.sql \
   migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
@@ -297,13 +314,14 @@ Two things the Management API cannot do, because they need a *direct* session:
   notify pgrst, 'reload schema';
   ```
 
-### Non-production environments
+### Keeping the hosted project shut
 
 `0004_security.sql` grants the `authenticated` role access to `ypl`. Supabase
-projects permit self-service signup by default, so on any environment carrying
-real data **anyone who can sign up gains staff-level read access**. Turn signup
-off in the dashboard, and apply `staging/staging_hardening.sql`, which enforces
-an email allowlist with a trigger on `auth.users` as a second line of defence.
+projects permit self-service signup by default, and the hosted project carries
+the full import including guest PII, so **anyone who can sign up gains
+staff-level read access**. Turn signup off in the dashboard, and apply
+`staging/staging_hardening.sql`, which enforces an email allowlist with a
+trigger on `auth.users` as a second line of defence.
 
 ## Security and Supabase API exposure
 

@@ -35,9 +35,16 @@ ypl.report_folio_receipts(int)          ypl.report_in_house(date)            [re
                                         ypl.v_transaction_lines              [2 columns added]
 ```
 
-**Deploy:** `0010` is applied locally only. Staging/production need it before the
-app is deployed — the `run_remote_sql.py` command in `supabase/README.md`
-already lists it.
+**Deploy:** applied to the local stack and, on 2026-09-17, to the hosted project
+(**YP Test**, `evapfimnlxwckgbllzys`) — the only cloud instance there is, so a
+migration is live once it has been applied there. See
+[Environments](../../supabase/README.md#environments). Applied with the
+`run_remote_sql.py` command in `supabase/README.md`, which lists it. Verified
+afterwards against the hosted schema: same 60 tables, 6 views, 96 functions, 17
+triggers and 619 columns as local, every function body identical, and the new
+behaviour exercised on the imported data — a phone number found in three
+formats, `Room – Lodge #05` on a bill, three room windows on a stay that moves,
+and 13 of that day's 65 in-house stays flagged as sharing a room.
 
 ---
 

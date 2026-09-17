@@ -31,9 +31,9 @@ Read that way the feature is almost entirely presentation: the new stay is an or
 | Tests | 1 new test file, 2 rewritten, 1 deleted; one latent hang in the test harness fixed |
 | App | re-book routes to the new-reservation screen; re-book dialog and `rebookReservation` deleted; new-reservation screen seeds from a source stay; one race fixed |
 
-**Deploy:** `0009` is applied locally only. Staging/production need it before the app is deployed — the `run_remote_sql.py` command in `supabase/README.md` lists it.
+**Deploy:** applied to the local stack and to the hosted project (**YP Test**, `evapfimnlxwckgbllzys`) — the only cloud instance there is. See [Environments](../../supabase/README.md#environments). Applied with the `run_remote_sql.py` command in `supabase/README.md`, which lists it.
 
-**Local database:** the working database carried hand-applied experiments from an abandoned attempt (a `ypl.booking_horizon(date)` helper, a `rebook_reservation` with a `p_roomid` argument, and a `ypl.rebooking` session flag the `reservations` trigger consulted to skip the horizon). All of it was reverted to the committed definitions before `0009` was written, and `pg_dump --schema-only -n ypl` of the working database is now byte-identical to a database built from `0001`–`0009` alone. Nothing in `0009` depends on those experiments and none of them reached staging.
+**Local database:** the working database carried hand-applied experiments from an abandoned attempt (a `ypl.booking_horizon(date)` helper, a `rebook_reservation` with a `p_roomid` argument, and a `ypl.rebooking` session flag the `reservations` trigger consulted to skip the horizon). All of it was reverted to the committed definitions before `0009` was written, and `pg_dump --schema-only -n ypl` of the working database is now byte-identical to a database built from `0001`–`0009` alone. Nothing in `0009` depends on those experiments and none of them reached the hosted project.
 
 ---
 

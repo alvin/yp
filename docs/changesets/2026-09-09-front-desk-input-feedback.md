@@ -32,7 +32,7 @@ ypl.reservations_sync_guest_dates()      [replaced]
 trigger reservations_sync_room_dates on ypl.reservations
 ```
 
-**Deploy:** `0008` is applied locally only. Staging/production need it before the app is deployed — the `run_remote_sql.py` command in `supabase/README.md` already lists it.
+**Deploy:** applied to the local stack and to the hosted project (**YP Test**, `evapfimnlxwckgbllzys`) — the only cloud instance there is. See [Environments](../../supabase/README.md#environments). Applied with the `run_remote_sql.py` command in `supabase/README.md`, which lists it.
 
 ---
 
