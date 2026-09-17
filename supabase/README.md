@@ -29,6 +29,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0006_ux_refinements.sql` | Search/report refinements from the wireframe audit: richer date search, cancelled-rows option on Manual Sales, multi-name guest documents, shared-booking context in guest history |
 | `migrations/0007_note_text.sql` | Converts Access rich-text notes to plain text and keeps them that way |
 | `migrations/0008_input_refinements.sql` | Front-desk input refinements from live use: forgiving search terms, multi-keyword and second-name search, stay dates that carry their rooms, loud removal of lines entered in error |
+| `migrations/0009_rebooking.sql` | Re-booking is next season's stay rather than a change to this one: `rebook_reservation` dropped, booking horizon narrowed to the arrival date with a week of grace |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -49,6 +50,7 @@ Apply migrations in filename order:
 6. `0006_ux_refinements.sql`
 7. `0007_note_text.sql`
 8. `0008_input_refinements.sql`
+9. `0009_rebooking.sql`
 
 Then load `seed.sql` for repeatable reference/configuration data.
 
@@ -60,7 +62,7 @@ table editor, SQL editor, or import:
 
 | Table | Trigger behaviour |
 |---|---|
-| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the one-year booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out and to the room assignments that ran to the reservation's own dates (mid-stay move windows keep theirs) |
+| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out and to the room assignments that ran to the reservation's own dates (mid-stay move windows keep theirs) |
 | `reservation_guests` | Check-in/out default from the reservation; exactly one primary guest per reservation |
 | `room_assignments` | Date validation; guest count defaults from the reservation |
 | `transactions` | Auto-completes the amount from the price list (manual overrides always win) and recomputes all seven tax columns from room/inventory tax flags × the rate effective on the transaction date |
@@ -75,9 +77,9 @@ losslessly.
 Guests: `create_guest`, `update_guest`, `set_guest_notes` (office-only notes).
 Reservations: `create_reservation` (header + primary guest + optional room in
 one call), `update_reservation`, `confirm_reservation`, `set_reservation_notes`,
-`cancel_reservation(p_deposit_handling => none|refund|keep)`,
-`rebook_reservation` (new stay, deposits transferred with an offsetting
-refund/received pair, original cancelled).
+`cancel_reservation(p_deposit_handling => none|refund|keep)`. Re-booking is
+not an RPC: next season's stay is written by `create_reservation` like any
+other, and the screen carries the party, room and dates forward.
 Guests on a stay: `add_reservation_guest`, `update_reservation_guest`,
 `set_guest_in_house`, `archive_reservation_guest`.
 Rooms: `assign_room`, `record_room_move` (splits the occupancy at the move
@@ -102,7 +104,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/business_logic_smoke.s
 ```
 
 Runs the entire workflow (guest → reservation → charges → payments → move →
-cancel → rebook → reports) inside one transaction and rolls back.
+cancel → reports) inside one transaction and rolls back.
 
 ## Core production tables
 
@@ -237,7 +239,8 @@ python3 tools/run_remote_sql.py <project-ref> \
   migrations/0001_extensions.sql migrations/0002_schema.sql \
   migrations/0003_views_and_reports.sql migrations/0004_security.sql \
   migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
-  migrations/0007_note_text.sql migrations/0008_input_refinements.sql seed.sql
+  migrations/0007_note_text.sql migrations/0008_input_refinements.sql \
+  migrations/0009_rebooking.sql seed.sql
 ```
 
 Two things the Management API cannot do, because they need a *direct* session:

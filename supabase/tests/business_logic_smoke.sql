@@ -59,13 +59,24 @@ begin
   assert v_r.resbookedby = 'ST', 'bookedby not upcased';
   assert v_r.resbookingdate::date = current_date, 'booking date default missing';
 
-  -- One-year horizon enforced
+  -- One-year horizon enforced, on the arrival date, with a week of grace
   begin
     perform ypl.create_reservation(v_guestid, current_date + 400, current_date + 403, 'ST');
     raise exception 'horizon check failed to raise';
   exception when others then
     if sqlerrm = 'horizon check failed to raise' then raise; end if;
   end;
+
+  -- The grace week: next season is 52 weeks on, which from mid-stay runs a
+  -- few days past a bare year.
+  select * into v_res2 from ypl.create_reservation(
+    v_guestid, current_date + 370, current_date + 373, 'ST');
+  assert v_res2.resnumber > 0, 'arrival inside the grace week refused';
+
+  -- Departure is not held to the horizon; only the arrival is.
+  select * into v_res2 from ypl.create_reservation(
+    v_guestid, current_date + 370, current_date + 400, 'ST');
+  assert v_res2.resnumber > 0, 'departure past the horizon refused';
 
   -- Departure before arrival rejected
   begin
@@ -211,28 +222,6 @@ begin
   assert v_count = 1, 'deposit refund row missing';
   assert ypl.reservationguest_deposit_held(v_res2.reservationguestid) = 0, 'deposit still held after refund';
   assert (select count(*) from ypl.report_cancellation_list(current_date)) >= 1, 'cancellation list empty';
-
-  ------------------------------------------------------------------
-  -- Re-book with deposit transfer
-  ------------------------------------------------------------------
-  select * into v_res2 from ypl.create_reservation(v_guestid, current_date + 20, current_date + 22, 'ST');
-  perform ypl.record_payment(v_res2.reservationguestid, 'Deposit (Received)', 'Visa', 200);
-  select * into v_r from ypl.reservations where reservationid = v_res2.reservationid;
-  declare
-    v_new record;
-  begin
-    select * into v_new from ypl.rebook_reservation(v_res2.reservationid, current_date + 30, current_date + 33, 'ST');
-    assert v_new.resnumber <> v_r.resnumber, 'rebook did not create a new reservation';
-    assert (select rescancelled from ypl.reservations where reservationid = v_res2.reservationid),
-      'original not cancelled on rebook';
-    -- Deposit moved: old guest holds 0, new reservation holds 200
-    assert ypl.reservationguest_deposit_held(v_res2.reservationguestid) = 0, 'deposit not moved off original';
-    select coalesce(sum(ypl.reservationguest_deposit_held(rg.reservationguestid)), 0) into v_num
-      from ypl.reservation_guests rg where rg.reservationid = v_new.reservationid and not rg.rgarchive;
-    assert v_num = 200.00, format('transferred deposit expected 200, got %s', v_num);
-    assert (select numnights from ypl.reservations where reservationid = v_new.reservationid) = 3,
-      'rebooked nights wrong';
-  end;
 
   ------------------------------------------------------------------
   -- Gift certificate: charge side + receipt side

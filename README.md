@@ -17,7 +17,7 @@ operating habits.
 
 All business rules live in the database (`ypl` schema): reservation numbering,
 the one-year booking horizon, tax calculation from room/inventory flags and
-dated rate tables, US→CDN conversion, deposit refund/transfer handling, and
+dated rate tables, US→CDN conversion, deposit refund/kept handling, and
 room-move history. The app is a client-rendered SPA that reads through `ypl`
 views/RPCs and writes through workflow RPCs, so data stays consistent even when
 rows are edited directly in Supabase. Printed reports clone the client's
