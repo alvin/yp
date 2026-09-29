@@ -201,6 +201,16 @@ export async function sharedRoomOccupancies(reservationid: number): Promise<Shar
 	return rows.map((r) => ({ ...r, shared_in: d(r.shared_in)!, shared_out: d(r.shared_out)! }));
 }
 
+/** The room windows of a stay that are moves, keyed to the window(s) each moved from. */
+export async function roomMoves(reservationid: number): Promise<Map<number, number[]>> {
+	const rows = unwrap(
+		await supabase.rpc('room_moves', { p_reservationid: reservationid })
+	) as { occupancyid: number; from_occupancyid: number }[];
+	const moves = new Map<number, number[]>();
+	for (const m of rows) moves.set(m.occupancyid, [...(moves.get(m.occupancyid) ?? []), m.from_occupancyid]);
+	return moves;
+}
+
 export async function occupancySummaries(reservationid: number): Promise<OccupancySummary[]> {
 	const rows = unwrap(
 		await supabase

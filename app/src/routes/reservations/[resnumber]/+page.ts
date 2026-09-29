@@ -5,6 +5,7 @@ import {
   occupancySummaries,
   reservationLedger,
   reservationNotes,
+  roomMoves,
   sharedRoomOccupancies,
   TODAY,
 } from "$lib/data/queries.js";
@@ -15,12 +16,13 @@ export const load: PageLoad = async ({ params }) => {
   const summary = await findReservation(resnumber);
   if (!summary) error(404, `Reservation #${params.resnumber} not found`);
 
-  const [notes, occupancy, ledger, guest, shared] = await Promise.all([
+  const [notes, occupancy, ledger, guest, shared, moves] = await Promise.all([
     reservationNotes(summary.reservationid),
     occupancySummaries(summary.reservationid),
     reservationLedger(summary.reservationid),
     getGuest(summary.primary_guestid),
     sharedRoomOccupancies(summary.reservationid),
+    roomMoves(summary.reservationid),
   ]);
   return {
     summary,
@@ -29,6 +31,7 @@ export const load: PageLoad = async ({ params }) => {
     kitchen: notes.kitchen,
     occupancy,
     shared,
+    moves,
     ledger,
     guestNotes: guest?.guestnotes ?? null,
     today: TODAY,

@@ -14,6 +14,7 @@
     import FileTextIcon from "@lucide/svelte/icons/file-text";
     import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
     import CalendarIcon from "@lucide/svelte/icons/calendar";
+    import TrashIcon from "@lucide/svelte/icons/trash-2";
 
     import { Button } from "$lib/components/ui/button/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
@@ -31,12 +32,13 @@
     import SharedRoomBadge from "$lib/components/app/shared-room-badge.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
-    import { invalidateAll } from "$app/navigation";
+    import { afterNavigate, invalidateAll } from "$app/navigation";
     import { bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
     import { ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
     import { roomOptions } from "$lib/options.js";
     import {
         occupancySummaries,
+        roomMoves,
         sharedRoomOccupancies,
     } from "$lib/data/queries.js";
     import {
@@ -47,6 +49,7 @@
         confirmReservation,
         createGuest,
         recordRoomMove,
+        undoRoomMove,
         saveKitchenMeal,
         setGuestNotes,
         setReservationNotes,
@@ -63,12 +66,22 @@
     const s = $derived(data.summary);
     const today = $derived(data.today);
 
+    // Opened from a list of reservations — a guest's, a date search, an
+    // all-fields search — the back button returns to that list, so checking
+    // several stays doesn't mean searching again. Opened any other way it goes
+    // to Lookup, as before.
+    let backToList = $state(false);
+    afterNavigate(({ from }) => {
+        backToList = /^\/(guests\/|date$|query$)/.test(from?.url.pathname ?? "");
+    });
+
     function seed() {
         const d = data;
         return {
             cancelled: d.summary.rescancelled,
             occupancy: d.occupancy,
             shared: d.shared,
+            moves: d.moves,
             mIn: d.today,
             mOut: d.summary.resdeparturedate,
             kitchenText: d.kitchen
@@ -184,10 +197,7 @@
                 description: `${dateMed(dArrival)} → ${dateMed(dDeparture)} · ${dNights} night${dNights === 1 ? "" : "s"}`,
             });
             await invalidateAll();
-            [occupancy, shared] = await Promise.all([
-                occupancySummaries(s.reservationid),
-                sharedRoomOccupancies(s.reservationid),
-            ]);
+            await refreshRooms();
         } catch (e) {
             toast.error(
                 e instanceof Error ? e.message : "Could not change the dates.",
@@ -213,6 +223,17 @@
         }
         return byId;
     });
+    // Which rooms are moves, each keyed to the room(s) it moved from.
+    let moves = $state<Map<number, number[]>>(i.moves);
+
+    async function refreshRooms() {
+        [occupancy, shared, moves] = await Promise.all([
+            occupancySummaries(s.reservationid),
+            sharedRoomOccupancies(s.reservationid),
+            roomMoves(s.reservationid),
+        ]);
+    }
+
     let moveOpen = $state(false);
     let mMode = $state<"move" | "add">("move");
     let mFrom = $state("");
@@ -269,10 +290,7 @@
                     mNotes || null,
                 );
             }
-            [occupancy, shared] = await Promise.all([
-                occupancySummaries(s.reservationid),
-                sharedRoomOccupancies(s.reservationid),
-            ]);
+            await refreshRooms();
             moveOpen = false;
             toast.success(
                 `${mMode === "move" ? "Room move recorded" : "Room added"} — ${room.roomname}${room.roomnumber ? " " + room.roomnumber : ""}`,
@@ -281,6 +299,56 @@
             toast.error(
                 e instanceof Error ? e.message : "Could not save the room move.",
             );
+        }
+    }
+
+    // Undo a move booked ahead and no longer needed: the stay keeps the room
+    // it was leaving. Where two rooms moved on the same day the database can't
+    // tell which one this move replaced, so the desk picks it.
+    let undoOpen = $state(false);
+    let undoing = $state(false);
+    let undoTarget = $state<OccupancySummary | null>(null);
+    let undoFrom = $state("");
+    const undoFromOptions = $derived(
+        (undoTarget ? (moves.get(undoTarget.occupancyid) ?? []) : []).map(
+            (id) => {
+                const o = occupancy.find((x) => x.occupancyid === id);
+                return {
+                    value: String(id),
+                    label: o
+                        ? `${o.room_compact} · ${dateShort(o.occupancyin)} → ${dateShort(o.occupancyout)}`
+                        : String(id),
+                };
+            },
+        ),
+    );
+    const undoKeeps = $derived(
+        occupancy.find((o) => String(o.occupancyid) === undoFrom),
+    );
+
+    function askUndoMove(o: OccupancySummary) {
+        const from = moves.get(o.occupancyid) ?? [];
+        undoTarget = o;
+        undoFrom = from.length === 1 ? String(from[0]) : "";
+        undoOpen = true;
+    }
+
+    async function confirmUndoMove() {
+        const o = undoTarget;
+        if (!o || !undoFrom) return;
+        undoing = true;
+        try {
+            await undoRoomMove(o.occupancyid, Number(undoFrom));
+            await refreshRooms();
+            undoOpen = false;
+            undoTarget = null;
+            toast.success(`Room move undone — ${o.room_compact}`);
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Could not undo the move.",
+            );
+        } finally {
+            undoing = false;
         }
     }
 
@@ -425,7 +493,13 @@
 
 <!-- Action bar -->
 <div class="mb-5 flex flex-wrap items-center gap-3">
-    <Button variant="ghost" size="sm" href="/"><ArrowLeftIcon /> Lookup</Button>
+    {#if backToList}
+        <Button variant="ghost" size="sm" onclick={() => history.back()}
+            ><ArrowLeftIcon /> Back</Button
+        >
+    {:else}
+        <Button variant="ghost" size="sm" href="/"><ArrowLeftIcon /> Lookup</Button>
+    {/if}
     <div class="flex items-center gap-2">
         <h1 class="text-lg font-semibold">Reservation #{s.resnumber}</h1>
         <StatusBadge status={statusToday} />
@@ -599,7 +673,7 @@
             <Card.Content class="space-y-2">
                 {#each occupancy as o (o.occupancyid)}
                     <div
-                        class="bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
+                        class="group bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
                     >
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
@@ -640,6 +714,17 @@
                                 </div>
                             {/each}
                         </div>
+                        {#if moves.has(o.occupancyid)}
+                            <button
+                                type="button"
+                                aria-label="Undo move to {o.room_compact}"
+                                title="Undo this move"
+                                onclick={() => askUndoMove(o)}
+                                class="text-muted-foreground hover:text-destructive shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                            >
+                                <TrashIcon class="size-3.5" />
+                            </button>
+                        {/if}
                     </div>
                 {/each}
             </Card.Content>
@@ -995,6 +1080,57 @@
             >
             <Button onclick={addMove}>
                 {mMode === "move" ? "Record move" : "Add room"}
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Undo a room move -->
+<Dialog.Root bind:open={undoOpen}>
+    <Dialog.Content class="sm:max-w-sm">
+        <Dialog.Header>
+            <Dialog.Title>Undo this move?</Dialog.Title>
+            <Dialog.Description>
+                {#if undoKeeps && undoTarget}
+                    The stay keeps {undoKeeps.room_compact} to {dateShort(
+                        undoTarget.occupancyout,
+                    )}.
+                {:else}
+                    The stay keeps the room it was leaving.
+                {/if}
+            </Dialog.Description>
+        </Dialog.Header>
+        {#if undoTarget}
+            <div class="bg-muted/40 rounded-lg border px-3 py-2 text-sm">
+                <div class="font-medium">{undoTarget.room_compact}</div>
+                <div class="text-muted-foreground mt-0.5 text-xs">
+                    {dateShort(undoTarget.occupancyin)} → {dateShort(
+                        undoTarget.occupancyout,
+                    )}
+                </div>
+            </div>
+            {#if undoFromOptions.length > 1}
+                <div class="space-y-1.5">
+                    <Label for="u-from">Moving from</Label>
+                    <Combobox
+                        id="u-from"
+                        bind:value={undoFrom}
+                        options={undoFromOptions}
+                        placeholder="Select room"
+                    />
+                </div>
+            {/if}
+        {/if}
+        <Dialog.Footer>
+            <Button variant="ghost" onclick={() => (undoOpen = false)}
+                >Keep it</Button
+            >
+            <Button
+                variant="destructive"
+                disabled={undoing || !undoFrom}
+                onclick={confirmUndoMove}
+            >
+                <TrashIcon /> Undo move
             </Button>
         </Dialog.Footer>
     </Dialog.Content>

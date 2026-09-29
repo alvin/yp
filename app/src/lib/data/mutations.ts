@@ -223,6 +223,16 @@ export async function recordRoomMove(
 	);
 }
 
+/** Undoes a room move; the stay keeps the room it was leaving. Returns that room window. */
+export async function undoRoomMove(occupancyid: number, fromOccupancyid?: number): Promise<number> {
+	return unwrap(
+		await supabase.rpc('undo_room_move', {
+			p_occupancyid: occupancyid,
+			p_from_occupancyid: fromOccupancyid ?? null
+		})
+	);
+}
+
 // --- Charges and payments ------------------------------------------------------
 
 export async function postRoomNights(

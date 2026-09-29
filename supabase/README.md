@@ -32,6 +32,8 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0009_rebooking.sql` | Re-booking is next season's stay rather than a change to this one: `rebook_reservation` dropped, booking horizon narrowed to the arrival date with a week of grace |
 | `migrations/0010_output_refinements.sql` | Printed-output and lookup refinements from live use: every receipt and the diet on the check-in folio, the rooms of a stay on the folio and confirmation, room-named charges on the check-out bill, the In House report ordered for section headings, rooms two reservations hold at once, phone numbers matched however punctuated, guest number searchable, company no longer searched |
 | `migrations/0011_guest_document_notes.sql` | The diet and the housekeeping note print on both the confirmation and the check-in folio, read the way the kitchen and housekeeping reports read them |
+| `migrations/0012_undo_room_move.sql` | A room move can be undone: the stay keeps the room it was leaving |
+| `migrations/0013_accurate_occupancy_status.sql` | A room's status for a day is worked out, never assumed: Future, Past and Move Out join Arrive Today, Move In, In House and Depart Today |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -55,6 +57,8 @@ Apply migrations in filename order:
 9. `0009_rebooking.sql`
 10. `0010_output_refinements.sql`
 11. `0011_guest_document_notes.sql`
+12. `0012_undo_room_move.sql`
+13. `0013_accurate_occupancy_status.sql`
 
 Then load `seed.sql` for repeatable reference/configuration data.
 
@@ -87,7 +91,10 @@ other, and the screen carries the party, room and dates forward.
 Guests on a stay: `add_reservation_guest`, `update_reservation_guest`,
 `set_guest_in_house`, `archive_reservation_guest`.
 Rooms: `assign_room`, `record_room_move` (splits the occupancy at the move
-date, preserving both rooms in history), `update_room_assignment`,
+date, preserving both rooms in history), `undo_room_move` (the room being left
+runs on to the end of the move and the move is archived; a stay that moved out
+and back is left in one room; where two rooms moved on the same day the caller
+names the one to go back to), `update_room_assignment`,
 `archive_room_assignment`, `room_directory(p_in, p_out)` for room-selection
 help with availability.
 Charges: `post_room_nights`, `post_charge`, `archive_transaction`,
@@ -101,7 +108,7 @@ is already gone rather than silently doing nothing.
 Notes: `add_housekeeping_note`, `archive_housekeeping_note`,
 `save_kitchen_meal`, `archive_kitchen_meal`.
 
-### Read helpers worth knowing (0010–0011)
+### Read helpers worth knowing (0010–0012)
 
 `report_stay_rooms(p_reservationid)` — every room a stay occupies with its own
 dates and party size, in stay order. The check-in folio and the confirmation
@@ -116,6 +123,12 @@ all of them, not the deposit alone.
 (0011) — the diet and housekeeping note a stay carries, worded as the kitchen
 and housekeeping reports print them (the latest housekeeping note per guest).
 The confirmation and the check-in folio both print them.
+
+`room_moves(p_reservationid)` (0012) — the room windows of a stay that are
+moves, each with the window it moved from. `record_room_move` doesn't link the
+two, so a move is read the way the stay history reads: same guest, another
+room, opening the day the other closes. Two rows for one window means two rooms
+moved that day.
 
 `shared_room_occupancies(p_reservationid)` — room windows on this stay that
 another live reservation also holds for at least one night, with the party
@@ -294,7 +307,8 @@ python3 tools/run_remote_sql.py evapfimnlxwckgbllzys \
   migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
   migrations/0007_note_text.sql migrations/0008_input_refinements.sql \
   migrations/0009_rebooking.sql migrations/0010_output_refinements.sql \
-  migrations/0011_guest_document_notes.sql seed.sql
+  migrations/0011_guest_document_notes.sql migrations/0012_undo_room_move.sql \
+  migrations/0013_accurate_occupancy_status.sql seed.sql
 ```
 
 Two things the Management API cannot do, because they need a *direct* session:

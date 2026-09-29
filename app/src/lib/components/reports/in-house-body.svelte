@@ -8,11 +8,14 @@
 	const arriveToday = $derived(rows.filter((r) => r.section === 'Arrive Today').length);
 	const departToday = $derived(rows.filter((r) => r.section === 'Depart Today').length);
 	const inHouse = $derived(rows.filter((r) => r.section === 'In House').length);
-	const totalGuests = $derived(rows.reduce((sum, r) => sum + (r.guest_count ?? 0), 0));
+	// A party moving rooms is counted once, in the room it moves into.
+	const totalGuests = $derived(
+		rows.filter((r) => r.section !== 'Move Out').reduce((sum, r) => sum + (r.guest_count ?? 0), 0)
+	);
 
 	// The day in the order it runs. report_in_house returns rows in this order,
 	// so the sections are already contiguous; an empty one is left out.
-	const ORDER = ['Arrive Today', 'Move In', 'In House', 'Depart Today'];
+	const ORDER = ['Arrive Today', 'Move In', 'Move Out', 'In House', 'Depart Today'];
 	const sections = $derived(
 		ORDER.map((section) => ({ section, rows: rows.filter((r) => r.section === section) })).filter(
 			(s) => s.rows.length
