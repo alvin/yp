@@ -14,6 +14,7 @@
     import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
     import CalendarIcon from "@lucide/svelte/icons/calendar";
     import TrashIcon from "@lucide/svelte/icons/trash-2";
+    import PencilIcon from "@lucide/svelte/icons/pencil";
 
     import { Button } from "$lib/components/ui/button/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
@@ -35,15 +36,16 @@
     import { guestDocTabs } from "$lib/report-nav.js";
     import { afterNavigate, invalidateAll } from "$app/navigation";
     import { addDays, bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
-    import { ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
-    import { roomOptions } from "$lib/options.js";
+    import { GUEST_DIETS, ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
+    import { optionalOptions, roomOptions, textOptions } from "$lib/options.js";
     import {
         occupancySummaries,
         roomMoves,
+        roomsBooked,
         sharedRoomOccupancies,
     } from "$lib/data/queries.js";
     import {
-        addHousekeepingNote,
+        setHousekeepingNote,
         addReservationGuest,
         assignRoom,
         cancelReservation,
@@ -51,6 +53,7 @@
         createGuest,
         recordRoomMove,
         undoRoomMove,
+        changeRoom,
         saveKitchenMeal,
         setReservationNotes,
         updateReservation,
@@ -84,6 +87,7 @@
             moves: d.moves,
             mIn: d.today,
             mOut: d.summary.resdeparturedate,
+            kitchenDiet: primaryMeal(d)?.guestdiet ?? "",
             kitchenText: primaryMeal(d)?.kitchenmealnotes ?? "",
             housekeepingText: currentHousekeepingNote(d),
             requestText:
@@ -363,6 +367,54 @@
         }
     }
 
+    // Change a room outright — the stay holds another room for the same
+    // nights. The database refuses while a room charge for the old room is
+    // posted over them, or when the new room is the one the stay moves from or
+    // to next door (that is undoing the move).
+    let changeOpen = $state(false);
+    let changing = $state(false);
+    let changeTarget = $state<OccupancySummary | null>(null);
+    let changeTo = $state("");
+    let changeBooked = $state(new Set<number>());
+    const changeOptions = $derived(
+        rooms
+            .filter((o) => o.value !== String(changeTarget?.roomid))
+            .map((o) =>
+                changeBooked.has(Number(o.value)) ? { ...o, hint: "Booked" } : o,
+            ),
+    );
+
+    async function askChangeRoom(o: OccupancySummary) {
+        changeTarget = o;
+        changeTo = "";
+        changeBooked = new Set();
+        changeOpen = true;
+        changeBooked = await roomsBooked(o.occupancyin, o.occupancyout).catch(
+            () => new Set<number>(),
+        );
+    }
+
+    async function confirmChangeRoom() {
+        const o = changeTarget;
+        if (!o || !changeTo) return;
+        changing = true;
+        try {
+            await changeRoom(o.occupancyid, Number(changeTo));
+            await refreshRooms();
+            changeOpen = false;
+            const room = roomById(Number(changeTo))!;
+            toast.success(
+                `Room changed — ${room.roomname}${room.roomnumber ? " " + room.roomnumber : ""}`,
+            );
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Could not change the room.",
+            );
+        } finally {
+            changing = false;
+        }
+    }
+
     // Additional guest names on the reservation
     let addGuestOpen = $state(false);
     let agQuery = $state("");
@@ -410,27 +462,31 @@
     }
 
     // Notes tabs (report-feeding)
+    let kitchenDiet = $state(i.kitchenDiet);
     let kitchenText = $state(i.kitchenText);
+    const dietOptions = optionalOptions(textOptions(GUEST_DIETS), "None");
     let housekeepingText = $state(i.housekeepingText);
     let requestText = $state(i.requestText);
     let reservationText = $state(i.reservationText);
     async function saveNotes(which: string) {
         try {
             if (which === "Kitchen") {
+                // A diet on file is saved even when emptied, which clears it;
+                // with none on file, an empty tab adds nothing.
                 const meal = primaryMeal(data);
-                await saveKitchenMeal(
-                    s.primary_guestid,
-                    meal?.guestdiet ?? "",
-                    kitchenText,
-                    meal?.kitchenmealid ?? null,
-                );
-            } else if (which === "Housekeeping") {
-                if (housekeepingText.trim() !== currentHousekeepingNote(data).trim())
-                    await addHousekeepingNote(
-                        s.primary_reservationguestid,
-                        housekeepingText,
-                        today,
+                if (meal || kitchenDiet || kitchenText.trim())
+                    await saveKitchenMeal(
+                        s.primary_guestid,
+                        kitchenDiet,
+                        kitchenText,
+                        meal?.kitchenmealid ?? null,
                     );
+            } else if (which === "Housekeeping") {
+                await setHousekeepingNote(
+                    s.primary_reservationguestid,
+                    housekeepingText,
+                    today,
+                );
             } else if (which === "Request") {
                 await updateReservationGuestNotes(
                     s.primary_reservationguestid,
@@ -709,6 +765,15 @@
                                 </div>
                             {/each}
                         </div>
+                        <button
+                            type="button"
+                            aria-label="Change room {o.room_compact}"
+                            title="Change room"
+                            onclick={() => askChangeRoom(o)}
+                            class="text-muted-foreground hover:text-foreground ml-auto shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                        >
+                            <PencilIcon class="size-3.5" />
+                        </button>
                         {#if moves.has(o.occupancyid)}
                             <button
                                 type="button"
@@ -742,16 +807,16 @@
                         <Tabs.Trigger value="res">Reservation</Tabs.Trigger>
                     </Tabs.List>
                     <Tabs.Content value="kitchen" class="mt-3 space-y-2">
-                        {#if primaryMeal(data)?.guestdiet}
-                            <p class="text-sm">
-                                <span class="text-muted-foreground">Diet</span>
-                                {primaryMeal(data)?.guestdiet}
-                            </p>
-                        {/if}
+                        <Combobox
+                            id="kitchen-diet"
+                            bind:value={kitchenDiet}
+                            options={dietOptions}
+                            placeholder="None"
+                        />
                         <Textarea
                             bind:value={kitchenText}
                             rows={4}
-                            placeholder="Diet, allergies, meal preferences"
+                            placeholder="Allergies, meal preferences"
                         />
                         <p class="text-muted-foreground text-xs">
                             Prints on the kitchen report, confirmation and check-in folio.
@@ -1069,6 +1134,40 @@
             >
                 {mMode === "move" ? "Record move" : "Add room"}
             </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Change a room outright -->
+<Dialog.Root bind:open={changeOpen}>
+    <Dialog.Content class="sm:max-w-sm">
+        <Dialog.Header>
+            <Dialog.Title>Change room</Dialog.Title>
+            {#if changeTarget}
+                <Dialog.Description>
+                    {changeTarget.room_compact} · {dateShort(
+                        changeTarget.occupancyin,
+                    )} → {dateShort(changeTarget.occupancyout)}
+                </Dialog.Description>
+            {/if}
+        </Dialog.Header>
+        <div class="space-y-1.5">
+            <Label for="cr-room">New room</Label>
+            <Combobox
+                id="cr-room"
+                bind:value={changeTo}
+                options={changeOptions}
+                placeholder="Select room"
+                searchPlaceholder="Room name or number…"
+            />
+        </div>
+        <Dialog.Footer>
+            <Button variant="ghost" onclick={() => (changeOpen = false)}
+                >Cancel</Button
+            >
+            <Button disabled={changing || !changeTo} onclick={confirmChangeRoom}
+                >Change room</Button
+            >
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

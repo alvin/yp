@@ -40,7 +40,11 @@ beforeAll(async () => {
 
 	// Diet comes from the lodge's diet list; the notes beside it are free text.
 	await page.click('#diet');
-	const option = page.locator('[data-testid=combobox-list] [role=option]').first();
+	// The first real diet — the list opens with None, for taking one back.
+	const option = page
+		.locator('[data-testid=combobox-list] [role=option]')
+		.filter({ hasNotText: 'None' })
+		.first();
 	await option.waitFor({ timeout: 10_000 });
 	diet = (await option.textContent())?.trim() ?? '';
 	await option.click();
@@ -126,5 +130,20 @@ describe('capture housekeeping and diet notes when booking', () => {
 		) as unknown[];
 		expect(notes).toHaveLength(0);
 		expect(meals).toHaveLength(0);
+	});
+
+	it('shows a returning guest’s diet and clears it when emptied', async () => {
+		await page.goto(`${APP_URL}/reservations/new?guest=${guestid}`, { waitUntil: 'networkidle' });
+		expect(await page.inputValue('#kitchen-notes')).toBe(KITCHEN_NOTE);
+		await page.click('#diet');
+		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: 'None' }).click();
+		await page.fill('#kitchen-notes', '');
+		const next = addDays(arrival, 10);
+		await page.fill('#bb', 'QA');
+		await page.fill('#arr', next);
+		await page.fill('#dep', addDays(next, 2));
+		await page.getByRole('button', { name: 'Save reservation' }).click();
+		await page.waitForURL(/\/reservations\/\d+$/, { timeout: 30_000 });
+		expect(await rpc<string | null>('stay_diet_notes', { p_reservationid: reservationid })).toBeNull();
 	});
 });

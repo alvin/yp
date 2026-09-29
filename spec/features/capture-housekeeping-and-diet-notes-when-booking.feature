@@ -14,3 +14,4 @@ Feature: capture housekeeping and diet notes when booking
     And Saving stores them against the stay's guest, the same way notes added later are stored.
     And The notes appear on the housekeeping and kitchen reports without any further step.
     And Leaving them blank records no notes at all.
+    And For a returning guest, the diet on file is shown and can be changed or cleared here.

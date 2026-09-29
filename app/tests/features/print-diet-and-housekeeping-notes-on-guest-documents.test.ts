@@ -214,4 +214,33 @@ describe('print diet and housekeeping notes on guest documents — the notes tab
 		expect(await housekeepingNotes()).toEqual(before);
 		expect((await folio(full.reservationid)).housekeeping_notes).toBe(latest);
 	});
+
+	it('clears the housekeeping note when the box is emptied, keeping its history', async () => {
+		await page.getByRole('tab', { name: 'Housekeeping' }).click();
+		await page.locator('[role=tabpanel][data-state=active] textarea').fill('');
+		await page.locator('[role=tabpanel][data-state=active]').getByRole('button', { name: 'Save' }).click();
+		await page.getByText('Housekeeping notes saved').last().waitFor({ timeout: 10_000 });
+		await expect
+			.poll(async () => (await folio(full.reservationid)).housekeeping_notes, { timeout: 10_000 })
+			.toBeNull();
+		const db = await staffClient();
+		const history = unwrap(
+			await db
+				.from('housekeeping_notes')
+				.select('housekeepingnotes')
+				.eq('reservationguestid', full.reservationguestid)
+		) as { housekeepingnotes: string }[];
+		expect(history.map((h) => h.housekeepingnotes)).toEqual(expect.arrayContaining([earlier, latest]));
+	});
+
+	it('clears the diet when it is set to None and its notes emptied', async () => {
+		await page.getByRole('tab', { name: 'Kitchen' }).click();
+		await page.click('#kitchen-diet');
+		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: 'None' }).click();
+		await page.locator('[role=tabpanel][data-state=active] textarea').fill('');
+		await page.locator('[role=tabpanel][data-state=active]').getByRole('button', { name: 'Save' }).click();
+		await expect
+			.poll(async () => (await confirmation(full.reservationid)).diet_notes, { timeout: 10_000 })
+			.toBeNull();
+	});
 });

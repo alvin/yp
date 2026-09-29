@@ -11,5 +11,5 @@ Feature: attach an existing guest to a new reservation
   Scenario: Acceptance criteria
     Then An existing guest can be found from part of their name without spelling it in full.
     And Choosing a guest fills the whole stored record, including the street address, postal code, and country.
-    And The filled details can still be corrected before the reservation is saved.
+    And The filled details can still be corrected before the reservation is saved, and the corrections are saved to the guest's record; details the screen doesn't show are left as they were.
     And The reservation is attached to the existing guest record rather than creating a second one.

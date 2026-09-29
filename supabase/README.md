@@ -36,6 +36,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0013_accurate_occupancy_status.sql` | A room's status for a day is worked out, never assumed: Future, Past and Move Out join Arrive Today, Move In, In House and Depart Today |
 | `migrations/0014_one_rule_each.sql` | Each reporting rule written once: rooms held on a day, guests in house, deposit held, the current housekeeping note and the diets that count, daily cash lines that add up to their totals, a charge's daily cash category; removal of an already-removed line fails |
 | `migrations/0015_room_rate_type.sql` | A room night is priced at the rate type chosen — Regular, Special or Split — as Access asked |
+| `migrations/0016_guest_details_and_notes.sql` | A guest's details can be corrected and cleared; the housekeeping note in force can be cleared; a stay's room can be changed outright without leaving its room charges behind |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -59,7 +60,7 @@ table editor, SQL editor, or import:
 |---|---|
 | `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out and to the room assignments that ran to the reservation's own dates (mid-stay move windows keep theirs) |
 | `reservation_guests` | Check-in/out default from the reservation; exactly one primary guest per reservation |
-| `room_assignments` | Date validation; guest count defaults from the reservation |
+| `room_assignments` | Date validation; guest count defaults from the reservation; a room can't be changed while a room charge for the old room is posted over its nights, nor to the room the stay is in on the nights either side |
 | `transactions` | Auto-completes the amount from the price list (manual overrides always win) and recomputes every tax column from room/inventory tax flags × the rate effective on the transaction date |
 | `payments` | Payment code derives from the category, payment date defaults, `paymentamountcdn` converts US funds at the effective exchange rate |
 
@@ -69,7 +70,9 @@ losslessly.
 
 ### Workflow RPCs (writes)
 
-Guests: `create_guest`, `update_guest`, `set_guest_notes` (office-only notes).
+Guests: `create_guest`, `update_guest` (a field given as text sets it, an
+empty string clears it, a field left null is kept), `set_guest_notes`
+(office-only notes).
 Reservations: `create_reservation` (header + primary guest + optional room in
 one call), `update_reservation`, `confirm_reservation`, `set_reservation_notes`,
 `cancel_reservation(p_deposit_handling => none|refund|keep)`. Re-booking is
@@ -80,7 +83,8 @@ Rooms: `assign_room`, `record_room_move` (splits the occupancy at the move
 date, preserving both rooms in history), `undo_room_move` (the room being left
 runs on to the end of the move and the move is archived; a stay that moved out
 and back is left in one room; where two rooms moved on the same day the caller
-names the one to go back to), `update_room_assignment`, `room_directory(p_in,
+names the one to go back to), `update_room_assignment` (how a stay's room is
+changed outright, as Access did it), `room_directory(p_in,
 p_out)` for room selection — the booking screen marks a room another stay holds
 for any of the nights as Booked.
 Charges: `post_room_nights` (priced at the rate type chosen, Regular unless
@@ -94,8 +98,10 @@ removed: the row is archived, not deleted, so it leaves the ledger, the balance
 and every report while the correction stays auditable. Both raise when the line
 does not exist or is already removed, rather than silently doing nothing; so do
 `archive_housekeeping_note` and `archive_kitchen_meal`.
-Notes: `add_housekeeping_note`, `archive_housekeeping_note`,
-`save_kitchen_meal`, `archive_kitchen_meal`.
+Notes: `set_housekeeping_note` (the note in force: new text is added to the
+dated history, the same text changes nothing, an empty note clears it),
+`add_housekeeping_note`, `archive_housekeeping_note`, `save_kitchen_meal` (a
+blank diet and notes clear the diet), `archive_kitchen_meal`.
 
 ### Read helpers worth knowing
 

@@ -5,6 +5,7 @@
 
 import { supabase, unwrap } from './client';
 import type { RoomRateType } from './types';
+import type { GuestForm } from '../guest-form';
 
 export interface NewGuestInput {
 	lastname: string;
@@ -40,6 +41,47 @@ export async function createGuest(input: NewGuestInput): Promise<number> {
 			p_secondaryphonetype: input.secondaryphonetype ?? null,
 			p_email: input.email ?? null,
 			p_notes: input.notes ?? null
+		})
+	);
+}
+
+/** A new guest from the booking form. */
+export async function createGuestFromForm(f: GuestForm): Promise<number> {
+	return createGuest({
+		lastname: f.lastName.trim(),
+		firstname: f.firstName.trim() || null,
+		salutation: f.salutation || null,
+		address: f.address.trim() || null,
+		city: f.city.trim() || null,
+		region: f.region.trim() || null,
+		country: f.country.trim() || null,
+		pczip: f.postal.trim() || null,
+		primaryphone: f.phone.trim() || null,
+		primaryphonetype: f.phoneType || null,
+		secondaryphone: f.secondaryPhone.trim() || null,
+		secondaryphonetype: f.secondaryPhoneType || null,
+		email: f.email.trim() || null
+	});
+}
+
+/** Saves a guest's corrected details; an emptied field is cleared. */
+export async function updateGuest(guestid: number, f: GuestForm): Promise<void> {
+	unwrap(
+		await supabase.rpc('update_guest', {
+			p_guestid: guestid,
+			p_lastname: f.lastName,
+			p_firstname: f.firstName,
+			p_salutation: f.salutation,
+			p_address: f.address,
+			p_city: f.city,
+			p_region: f.region,
+			p_country: f.country,
+			p_pczip: f.postal,
+			p_primaryphone: f.phone,
+			p_primaryphonetype: f.phoneType,
+			p_secondaryphone: f.secondaryPhone,
+			p_secondaryphonetype: f.secondaryPhoneType,
+			p_email: f.email
 		})
 	);
 }
@@ -224,6 +266,13 @@ export async function recordRoomMove(
 	);
 }
 
+/** Changes the room a stay holds for a room window's nights (not a move). */
+export async function changeRoom(occupancyid: number, roomid: number): Promise<void> {
+	unwrap(
+		await supabase.rpc('update_room_assignment', { p_occupancyid: occupancyid, p_roomid: roomid })
+	);
+}
+
 /** Undoes a room move; the stay keeps the room it was leaving. Returns that room window. */
 export async function undoRoomMove(occupancyid: number, fromOccupancyid?: number): Promise<number> {
 	return unwrap(
@@ -334,13 +383,14 @@ export async function sellGiftCertificate(
 
 // --- Notes ---------------------------------------------------------------------
 
-export async function addHousekeepingNote(
+/** The housekeeping note in force for a guest on a stay; an empty note clears it. */
+export async function setHousekeepingNote(
 	reservationguestid: number,
 	notes: string,
 	date: string
-): Promise<number> {
-	return unwrap(
-		await supabase.rpc('add_housekeeping_note', {
+): Promise<void> {
+	unwrap(
+		await supabase.rpc('set_housekeeping_note', {
 			p_reservationguestid: reservationguestid,
 			p_notes: notes,
 			p_date: date

@@ -15,15 +15,22 @@
     import { Textarea } from "$lib/components/ui/textarea/index.js";
     import ChargeBasket from "$lib/components/app/charge-basket.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
-    import PhoneInput from "$lib/components/app/phone-input.svelte";
-    import { GUEST_DIETS, SALUTATIONS } from "$lib/data/reference.js";
-    import { bedTypeOptions, roomOptions, textOptions } from "$lib/options.js";
+    import GuestFields from "$lib/components/app/guest-fields.svelte";
+    import { GUEST_DIETS } from "$lib/data/reference.js";
+    import { guestForm } from "$lib/guest-form.js";
+    import {
+        bedTypeOptions,
+        optionalOptions,
+        roomOptions,
+        textOptions,
+    } from "$lib/options.js";
     import { getGuest, guestKitchenMeal, roomsBooked } from "$lib/data/queries.js";
     import {
-        addHousekeepingNote,
-        createGuest,
+        createGuestFromForm,
         createReservation,
         saveKitchenMeal,
+        setHousekeepingNote,
+        updateGuest,
     } from "$lib/data/mutations.js";
     import { postPendingLines, type PendingLine } from "$lib/pending-charges.js";
     import { supabase } from "$lib/data/client.js";
@@ -37,16 +44,7 @@
         const k = data.kitchen;
         return {
             attachedGuestId: g?.guestid ?? null,
-            salutation: g?.guestsalutation ?? "",
-            firstName: g?.guestfirstname ?? "",
-            lastName: g?.guestlastname ?? "",
-            address: g?.guestaddress ?? "",
-            city: g?.guestcity ?? "",
-            region: g?.guestregion ?? "",
-            country: g?.guestcountry ?? "CAN",
-            postal: g?.guestpczip ?? "",
-            phone: g?.guestprimaryphone ?? "",
-            email: g?.guestemailaddress ?? "",
+            guest: guestForm(g),
             kitchenMealId: k?.kitchenmealid ?? null,
             diet: k?.guestdiet ?? "",
             kitchenNotes: k?.kitchenmealnotes ?? "",
@@ -60,18 +58,9 @@
     // from is not touched — this saves a new reservation like any other.
     const src = i.src;
 
-    // Guest fields
+    // Guest fields. An attached guest's corrections are saved to their record.
     let attachedGuestId = $state<number | null>(i.attachedGuestId);
-    let salutation = $state(i.salutation);
-    let firstName = $state(i.firstName);
-    let lastName = $state(i.lastName);
-    let address = $state(i.address);
-    let city = $state(i.city);
-    let region = $state(i.region);
-    let country = $state(i.country);
-    let postal = $state(i.postal);
-    let phone = $state(i.phone);
-    let email = $state(i.email);
+    let guest = $state(i.guest);
 
     // Guest lookup — the same partial-name search as the lookup screen.
     let guestQuery = $state("");
@@ -88,16 +77,8 @@
                 guestKitchenMeal(g.guestid),
             ]);
             attachedGuestId = g.guestid;
-            salutation = full?.guestsalutation ?? "";
-            firstName = full?.guestfirstname ?? g.guestfirstname ?? "";
-            lastName = full?.guestlastname ?? g.guestlastname;
-            address = full?.guestaddress ?? "";
-            city = full?.guestcity ?? g.guestcity ?? "";
-            region = full?.guestregion ?? g.guestregion ?? "";
-            country = full?.guestcountry ?? "CAN";
-            postal = full?.guestpczip ?? "";
-            phone = full?.guestprimaryphone ?? g.guestprimaryphone ?? "";
-            email = full?.guestemailaddress ?? g.guestemailaddress ?? "";
+            guest = guestForm(full);
+            if (!full) guest.lastName = g.guestlastname;
             kitchenMealId = meal?.kitchenmealid ?? null;
             diet = meal?.guestdiet ?? "";
             kitchenNotes = meal?.kitchenmealnotes ?? "";
@@ -117,17 +98,7 @@
         attachedGuestId = null;
         kitchenMealId = null;
         diet = kitchenNotes = "";
-        salutation =
-            firstName =
-            lastName =
-            address =
-            city =
-            region =
-            postal =
-            phone =
-            email =
-                "";
-        country = "CAN";
+        guest = guestForm();
     }
 
     // Reservation fields
@@ -181,9 +152,8 @@
             booked.has(Number(o.value)) ? { ...o, hint: "Booked" } : o,
         ),
     );
-    const salutationOptions = textOptions(SALUTATIONS);
     const bedTypes = bedTypeOptions();
-    const dietOptions = textOptions(GUEST_DIETS);
+    const dietOptions = optionalOptions(textOptions(GUEST_DIETS), "None");
 
     // Charges and the deposit taken while booking. Held until the reservation
     // exists, then posted to it.
@@ -206,7 +176,7 @@
     const badRange = $derived(!!arrival && !!departure && departure <= arrival);
     let saving = $state(false);
     const canSave = $derived(
-        !!lastName.trim() &&
+        !!guest.lastName.trim() &&
             !!arrival &&
             !!departure &&
             !!bookedBy.trim() &&
@@ -222,20 +192,13 @@
         }
         saving = true;
         try {
-            const guestid =
-                attachedGuestId ??
-                (await createGuest({
-                    lastname: lastName.trim(),
-                    firstname: firstName.trim() || null,
-                    salutation: salutation || null,
-                    address: address.trim() || null,
-                    city: city.trim() || null,
-                    region: region.trim() || null,
-                    country: country.trim() || null,
-                    pczip: postal.trim() || null,
-                    primaryphone: phone.trim() || null,
-                    email: email.trim() || null,
-                }));
+            let guestid: number;
+            if (attachedGuestId) {
+                await updateGuest(attachedGuestId, guest);
+                guestid = attachedGuestId;
+            } else {
+                guestid = await createGuestFromForm(guest);
+            }
             const created = await createReservation({
                 guestid,
                 arrival,
@@ -268,7 +231,9 @@
                     );
                 }
             }
-            if (diet || kitchenNotes.trim()) {
+            // A guest's diet is saved when there is one to set or one on
+            // file to change — emptied here, it is cleared.
+            if (kitchenMealId || diet || kitchenNotes.trim()) {
                 try {
                     await saveKitchenMeal(
                         guestid,
@@ -286,7 +251,7 @@
             }
             if (housekeepingNotes.trim()) {
                 try {
-                    await addHousekeepingNote(
+                    await setHousekeepingNote(
                         created.reservationguestid,
                         housekeepingNotes.trim(),
                         data.today,
@@ -300,7 +265,7 @@
                 }
             }
 
-            const stay = `${lastName}${firstName ? ", " + firstName : ""} · ${dateMed(arrival)} → ${dateMed(departure)}`;
+            const stay = `${guest.lastName}${guest.firstName ? ", " + guest.firstName : ""} · ${dateMed(arrival)} → ${dateMed(departure)}`;
             if (problems.length) {
                 toast.error(
                     `Reservation #${created.resnumber} created, but: ${problems.join("; ")}`,
@@ -378,84 +343,7 @@
                     </div>
                 {/if}
 
-                <div class="grid grid-cols-[90px_1fr] gap-3">
-                    <div class="space-y-1.5">
-                        <Label for="slt">Title</Label>
-                        <Combobox
-                            id="slt"
-                            bind:value={salutation}
-                            options={salutationOptions}
-                            placeholder="—"
-                        />
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label for="fn">First name</Label><Input
-                            id="fn"
-                            bind:value={firstName}
-                        />
-                    </div>
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="ln"
-                        >Last name <span class="text-destructive">*</span></Label
-                    >
-                    <Input
-                        id="ln"
-                        bind:value={lastName}
-                        aria-invalid={!lastName.trim()}
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="ad">Address</Label><Input
-                        id="ad"
-                        bind:value={address}
-                    />
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                        <Label for="ci">City</Label><Input
-                            id="ci"
-                            bind:value={city}
-                        />
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="space-y-1.5">
-                            <Label for="rg">Prov</Label><Input
-                                id="rg"
-                                bind:value={region}
-                                maxlength={2}
-                            />
-                        </div>
-                        <div class="space-y-1.5">
-                            <Label for="pc">Postal</Label><Input
-                                id="pc"
-                                bind:value={postal}
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                        <Label for="cn">Country</Label><Input
-                            id="cn"
-                            bind:value={country}
-                            maxlength={3}
-                        />
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label for="ph">Phone</Label><PhoneInput
-                            id="ph"
-                            bind:value={phone}
-                        />
-                    </div>
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="em">Email</Label><Input
-                        id="em"
-                        type="email"
-                        bind:value={email}
-                    />
-                </div>
+                <GuestFields bind:form={guest} />
             </Card.Content>
         </Card.Root>
 

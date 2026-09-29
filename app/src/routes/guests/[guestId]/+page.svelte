@@ -14,6 +14,8 @@
     import Money from "$lib/components/app/money.svelte";
     import StatusBadge from "$lib/components/app/status-badge.svelte";
     import GuestNotesDialog from "$lib/components/app/guest-notes-dialog.svelte";
+    import GuestDetailsDialog from "$lib/components/app/guest-details-dialog.svelte";
+    import PencilIcon from "@lucide/svelte/icons/pencil";
     import { dateMed } from "$lib/format.js";
     import type { GuestHistoryRow } from "$lib/data/types.js";
 
@@ -27,6 +29,7 @@
     const past = $derived(data.history.filter((h) => h.bucket === "past"));
 
     let notesOpen = $state(false);
+    let detailsOpen = $state(false);
 
     const SECTIONS: {
         key: string;
@@ -56,7 +59,8 @@
 </script>
 
 <svelte:head
-    ><title>{g.guestlastname}, {g.guestfirstname ?? ""} · Guest</title
+    ><title
+        >{g.guestlastname}{g.guestfirstname ? `, ${g.guestfirstname}` : ""} · Guest</title
     ></svelte:head
 >
 
@@ -74,7 +78,9 @@
             <div class="flex items-start justify-between gap-2">
                 <div>
                     <Card.Title class="text-lg"
-                        >{g.guestlastname}, {g.guestfirstname ?? ""}</Card.Title
+                        >{g.guestlastname}{g.guestfirstname
+                            ? `, ${g.guestfirstname}`
+                            : ""}</Card.Title
                     >
                     <Card.Description>Guest #{g.guestid}</Card.Description>
                 </div>
@@ -144,12 +150,17 @@
                 {/if}
             </div>
 
-            <Button variant="secondary" class="w-full" onclick={() => (notesOpen = true)}>
-                <NotebookIcon /> Guest notes
-                {#if g.guestnotes}<span
-                        class="bg-primary ml-1 size-1.5 rounded-full"
-                    ></span>{/if}
-            </Button>
+            <div class="grid grid-cols-2 gap-2">
+                <Button variant="secondary" onclick={() => (detailsOpen = true)}>
+                    <PencilIcon /> Edit details
+                </Button>
+                <Button variant="secondary" onclick={() => (notesOpen = true)}>
+                    <NotebookIcon /> Guest notes
+                    {#if g.guestnotes}<span
+                            class="bg-primary ml-1 size-1.5 rounded-full"
+                        ></span>{/if}
+                </Button>
+            </div>
         </Card.Content>
     </Card.Root>
 
@@ -233,3 +244,4 @@
 </div>
 
 <GuestNotesDialog bind:open={notesOpen} guestid={g.guestid} notes={g.guestnotes} />
+<GuestDetailsDialog bind:open={detailsOpen} guest={g} />
