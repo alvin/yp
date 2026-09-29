@@ -120,24 +120,28 @@ app does.
    Cancelled or Shared badges.
 
 **For the lodge**
-4. **Gift certificates.** The system can record a sale, but there's no button
+4. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
+   room charges entered through the new system went in at the Split rate:
+   reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
+   and 107033. Worth checking any that were real rather than testing.
+5. **Gift certificates.** The system can record a sale, but there's no button
    for it. Do they want one?
-5. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-6. **Older charges.** 387 room charges from the Access years bill a room the guest
+6. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+7. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-7. **Questions still open from their original feature pack:** the weekly
+8. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes; how
    a stay with several named guests should show; printing or reprinting a
    single document; how exact the printed layouts need to be; split bills;
    moving a deposit when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-8. A room's own dates and guest count can't be edited separately, as they
+9. A room's own dates and guest count can't be edited separately, as they
    could in Access; stay dates change through *Change dates*.
-9. On a stay with several guest names, the notes tabs edit the primary guest's
+10. On a stay with several guest names, the notes tabs edit the primary guest's
    notes only.
-10. All-fields search takes a few hundred milliseconds whatever is typed.
+11. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 
