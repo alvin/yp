@@ -1,4 +1,3 @@
-# id: N32rc94wwANLksLV9gtT
 @persona:daily-cash-reviewer @status:done @priority:5 @daily-cash @appendix @audit @review
 Feature: provide appendix drillback
 

@@ -1,4 +1,3 @@
-# id: Az7BB9SpocRBljKfxm9D
 @persona:front-desk-supervisor @status:done @priority:4 @daily-cash @appendix @items @quantity
 Feature: show quantity per item in items-cashed-out appendix
 

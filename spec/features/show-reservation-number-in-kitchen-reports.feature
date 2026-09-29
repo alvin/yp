@@ -1,4 +1,3 @@
-# id: ZKe4ba8f9BjXcvhzJhHA
 @persona:kitchen-coordinator @persona:operations-lead @status:done @priority:3 @kitchen-report @printing @meal-planning @reservation-identification
 Feature: show reservation number in kitchen reports
 

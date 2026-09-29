@@ -1,4 +1,3 @@
-# id: xJrlmND0d7rWMY8ySsIi
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:2 @printing @confirmation @documents
 Feature: render and print reservation confirmation
 

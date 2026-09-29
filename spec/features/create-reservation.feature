@@ -1,4 +1,3 @@
-# id: ZQ5bXJ4YpjZA6MKn1fri
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @reservation @stay @booking
 Feature: create reservation
 

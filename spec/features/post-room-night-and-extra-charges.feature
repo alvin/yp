@@ -1,4 +1,3 @@
-# id: D3btoD8xgPr97Vuq8vxr
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @charges @ledger @billing
 Feature: post room-night and extra charges
 

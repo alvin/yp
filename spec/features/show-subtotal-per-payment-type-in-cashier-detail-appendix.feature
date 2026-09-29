@@ -1,4 +1,3 @@
-# id: YQMfTXOUVs4F3gIzYoh5
 @persona:daily-cash-reviewer @persona:front-desk-supervisor @status:done @priority:4 @daily-cash @appendix @payment-types @subtotals
 Feature: show subtotal per payment type in cashier detail appendix
 

@@ -1,4 +1,3 @@
-# id: dzOPkoDAdo4BEbjXLhLM
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @search @guest @results
 Feature: show guest first name
 

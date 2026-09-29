@@ -1,4 +1,3 @@
-# id: mkXrLje3nOhgf7MNCXGj
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @reservation-history @in-house @active-stay
 Feature: display in-house stay context when active
 

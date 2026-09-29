@@ -1,4 +1,3 @@
-# id: mySPycjPDi7h1Feg8nOf
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @search @overlap @mode
 Feature: support occupancy overlap mode
 

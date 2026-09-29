@@ -1,4 +1,3 @@
-# id: JPQsq9M662jSDTz8fHiZ
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @reservation @guest-profile @contacts
 Feature: create guest profile
 

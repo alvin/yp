@@ -1,4 +1,3 @@
-# id: mbeFUNSY4bCuCsvJMgEM
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @guest-profile @contact-details
 Feature: show guest address
 

@@ -1,4 +1,3 @@
-# id: b5tvrDUOjagRkrCC0EJs
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @payment @ledger @receipt
 Feature: record payment
 

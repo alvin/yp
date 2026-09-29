@@ -1,4 +1,3 @@
-# id: FuHfeQfq3i6u8Ow9mrQt
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @search @date @arrival @results-list
 Feature: search by arrival date
 

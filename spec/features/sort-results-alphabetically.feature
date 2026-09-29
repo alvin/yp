@@ -1,4 +1,3 @@
-# id: 58e93KoT0udGed14JH6Z
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @search @sorting @results
 Feature: sort results alphabetically
 

@@ -1,4 +1,3 @@
-# id: jPYXdhiKuFCTpCaAKWw6
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @reservation-lookup
 Feature: open a reservation from a reservation number
 

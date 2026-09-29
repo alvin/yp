@@ -1,4 +1,3 @@
-# id: lOrzL5MwZra6b56tCEeF
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @search @occupancy @mode
 Feature: support in-house occupancy mode
 

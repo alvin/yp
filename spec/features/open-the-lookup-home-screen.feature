@@ -1,4 +1,3 @@
-# id: tjPjZbB4toId2jaYvhhr
 @persona:front-desk-supervisor @persona:reservation-clerk @persona:operations-lead @status:done @priority:5 @lookup @navigation
 Feature: open the lookup home screen
 

@@ -1,4 +1,3 @@
-# id: vFr39WHp8nwRo51KUdT2
 @persona:reservation-clerk @status:done @priority:5 @printing @documents @workflow
 Feature: provide print paths
 

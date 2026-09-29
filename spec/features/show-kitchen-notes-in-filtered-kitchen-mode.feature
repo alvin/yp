@@ -1,4 +1,3 @@
-# id: 2N7HuY5cPJmuL9ilYeKB
 @persona:kitchen-coordinator @status:done @priority:4 @kitchen @reporting @notes @display
 Feature: show kitchen notes in filtered kitchen mode
 

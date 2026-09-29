@@ -1,4 +1,3 @@
-# id: QURRrKXkBEUIEDgqF48S
 @persona:daily-cash-reviewer @status:done @priority:4 @daily-cash @balancing @review
 Feature: review upper balancing structure
 

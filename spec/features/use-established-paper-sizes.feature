@@ -1,4 +1,3 @@
-# id: 88saGtLgQDc6K5Znbtqh
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @formatting @paper-sizes
 Feature: use established paper sizes
 

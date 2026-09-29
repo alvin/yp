@@ -1,4 +1,3 @@
-# id: z4gd1tHVEEF4Ryq8pJgb
 @persona:front-desk-supervisor @status:done @priority:5 @reconciliation @adjustments @manual-workflow
 Feature: preserve manual adjustment visibility
 

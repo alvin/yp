@@ -1,4 +1,3 @@
-# id: XkFhDGu37GxmENSRlUjt
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:2 @deposits @prepayments @ledger
 Feature: classify deposit and prepayment activity for daily cash reporting
 

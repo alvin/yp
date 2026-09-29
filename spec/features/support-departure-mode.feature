@@ -1,4 +1,3 @@
-# id: tEMlOT3EI954rQEjI91A
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @search @departures @mode
 Feature: support departure mode
 

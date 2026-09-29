@@ -1,4 +1,3 @@
-# id: MmiYw77XtsWtKpQ3cZ1T
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @ledger @guests @allocation
 Feature: assign ledger responsibility
 

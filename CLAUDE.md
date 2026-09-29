@@ -45,5 +45,8 @@ thing that lets them act, and it stays that way as the system grows.
 - Each round of client feedback gets a record in `docs/changesets/` — what was
   asked, what shipped, the judgement calls, and how to back each one out. Read
   the latest before revisiting work; add one when you finish a round.
+- `docs/where-things-stand.md` is the one document the owner reads: what
+  changed, the decisions, and the open items, in plain language. Update it every
+  round; open items live there and nowhere else.
 - Before calling anything done: `cd app && npm run check && npx vitest run`,
   and apply any new migration to the local stack first.

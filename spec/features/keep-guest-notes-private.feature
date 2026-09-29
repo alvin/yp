@@ -1,4 +1,3 @@
-# id: 9BoMLHTnRFGZry1SqC6h
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @notes @internal @screen-only
 Feature: keep guest notes private
 

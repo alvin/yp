@@ -1,4 +1,3 @@
-# id: PfkKVSzQD6z5qulbCOOF
 @persona:front-desk-supervisor @status:done @priority:4 @reports @printing @notes @visibility
 Feature: ensure reservation notes feed reports
 

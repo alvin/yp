@@ -1,4 +1,3 @@
-# id: bVNDB50z27YtJKWEInsU
 @persona:daily-cash-reviewer @persona:operations-lead @status:done @priority:4 @adjustments @deposits @prepayments
 Feature: show balance-sheet adjustments
 

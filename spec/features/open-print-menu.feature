@@ -1,4 +1,3 @@
-# id: Gio4YXjigpeBZjmpWKgz
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:4 @print @navigation @documents
 Feature: open print menu
 

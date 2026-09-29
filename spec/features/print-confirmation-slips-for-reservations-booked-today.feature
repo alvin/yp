@@ -1,4 +1,3 @@
-# id: b6cUMokfZvubsB4XBF7L
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:4 @printing @confirmations @reservations
 Feature: print confirmation slips for reservations booked today
 

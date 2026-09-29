@@ -1,4 +1,3 @@
-# id: 0l93c3ZJEwY137em9nKg
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @reservation-history @segmentation @guest-context
 Feature: segment reservation history into future present in-house and past sections
 

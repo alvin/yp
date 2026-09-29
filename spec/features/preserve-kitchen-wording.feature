@@ -1,4 +1,3 @@
-# id: DnHAACgUdN8paf7mExGD
 @persona:operations-lead @status:done @priority:5 @kitchen @reporting @wording
 Feature: preserve kitchen wording
 

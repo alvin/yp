@@ -1,4 +1,3 @@
-# id: d4vJlSrqpNbLcntdoaOS
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:2 @printing @cancellation @documents
 Feature: render and print cancellation notice
 

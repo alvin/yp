@@ -1,4 +1,3 @@
-# id: dXlzHTjm8ZssgXaNDlxV
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:2 @printing @check-in @arrival-list
 Feature: print check-in folios for a selected day
 

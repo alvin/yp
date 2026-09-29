@@ -1,4 +1,3 @@
-# id: L5MysewYuhWaKehdGB00
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @reservation-history @future-stays @room-context
 Feature: display arrival date and room context for future history rows
 

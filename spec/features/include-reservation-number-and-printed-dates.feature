@@ -1,4 +1,3 @@
-# id: 8WVaveRfMhaTc9Cx0jSg
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @confirmation-slip @traceability @printout
 Feature: include reservation number and printed dates
 

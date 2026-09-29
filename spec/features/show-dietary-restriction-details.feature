@@ -1,4 +1,3 @@
-# id: mCFCfAGgPvlVFDqyMfgS
 @persona:operations-lead @status:done @priority:5 @kitchen @reporting @dietary
 Feature: show dietary restriction details
 

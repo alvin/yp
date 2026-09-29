@@ -1,4 +1,3 @@
-# id: KtdaFPavhDCVejuF6b7I
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @occupancy @room-move @stay-history
 Feature: record room moves
 

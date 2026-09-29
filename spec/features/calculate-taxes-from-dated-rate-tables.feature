@@ -1,4 +1,3 @@
-# id: 1hBaJ2NzD7BeKr9rz9WP
 @persona:operations-lead @persona:front-desk-supervisor @status:done @priority:5 @business-logic @taxes @rates @reporting
 Feature: calculate taxes from dated rate tables
 

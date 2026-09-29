@@ -1,4 +1,3 @@
-# id: vDZaFR3Kk2cg8R3vww2n
 @persona:kitchen-coordinator @status:done @priority:3 @kitchen @reporting @print @filter
 Feature: print filtered kitchen report for selected date
 

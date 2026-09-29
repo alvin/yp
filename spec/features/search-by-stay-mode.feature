@@ -1,4 +1,3 @@
-# id: UhA0w8E1n4ioVEjXw0tr
 @persona:reservation-clerk @status:done @priority:4 @search @date @stay
 Feature: search by stay mode
 

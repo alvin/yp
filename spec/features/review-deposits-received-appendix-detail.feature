@@ -1,4 +1,3 @@
-# id: bappxRCwIkBDUZiRZ51Q
 @persona:daily-cash-reviewer @persona:front-desk-supervisor @status:done @priority:5 @dcar @deposits @appendix @detail @grouping
 Feature: review deposits received appendix detail
 

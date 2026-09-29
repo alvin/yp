@@ -1,4 +1,3 @@
-# id: xOwRSZNXitrmq00NAxQB
 @persona:daily-cash-reviewer @persona:operations-lead @status:done @priority:5 @dcar @tenders @reporting
 Feature: show tender types
 

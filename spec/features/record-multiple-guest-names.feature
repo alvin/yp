@@ -1,4 +1,3 @@
-# id: tcbdlQzqyK7025TH6edh
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @reservation @guest-names @printing
 Feature: record multiple guest names
 

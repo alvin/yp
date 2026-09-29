@@ -1,4 +1,3 @@
-# id: r15wIqrrSKEN08VVmQKV
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @lookup @search @broad
 Feature: run all-fields search
 

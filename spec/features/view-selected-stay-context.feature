@@ -1,4 +1,3 @@
-# id: do9eyvCw1OuGbeWjpuc0
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @reservation @stay @ledger
 Feature: view selected stay context
 

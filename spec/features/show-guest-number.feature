@@ -1,4 +1,3 @@
-# id: p7wRSeKJ39KNKjkBomeH
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @guest-profile @search-results @identification
 Feature: show guest number
 

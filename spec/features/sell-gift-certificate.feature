@@ -1,4 +1,3 @@
-# id: d4R08ndmljixNqOTEHAJ
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @gift-certificate @cash @charges
 Feature: sell gift certificate
 

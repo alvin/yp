@@ -1,4 +1,3 @@
-# id: wTwlzVBU344MHzPlkY0d
 @persona:front-desk-supervisor @persona:reservation-clerk @status:done @priority:4 @guest-details @name-search
 Feature: view guest details for a selected name match
 

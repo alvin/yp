@@ -1,4 +1,3 @@
-# id: lcsGcOqDk0BaUmaBKfCx
 @persona:printing-coordinator @status:done @priority:5 @printing @shared-process @document-types
 Feature: generate guest-document queues through shared queue service by output type and date
 

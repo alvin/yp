@@ -1,4 +1,3 @@
-# id: p1rqjacjEpXJ6szpQP8t
 @persona:daily-cash-reviewer @persona:front-desk-supervisor @status:done @priority:5 @daily-cash @dcar @printing @reports
 Feature: print daily cash activity report
 

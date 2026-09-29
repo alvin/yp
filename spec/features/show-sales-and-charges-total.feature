@@ -1,4 +1,3 @@
-# id: a20890GxkHEHCbbt986A
 @persona:daily-cash-reviewer @persona:operations-lead @status:done @priority:5 @sales @charges @daily-report
 Feature: show sales and charges total
 

@@ -1,4 +1,3 @@
-# id: m1U2J2AyhPRxlmyPW8BI
 @persona:daily-cash-reviewer @persona:front-desk-supervisor @status:done @priority:5 @cash @reporting @navigation
 Feature: open daily cash reporting
 

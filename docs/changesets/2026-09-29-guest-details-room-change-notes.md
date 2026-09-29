@@ -97,31 +97,6 @@ stories this round touched.
 
 ---
 
-## Active issues
+## Open items
 
-One list of everything open, replacing the lists in rounds 5 and 6.
-
-**Waiting on the owner**
-1. **Deploy** `0014`, `0015`, `0016` to the hosted project, then push the app. The live app is two rounds behind.
-2. **Charge-line notes** — the recommendation in §4.
-3. **Weak tests** — `docs/test-review-2026-09-29.md`.
-4. **Date-range search** — sorted by arrival rather than name, and never shows the Cancelled or Shared badge.
-5. **UserForge** — delete the removed stories' ids by hand (listed in round 6).
-
-**For the lodge**
-6. **Gift certificates** — the story is marked done but there's no button to sell one.
-7. **Daily Cash and US funds** — the US tender lines and "All US amounts converted" note on the Daily Cash report and appendices, deferred by the lodge to "Feedback 1.1".
-8. **Questions still open from the original pack:**
-   - the weekly spreadsheet handoff
-   - storing DCAR actual amounts, staff-tip codes and adjustments, and against which accounting codes
-   - how a stay with several named occupants shows on the guest side
-   - the flow for printing or reprinting a single document
-   - pixel copies of the Access layouts versus matching data and wording
-   - split bills beyond percent-of-bill
-   - moving a deposit when a stay is cancelled or re-booked
-9. **Legacy room charges** — 387 legacy room-charge lines bill a room the stay isn't in (§2). The lodge may want to know, since old bills and history reflect them.
-
-**Known gaps, not requested**
-10. **Room rows** — a room row's dates and guest count can't be edited, as they could in Access.
-11. **Multi-guest notes** — on a stay with several guest names, the notes tabs edit the primary guest's diet, housekeeping note and requests only.
-12. **All-fields search speed** — it takes a few hundred milliseconds whatever is typed. Left for now.
+Kept in one place: `docs/where-things-stand.md`.

@@ -1,4 +1,3 @@
-# id: uvJQbadKRqkzLJxAqh0E
 @persona:operations-lead @status:done @priority:4 @kitchen @filtered-report @dates
 Feature: show departure date in kitchen report rows
 

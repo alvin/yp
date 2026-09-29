@@ -1,4 +1,3 @@
-# id: FsRUMdw1v1sgbMnzKmHZ
 @persona:daily-cash-reviewer @status:done @priority:5 @daily-cash @currency @review @mvp
 Feature: show receipts converted to canadian dollars
 

@@ -1,4 +1,3 @@
-# id: Q38S40VWBm0GLPkRU4pH
 @persona:daily-cash-reviewer @persona:front-desk-supervisor @status:done @priority:5 @daily-cash @upper-section @donation
 Feature: show donation line in daily cash upper section
 

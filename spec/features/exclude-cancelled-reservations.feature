@@ -1,4 +1,3 @@
-# id: LfnYda3roP0VGmgWYnbj
 @persona:operations-lead @status:done @priority:5 @manual-sales-list @filtering @cancelled-reservations
 Feature: exclude cancelled reservations
 

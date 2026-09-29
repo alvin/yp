@@ -1,4 +1,3 @@
-# id: itHhh90ZvbGpP4YyacMC
 @persona:operations-lead @persona:front-desk-supervisor @status:done @priority:3 @print @charges @liquor
 Feature: show manual sales list
 

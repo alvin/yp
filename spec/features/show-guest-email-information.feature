@@ -1,4 +1,3 @@
-# id: 59fiZUigj3vJGVJ5jBLm
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @guest-profile @email @contact-details
 Feature: show guest email information
 

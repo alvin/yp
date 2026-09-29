@@ -1,4 +1,3 @@
-# id: mGwWt8WOmuplauu73hIQ
 @persona:operations-lead @status:done @priority:4 @kitchen @filtered-report @dates
 Feature: show arrival date in kitchen report rows
 

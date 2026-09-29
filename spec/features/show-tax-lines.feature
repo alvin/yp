@@ -1,4 +1,3 @@
-# id: 1FYhR2KPsW7h44bW854x
 @persona:daily-cash-reviewer @persona:operations-lead @status:done @priority:5 @dcar @tax @reconciliation
 Feature: show tax lines
 

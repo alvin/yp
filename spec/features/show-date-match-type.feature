@@ -1,4 +1,3 @@
-# id: pdmWwyjIrI1ZTERZggwL
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @search @results @matching
 Feature: show date match type
 

@@ -1,4 +1,3 @@
-# id: njioRUoEiDdShnYxw5Mx
 @persona:operations-lead @status:done @priority:5 @manual-sales-list @room-order @daily-review
 Feature: preserve room order sequencing
 

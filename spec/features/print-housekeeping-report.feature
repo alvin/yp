@@ -1,4 +1,3 @@
-# id: FI0AKmNg8P9NoAklFOHO
 @persona:printing-coordinator @persona:operations-lead @status:done @priority:5 @printing @reports @housekeeping
 Feature: print housekeeping report
 

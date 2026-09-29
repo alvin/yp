@@ -1,4 +1,3 @@
-# id: vl8mmwIiPBnQfiZ13tk8
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @guest-profile @phone @contact-details
 Feature: show primary phone where present
 

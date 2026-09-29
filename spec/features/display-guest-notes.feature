@@ -1,4 +1,3 @@
-# id: KT9DUHmVkhiTt2mozuzt
 @persona:reservation-clerk @persona:front-desk-supervisor @persona:operations-lead @status:done @priority:5 @guest-notes @office-use @visibility
 Feature: display guest notes
 

@@ -1,4 +1,3 @@
-# id: eCN4tSrtdtwgjBtSPIUL
 @persona:printing-coordinator @persona:operations-lead @status:done @priority:2 @printing @in-house @occupancy
 Feature: print in-house occupancy report
 

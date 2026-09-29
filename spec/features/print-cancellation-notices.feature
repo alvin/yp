@@ -1,4 +1,3 @@
-# id: GibOH2nTUdzDS1kv2Eup
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @cancellations @notices
 Feature: print cancellation notices
 

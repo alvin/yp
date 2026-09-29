@@ -1,4 +1,3 @@
-# id: UwkPmXw5BlcxItZvVvjP
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @search @room @results
 Feature: show room
 

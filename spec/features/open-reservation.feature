@@ -1,4 +1,3 @@
-# id: Dvtt8FQgNaAdmwlMQ5W8
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @date-search @navigation @reservation
 Feature: open reservation
 

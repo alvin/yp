@@ -1,4 +1,3 @@
-# id: VzLaYBOelWfv2EDnb4Kw
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @guest-profile @address @location
 Feature: show guest city province and country
 

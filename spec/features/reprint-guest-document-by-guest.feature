@@ -1,4 +1,3 @@
-# id: SkEoGqAydEhcwcrsWdW8
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @reprint @guest
 Feature: reprint guest document by guest
 

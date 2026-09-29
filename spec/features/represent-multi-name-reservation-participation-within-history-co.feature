@@ -1,4 +1,3 @@
-# id: 96wAPHEzOkvl1Idyaeix
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:4 @reservation-history @shared-booking @guest-context
 Feature: represent multi-name reservation participation within history context
 

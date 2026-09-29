@@ -1,5 +1,4 @@
 ---
-id: OJX93vVYa6iOQMvtjkSB
 name: Operations lead
 role: Operational reporting & housekeeping guidance
 demographics:

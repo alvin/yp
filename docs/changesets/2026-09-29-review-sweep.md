@@ -126,7 +126,7 @@ above." (its empty state could not occur and is gone).
 
 ## 6. Spec and docs
 
-- **Stories** brought back in step with the app, including behaviour decided in earlier rounds. Eleven near-duplicate pairs merged, every assertion kept or folded in. Garbled boilerplate fixed ("So that so that", "As a user", "Given when"). Removed stories' UserForge ids, to delete there by hand: `PD2oxeCcZmmHsdfS8u2y`, `5oJmv5pG1cNcSnONViJc`, `TcBJiDzp0xOmVZN2lm05`, `cMIJymj3FvOvAr6EpM31`, `ODS9rOUSWT304riPgZkD`, `ON8UDFWv7A1Gorj6O3yr`, `hyUOz22FryWuYOKXkd0B`, `T0zRt2HlmkQ4jA0BmqyA`, `KQzRWc7p0cwJaigcxraO`. (`1hBaJ2NzD7BeKr9rz9WP` moved from `capture-tax-details` onto `calculate-taxes-from-dated-rate-tables`, which had none.)
+- **Stories** brought back in step with the app, including behaviour decided in earlier rounds. Eleven near-duplicate pairs merged, every assertion kept or folded in. Garbled boilerplate fixed ("So that so that", "As a user", "Given when").
 - **CLAUDE.md** now says the spec is maintained as carefully as the tests, and that docs never state code-level counts or inventories. Counts removed from the READMEs; the Supabase README's migration list and deploy command are globs.
 - **`features/` removed** (the client's original pack, superseded by `spec/features/`), with every reference to it in `original_spec/`. Questions still open in its `.questions` files, recorded here so they aren't lost:
   - Daily cash: does the weekly spreadsheet handoff need app support? Should DCAR actual amounts, staff-tip codes and manual adjustments be stored, and against which accounting codes?
@@ -137,13 +137,6 @@ above." (its empty state could not occur and is gone).
 
 ---
 
-## Left for the owner or the lodge (not built)
+## Open items
 
-- **Gift certificates:** `sell-gift-certificate` is marked done but has no button; left until the lodge is asked.
-- **Editing a guest's details:** there is no screen for it. Attaching an existing guest to a new booking discards any corrections typed into their details, though `attach-an-existing-guest-to-a-new-reservation` says they can be corrected. `update_guest` exists for this.
-- **Changing a stay's room outright** (not a move): `update_room_assignment` exists; no button.
-- **Clearing a housekeeping note or a diet:** the tabs can change them but not empty them; `archive_housekeeping_note`/`archive_kitchen_meal` exist.
-- **A charge note on a price-list item** never shows on the ledger or bill, though the field says "Overrides the line description".
-- **Date-range search:** sorted by arrival rather than name, and never shows the cancelled or shared badge.
-- **Test hardening:** about ten weak tests found by the review (assertions that can't fail, silent early returns, a legacy-import test that only reads source) and criteria without assertions. The ones in stories this round touched were fixed; the rest await a decision.
-- **Silent fallbacks** kept as they are pending a decision: US funds at par with no exchange rate on file (USD entry is already off the screens), no tax on a date with no tax rate on file, a cancellation refund with no deposit on file recorded as Cheque.
+Kept in one place: `docs/where-things-stand.md`.

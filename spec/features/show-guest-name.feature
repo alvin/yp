@@ -1,4 +1,3 @@
-# id: oMzS0bAJ491FX2HyWPiZ
 @persona:operations-lead @status:done @priority:5 @kitchen @filtered-report @guest
 Feature: show guest name
 

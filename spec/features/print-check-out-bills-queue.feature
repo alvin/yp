@@ -1,4 +1,3 @@
-# id: OZTxzbkYTXJhA4KXQ2D5
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @billing @departures
 Feature: print check-out bills queue
 

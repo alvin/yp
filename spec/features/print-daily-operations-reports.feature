@@ -1,4 +1,3 @@
-# id: aTIpm3uEewevs4fkXjF7
 @persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @daily-operations @reports @date-range
 Feature: print daily operations reports
 

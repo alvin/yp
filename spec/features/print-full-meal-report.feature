@@ -1,4 +1,3 @@
-# id: JZ9Dl36ZMd7LjngOlq7o
 @persona:kitchen-coordinator @persona:printing-coordinator @persona:operations-lead @status:done @priority:5 @kitchen @reporting @print @daily-workflow
 Feature: print full meal report
 

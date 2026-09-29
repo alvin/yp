@@ -1,4 +1,3 @@
-# id: EybukSx2FeY49vByYYVT
 @persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:3 @guest-profile @phone @contact-details
 Feature: show secondary phone where present
 
