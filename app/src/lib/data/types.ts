@@ -149,6 +149,16 @@ export interface DateRangeRow {
 	match_type: string;
 }
 
+/** One month of the year-end deposits report. */
+export interface NextYearsDepositsRow {
+	month: string;
+	deposits: number;
+	received: number;
+	refunded: number;
+	kept: number;
+	held: number;
+}
+
 export interface ReservationSummary {
 	reservationid: number;
 	resnumber: number;

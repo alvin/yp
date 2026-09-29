@@ -75,6 +75,12 @@ short).
 
 **Printed reports** number their pages ("Page 2 of 4") as the originals did.
 
+**Year-end deposits.** A **Next Year's Deposits** report (Print Center → Year
+end) totals the deposits taken from January 1 to December 31 for stays after
+that year, month by month, with what was refunded or kept and what is still
+held at December 31. The $0.00 deposit lines Access added to new bookings
+aren't counted.
+
 **Charge lines carry no notes.** The Add charge dialog had a Notes box only
 because the Access charges table had a notes column. Nobody asked for it,
 Access never printed it, and staff used it once in 55,760 charges — yet here it
@@ -126,22 +132,28 @@ app does.
    room charges entered through the new system went in at the Split rate:
    reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
    and 107033. Worth checking any that were real rather than testing.
-6. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-7. **Older charges.** 387 room charges from the Access years bill a room the guest
+6. **A record of changes to a reservation.** The system keeps when a booking
+   was made, confirmed and cancelled, but not when its details were later
+   changed. Offered to Richard as a "last changed" date or a full history.
+7. **"ICS Crossover"** on the payment-type list came from Access and was used
+   once (a $35 deposit refund on #100084, Sept 2024). Asked Richard what it is;
+   it can be hidden if nobody needs it.
+8. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+9. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-8. **Questions still open from their original feature pack:** the weekly
+10. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes; how
    a stay with several named guests should show; printing or reprinting a
    single document; how exact the printed layouts need to be; moving a deposit
    when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-9. A room's own dates and guest count can't be edited separately, as they
+11. A room's own dates and guest count can't be edited separately, as they
    could in Access; stay dates change through *Change dates*.
-10. On a stay with several guest names, the notes tabs edit the primary guest's
+12. On a stay with several guest names, the notes tabs edit the primary guest's
    notes only.
-11. All-fields search takes a few hundred milliseconds whatever is typed.
+13. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 

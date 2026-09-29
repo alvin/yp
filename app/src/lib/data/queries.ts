@@ -33,6 +33,7 @@ import type {
 	KitchenMealRow,
 	LedgerRow,
 	ManualSalesRow,
+	NextYearsDepositsRow,
 	OccupancySummary,
 	ReservationGuestSummary,
 	ReservationSummary,
@@ -440,6 +441,21 @@ export async function reportDcarSummary(date: string): Promise<DcarSummary> {
 		receipts_total: num(s.receipts_total),
 		balance_owed: num(s.balance_owed)
 	};
+}
+
+/** Deposits taken during a year for stays after it, month by month. */
+export async function reportNextYearsDeposits(year: number): Promise<NextYearsDepositsRow[]> {
+	const rows = unwrap(
+		await supabase.rpc('report_next_years_deposits', { p_year: year })
+	) as NextYearsDepositsRow[];
+	return rows.map((r) => ({
+		...r,
+		month: d(r.month)!,
+		received: num(r.received),
+		refunded: num(r.refunded),
+		kept: num(r.kept),
+		held: num(r.held)
+	}));
 }
 
 export async function reportDepositsReceived(date: string): Promise<DepositReportRow[]> {

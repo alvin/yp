@@ -6,6 +6,7 @@
     import FileTextIcon from "@lucide/svelte/icons/file-text";
     import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
     import CalculatorIcon from "@lucide/svelte/icons/calculator";
+    import CalendarRangeIcon from "@lucide/svelte/icons/calendar-range";
     import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
     import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
@@ -413,6 +414,33 @@
                         >
                         <span class="text-muted-foreground block text-xs"
                             >Two-section balance with appendices</span
+                        >
+                    </span>
+                    <ChevronRightIcon
+                        class="text-muted-foreground size-4 shrink-0"
+                    />
+                </a>
+            </Card.Content>
+        </Card.Root>
+
+        <!-- Year end -->
+        <Card.Root>
+            <Card.Header class="border-b pb-4">
+                <Card.Title class="flex items-center gap-2 text-base"
+                    ><CalendarRangeIcon class="size-4" /> Year end</Card.Title
+                >
+            </Card.Header>
+            <Card.Content class="pt-4">
+                <a
+                    href="/reports/next-years-deposits?year={printDate.slice(0, 4)}"
+                    class="hover:border-primary/40 flex items-center justify-between gap-3 rounded-lg border px-4 py-3 transition-colors"
+                >
+                    <span>
+                        <span class="block text-sm font-medium"
+                            >Next Year's Deposits</span
+                        >
+                        <span class="text-muted-foreground block text-xs"
+                            >Deposits taken for future stays, by month</span
                         >
                     </span>
                     <ChevronRightIcon
