@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-29
 **Trigger:** two items of written feedback from the lodge, and a status bug found while building the second.
-**State:** 126 stories, 125 feature test files (one story still `@status:backlog`), 466 tests passing. `npm run check` clean, `business_logic_smoke.sql` passing. `0012` and `0013` applied to the local stack; not yet applied to the hosted project.
+**State:** 126 stories, 125 feature test files (one story still `@status:backlog`), 466 tests passing. `npm run check` clean, `business_logic_smoke.sql` passing. `0012` and `0013` applied to the local stack and, on 2026-09-29, to the hosted project.
 
 ## What this document is for
 
@@ -24,10 +24,14 @@ back each one out. The three items are independent.
 New DB objects in `0012`: `ypl.room_moves(int)`, `ypl.undo_room_move(int, int)`.
 `0013` replaces `ypl.occupancy_status` and `ypl.report_in_house`.
 
-**Deploy:** apply `0012` then `0013` to the hosted project with the
-`run_remote_sql.py` command in `supabase/README.md`, **before** the app ships —
-the reservation screen loads `room_moves`, and the badge and In House report
-expect the new statuses.
+**Deploy:** `0012` and `0013` were applied to the hosted project on 2026-09-29,
+in one `begin … commit`, **before** the app was pushed — the reservation screen
+loads `room_moves`, and the badge and In House report expect the new statuses.
+Verified afterwards: the four function bodies match local exactly;
+`authenticated` can execute them; `room_moves` finds 5,234 moves; no room held on
+any of the last 730 days is left without a status; today's room badges read
+Past 29,718, Future 2,642, In House 31, Arrive Today 23, Depart Today 25,
+Move In 4, Move Out 4 (previously 36,186 read In House).
 
 ---
 
