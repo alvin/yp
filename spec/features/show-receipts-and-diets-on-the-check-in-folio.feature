@@ -12,4 +12,4 @@ Feature: show receipts and diets on the check-in folio
     Then The folio lists every receipt already held against the stay, not the deposit alone.
     And A prepayment or a gift certificate taken for the stay appears beside the deposit, named as what it is.
     And The folio shows the diet the kitchen holds for the party.
-    And A stay with only a deposit and no diet prints as it did before.
+    And A stay with only a deposit and no diet or housekeeping note prints as it did before.

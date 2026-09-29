@@ -123,7 +123,7 @@ describe('undo a room move', () => {
 		const fx = await makeReservation({ nights: 4, roomid: rooms[0] });
 		const moveDate = addDays(fx.arrival, 2);
 		const moved = await move(await firstWindow(fx), rooms[1], moveDate);
-		await rpc('post_room_nights', {
+		const charge = await rpc<number>('post_room_nights', {
 			p_reservationguestid: fx.reservationguestid,
 			p_roomid: rooms[1],
 			p_occupancyin: moveDate,
@@ -132,8 +132,14 @@ describe('undo a room move', () => {
 			p_transdate: moveDate
 		});
 		await rpc('undo_room_move', { p_occupancyid: moved });
-		const balance = await rpc<number>('reservation_balance', { p_reservationid: fx.reservationid });
-		expect(Number(balance)).toBeGreaterThanOrEqual(200);
+		const db = await staffClient();
+		const [line] = unwrap(
+			await db
+				.from('transactions')
+				.select('roomid, transamount, transquantity, transarchive')
+				.eq('transactionid', charge)
+		) as { roomid: number; transamount: number; transquantity: number; transarchive: boolean }[];
+		expect(line).toEqual({ roomid: rooms[1], transamount: 200, transquantity: 2, transarchive: false });
 	});
 });
 

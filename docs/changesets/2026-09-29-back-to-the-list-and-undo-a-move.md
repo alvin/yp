@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-29
 **Trigger:** two items of written feedback from the lodge, and a status bug found while building the second.
-**State:** 126 stories, 125 feature test files (one story still `@status:backlog`), 466 tests passing. `npm run check` clean, `business_logic_smoke.sql` passing. `0012` and `0013` applied to the local stack and, on 2026-09-29, to the hosted project.
+**State:** 126 stories, 125 feature test files (one story still `@status:backlog`), 468 tests passing. `npm run check` clean, `business_logic_smoke.sql` passing. `0012` and `0013` applied to the local stack and, on 2026-09-29, to the hosted project.
 
 ## What this document is for
 
@@ -122,6 +122,29 @@ from the reservation screen, and `roomMoves` from its loader. The two functions
 can stay; nothing else calls them. Moves already undone can be restored by
 un-archiving the moved-to window and setting the kept window's `occupancyout`
 back to the move date.
+
+---
+
+## 2a. The move dialog offers only dates a move can fall on
+
+Found in review on 2026-09-29: recording a move on a stay arriving that day
+failed with "Move date … must fall inside the current occupancy". The dialog
+always started on today's date and accepted any date, but `record_room_move`
+only allows a date after the first night and before the last morning of the
+room being left — so for any stay not yet under way, the starting date was
+always refused.
+
+**Shipped.** The date box offers only those dates (`min`/`max`), starts on
+today when today is one of them and otherwise on the first, re-starts when a
+different room is chosen, and *Record move* stays disabled for a date outside
+them. No copy changed. The database rule is unchanged and still enforces it.
+
+**Where:** `app/src/routes/reservations/[resnumber]/+page.svelte`. One criterion
+added to `record-a-room-move-with-move-dates-and-occupancy-context.feature`,
+tested in the browser.
+
+**Not built:** changing a stay's room outright (not a move) still has no button
+on the reservation screen; `update_room_assignment` exists in the database.
 
 ---
 

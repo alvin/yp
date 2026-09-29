@@ -11,5 +11,5 @@ Feature: print housekeeping report
 
   Scenario: Acceptance criteria
     Then Report prints for the selected date.
-    And Printed output follows the lodge room order, with each row's departure, stayover, or arrival status shown beside it.
+    And Printed output follows the lodge room order, with each row's status for the day shown beside it: Arrive Today, Move In, Move Out, In House, or Depart Today.
     And Only report-facing instructions are included on the printout.

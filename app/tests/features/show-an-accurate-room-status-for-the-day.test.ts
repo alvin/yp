@@ -90,14 +90,9 @@ describe('show an accurate room status for the day — on screen and paper', () 
 		await page.goto(`${APP_URL}/reports/in-house?date=${moveDate}`, { waitUntil: 'networkidle' });
 		const headings = await page.locator('.report-page h2').allTextContents();
 		expect(headings.indexOf('Move Out')).toBe(headings.indexOf('Move In') + 1);
-		const rows = await rpc<{ section: string; guest_count: number }[]>('report_in_house', {
-			p_date: moveDate
-		});
-		const expected = rows
-			.filter((r) => r.section !== 'Move Out')
-			.reduce((sum, r) => sum + Number(r.guest_count), 0);
+		// The date is this test's alone: one party of two, in two rooms that day.
 		const sheet = (await page.textContent('.report-page')) ?? '';
-		expect(sheet).toMatch(new RegExp(`Total Guests\\s*${expected}\\b`));
+		expect(sheet).toMatch(/Total Guests\s*2\b/);
 	});
 
 	it('shows a past stay\'s rooms as Past on the reservation screen', async () => {

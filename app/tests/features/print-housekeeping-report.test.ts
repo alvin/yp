@@ -23,9 +23,8 @@ describe('print housekeeping report', () => {
 		const rows = await rpc<{ resnumber: number; status: string }[]>('report_housekeeping', {
 			p_date: mid
 		});
-		expect(['In House', 'Arrive Today', 'Depart Today', 'Move In']).toContain(
-			rows.find((r) => r.resnumber === fx.resnumber)?.status
-		);
+		// The day after arrival, mid-stay, in the one room.
+		expect(rows.find((r) => r.resnumber === fx.resnumber)?.status).toBe('In House');
 	});
 
 	it('prints only report-facing housekeeping instructions', async () => {

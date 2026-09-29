@@ -33,7 +33,7 @@
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
     import { afterNavigate, invalidateAll } from "$app/navigation";
-    import { bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
+    import { addDays, bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
     import { ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
     import { roomOptions } from "$lib/options.js";
     import {
@@ -251,6 +251,26 @@
         })),
     );
 
+    // A move happens inside the room being left — after its first night and
+    // before its last morning — so the date box offers only those dates, and
+    // starts on today when today is one of them, otherwise the first.
+    const moveDates = $derived.by(() => {
+        const o = occupancy.find((x) => String(x.occupancyid) === mFrom);
+        if (!o) return null;
+        const min = addDays(o.occupancyin, 1);
+        const max = addDays(o.occupancyout, -1);
+        return min <= max ? { min, max } : null;
+    });
+    const moveDateOk = $derived(
+        !!moveDates && mMoveDate >= moveDates.min && mMoveDate <= moveDates.max,
+    );
+    function firstMoveDate(): string {
+        if (!moveDates) return "";
+        return today >= moveDates.min && today <= moveDates.max
+            ? today
+            : moveDates.min;
+    }
+
     function openMove() {
         mMode = occupancy.length ? "move" : "add";
         const current =
@@ -258,7 +278,7 @@
                 (o) => o.occupancyin <= today && o.occupancyout >= today,
             ) ?? occupancy[occupancy.length - 1];
         mFrom = current ? String(current.occupancyid) : "";
-        mMoveDate = today;
+        mMoveDate = firstMoveDate();
         mIn = today;
         mOut = s.resdeparturedate;
         mGuests = current?.occupancynumguests ?? s.numadults;
@@ -1014,6 +1034,7 @@
                         bind:value={mFrom}
                         options={occupancyOptions}
                         placeholder="Select room"
+                        onchange={() => (mMoveDate = firstMoveDate())}
                     />
                 </div>
             {/if}
@@ -1034,7 +1055,14 @@
             {#if mMode === "move"}
                 <div class="space-y-1.5">
                     <Label for="m-date">Move date</Label>
-                    <Input id="m-date" type="date" bind:value={mMoveDate} />
+                    <Input
+                        id="m-date"
+                        type="date"
+                        bind:value={mMoveDate}
+                        min={moveDates?.min}
+                        max={moveDates?.max}
+                        disabled={!moveDates}
+                    />
                     <p class="text-muted-foreground text-xs">
                         The stay switches rooms on this date.
                     </p>
@@ -1078,7 +1106,10 @@
             <Button variant="ghost" onclick={() => (moveOpen = false)}
                 >Cancel</Button
             >
-            <Button onclick={addMove}>
+            <Button
+                onclick={addMove}
+                disabled={mMode === "move" && !moveDateOk}
+            >
                 {mMode === "move" ? "Record move" : "Add room"}
             </Button>
         </Dialog.Footer>

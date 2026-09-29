@@ -1,5 +1,7 @@
 // Story: spec/features/record-a-room-move-with-move-dates-and-occupancy-context.feature
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Page } from 'playwright';
+import { APP_URL, closeApp, openAppPage } from '../helpers/app';
 import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
@@ -63,5 +65,38 @@ describe('record a room move with move dates and occupancy context', () => {
 				.in('occupancyid', [oldOccId, newOccId])
 		) as { occupancynumguests: number }[];
 		expect(occ[0].occupancynumguests).toBe(occ[1].occupancynumguests);
+	});
+});
+
+describe('record a room move with move dates and occupancy context — the move date', () => {
+	let page: Page;
+	let stay: Fixture; // three nights in one room, no move yet
+
+	beforeAll(async () => {
+		stay = await makeReservation({ nights: 3 });
+		page = await openAppPage();
+		await page.goto(`${APP_URL}/reservations/${stay.resnumber}`, { waitUntil: 'networkidle' });
+		await page.getByRole('button', { name: 'Room move' }).click();
+		await page.locator('#m-date').waitFor({ timeout: 15_000 });
+	});
+
+	afterAll(async () => {
+		await closeApp(page);
+	});
+
+	it('offers only the nights inside the room being left, starting on the first', async () => {
+		const box = page.locator('#m-date');
+		expect(await box.getAttribute('min')).toBe(addDays(stay.arrival, 1));
+		expect(await box.getAttribute('max')).toBe(addDays(stay.departure, -1));
+		expect(await box.inputValue()).toBe(addDays(stay.arrival, 1));
+	});
+
+	it('will not record a move on a date outside them', async () => {
+		const record = page.getByRole('button', { name: 'Record move' });
+		expect(await record.isDisabled()).toBe(false);
+		await page.fill('#m-date', stay.arrival);
+		expect(await record.isDisabled()).toBe(true);
+		await page.fill('#m-date', stay.departure);
+		expect(await record.isDisabled()).toBe(true);
 	});
 });

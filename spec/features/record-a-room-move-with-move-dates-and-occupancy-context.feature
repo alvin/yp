@@ -13,3 +13,4 @@ Feature: record a room move with move dates and occupancy context
     Then A staff member can record the move date for the room change.
     And The new room and the prior room are both visible in the stay history.
     And The occupancy context for the move is retained with the record.
+    And The move date offers only the dates a move can fall on, and starts on the first of them.
