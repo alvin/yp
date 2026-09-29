@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, uid, type Fixture } from '../helpers/db';
+import { addDays, makeReservation, rpc, staffClient, uid, unwrap, type Fixture } from '../helpers/db';
 
 interface GuestDocumentNotes {
 	diet_notes: string | null;
@@ -130,4 +130,88 @@ describe('print diet and housekeeping notes on guest documents — on paper', ()
 			expect(text).not.toContain('Housekeeping:');
 		});
 	}
+});
+
+describe('print diet and housekeeping notes on guest documents — office notes stay in the office', () => {
+	let stay: Fixture;
+	const marker = `OFFICE-${uid()}`;
+
+	beforeAll(async () => {
+		stay = await makeReservation();
+		await rpc('set_guest_notes', { p_guestid: stay.guestid, p_notes: `${marker} guest` });
+		await rpc('update_reservation_guest', {
+			p_reservationguestid: stay.reservationguestid,
+			p_rgnotes: `${marker} request`
+		});
+		const db = await staffClient();
+		unwrap(
+			await db
+				.from('room_assignments')
+				.update({ occupancynotes: `${marker} room` })
+				.eq('reservationguestid', stay.reservationguestid)
+				.select('occupancyid')
+		);
+	});
+
+	it('never prints them on the confirmation, folio, bill or cancellation notice', async () => {
+		for (const fn of [
+			'report_reservation_confirmation',
+			'report_check_in_folio',
+			'report_checkout_bill_header',
+			'report_checkout_bill_lines',
+			'report_cancellation_notice'
+		]) {
+			const rows = await rpc<Record<string, unknown>[]>(fn, { p_reservationid: stay.reservationid });
+			const text = JSON.stringify(rows);
+			// The stay itself is on the document; only the office notes are not.
+			if (!fn.endsWith('_lines')) expect(text).toContain(String(stay.resnumber));
+			expect(text).not.toContain(marker);
+		}
+	});
+});
+
+describe('print diet and housekeeping notes on guest documents — the notes tabs', () => {
+	let page: Page;
+
+	async function housekeepingNotes(): Promise<string[]> {
+		const db = await staffClient();
+		return (
+			unwrap(
+				await db
+					.from('housekeeping_notes')
+					.select('housekeepingnotes')
+					.eq('reservationguestid', full.reservationguestid)
+					.eq('hkarchive', false)
+			) as { housekeepingnotes: string }[]
+		).map((h) => h.housekeepingnotes);
+	}
+
+	beforeAll(async () => {
+		page = await openAppPage();
+		await page.goto(`${APP_URL}/reservations/${full.resnumber}`, { waitUntil: 'networkidle' });
+	});
+
+	afterAll(async () => {
+		await closeApp(page);
+	});
+
+	it('edits only the diet notes, leaving the diet as it is', async () => {
+		await page.getByRole('tab', { name: 'Kitchen' }).click();
+		const box = page.locator('[role=tabpanel][data-state=active] textarea');
+		expect(await box.inputValue()).toBe('1 vegan');
+		await page.locator('[role=tabpanel][data-state=active]').getByRole('button', { name: 'Save' }).click();
+		await page.getByText('Kitchen notes saved').waitFor({ timeout: 10_000 });
+		expect((await confirmation(full.reservationid)).diet_notes).toBe('Vegan 1 vegan');
+	});
+
+	it('edits the housekeeping note in force, and saving it unchanged adds nothing', async () => {
+		const before = await housekeepingNotes();
+		await page.getByRole('tab', { name: 'Housekeeping' }).click();
+		const box = page.locator('[role=tabpanel][data-state=active] textarea');
+		expect(await box.inputValue()).toBe(latest);
+		await page.locator('[role=tabpanel][data-state=active]').getByRole('button', { name: 'Save' }).click();
+		await page.getByText('Housekeeping notes saved').waitFor({ timeout: 10_000 });
+		expect(await housekeepingNotes()).toEqual(before);
+		expect((await folio(full.reservationid)).housekeeping_notes).toBe(latest);
+	});
 });

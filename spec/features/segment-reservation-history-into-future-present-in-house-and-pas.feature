@@ -7,7 +7,7 @@ Feature: segment reservation history into future present in-house and past secti
   So that they can understand the guest’s activity over time at a glance
 
   Background:
-    Given when staff review a guest’s reservation history
+    Given staff review a guest’s reservation history
 
   Scenario: Acceptance criteria
     Then Reservation history is grouped into future, current in-house, and past sections.

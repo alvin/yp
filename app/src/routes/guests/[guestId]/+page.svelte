@@ -6,46 +6,19 @@
     import PhoneIcon from "@lucide/svelte/icons/phone";
     import MailIcon from "@lucide/svelte/icons/mail";
     import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
-    import EyeOffIcon from "@lucide/svelte/icons/eye-off";
 
-    import { invalidateAll } from "$app/navigation";
-    import { toast } from "svelte-sonner";
     import UsersIcon from "@lucide/svelte/icons/users";
     import { Button } from "$lib/components/ui/button/index.js";
     import * as Card from "$lib/components/ui/card/index.js";
-    import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
-    import { Textarea } from "$lib/components/ui/textarea/index.js";
     import Money from "$lib/components/app/money.svelte";
     import StatusBadge from "$lib/components/app/status-badge.svelte";
-    import { setGuestNotes } from "$lib/data/mutations.js";
+    import GuestNotesDialog from "$lib/components/app/guest-notes-dialog.svelte";
     import { dateMed } from "$lib/format.js";
     import type { GuestHistoryRow } from "$lib/data/types.js";
 
     let { data } = $props();
     const g = $derived(data.guest);
-
-    let notesText = $state("");
-    let savingNotes = $state(false);
-    function openNotes() {
-        notesText = g.guestnotes ?? "";
-        notesOpen = true;
-    }
-    async function saveNotes() {
-        savingNotes = true;
-        try {
-            await setGuestNotes(g.guestid, notesText);
-            notesOpen = false;
-            toast.success("Guest notes saved (office only — never printed)");
-            await invalidateAll();
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not save guest notes.",
-            );
-        } finally {
-            savingNotes = false;
-        }
-    }
 
     const future = $derived(data.history.filter((h) => h.bucket === "future"));
     const present = $derived(
@@ -171,7 +144,7 @@
                 {/if}
             </div>
 
-            <Button variant="secondary" class="w-full" onclick={openNotes}>
+            <Button variant="secondary" class="w-full" onclick={() => (notesOpen = true)}>
                 <NotebookIcon /> Guest notes
                 {#if g.guestnotes}<span
                         class="bg-primary ml-1 size-1.5 rounded-full"
@@ -259,28 +232,4 @@
     </div>
 </div>
 
-<Dialog.Root bind:open={notesOpen}>
-    <Dialog.Content>
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2"
-                ><NotebookIcon class="size-4" /> Guest notes</Dialog.Title
-            >
-            <Dialog.Description class="flex items-center gap-1.5">
-                <EyeOffIcon class="size-3.5" /> Office only — never printed.
-            </Dialog.Description>
-        </Dialog.Header>
-        <Textarea
-            bind:value={notesText}
-            rows={6}
-            placeholder="Preferences, history, anything the office should know…"
-        />
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (notesOpen = false)}
-                >Close</Button
-            >
-            <Button onclick={saveNotes} disabled={savingNotes}
-                >Save notes</Button
-            >
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
+<GuestNotesDialog bind:open={notesOpen} guestid={g.guestid} notes={g.guestnotes} />

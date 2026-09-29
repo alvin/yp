@@ -95,6 +95,13 @@ describe('show an accurate room status for the day — on screen and paper', () 
 		expect(sheet).toMatch(/Total Guests\s*2\b/);
 	});
 
+	it('counts the moving party once on the kitchen report too', async () => {
+		expect(await rpc<number>('guests_in_house', { p_date: moveDate })).toBe(2);
+		await page.goto(`${APP_URL}/reports/kitchen?date=${moveDate}`, { waitUntil: 'networkidle' });
+		const sheet = (await page.textContent('.report-page')) ?? '';
+		expect(sheet).toMatch(/Total Guests\s*2\b/);
+	});
+
 	it('shows a past stay\'s rooms as Past on the reservation screen', async () => {
 		// Fixture stays are historical, so both rooms were left long ago.
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });

@@ -1,15 +1,10 @@
 <script lang="ts">
 	import type { ConfirmationReport, StayRoomRow } from '$lib/data/types.js';
 	import { dateShort, money } from '$lib/format.js';
+	import { LODGE_PHONE } from '$lib/data/reference.js';
+	import GuestLetterhead from './guest-letterhead.svelte';
 
 	let { r, rooms = [] }: { r: ConfirmationReport; rooms?: StayRoomRow[] } = $props();
-
-	// "VICTORIA, BC CAN" — city, region then country, as on the original slip.
-	const cityLine = $derived(
-		[[r.guestcity, r.guestregion].filter(Boolean).join(', '), r.guestcountry]
-			.filter(Boolean)
-			.join(' ')
-	);
 
 	// The diet and housekeeping notes sit in the space above the office hours.
 	const notes = $derived(Boolean(r.diet_notes || r.housekeeping_notes));
@@ -32,20 +27,12 @@
 </script>
 
 <div class="logo">Yellow Point Lodge</div>
-<div class="letterhead">
-	<div style="text-transform: uppercase">
-		{#each (r.guest_names ?? r.guest).split('\n') as guest_line (guest_line)}{guest_line}<br />{/each}
-		{#if r.guestaddress}{r.guestaddress}<br />{/if}
-		{#if cityLine}{cityLine}<br />{/if}
-		{#if r.guestpczip}{r.guestpczip}{/if}
-	</div>
-	<div class="right">
-		Date Printed:&nbsp; {dateShort(r.date_printed)}<br />
-		Date Confirmed:&nbsp; {dateShort(r.date_confirmed)}<br />
-		{#if r.phone}{r.phone}<br />{/if}
-		Res. No. {r.resnumber}
-	</div>
-</div>
+<GuestLetterhead names={r.guest_names ?? r.guest} to={r}>
+	Date Printed:&nbsp; {dateShort(r.date_printed)}<br />
+	Date Confirmed:&nbsp; {dateShort(r.date_confirmed)}<br />
+	{#if r.phone}{r.phone}<br />{/if}
+	Res. No. {r.resnumber}
+</GuestLetterhead>
 <div class="rule"></div>
 <p class="center">
 	Thank you for your reservation. Please check the information below for accuracy<br />and
@@ -97,5 +84,5 @@
 	the information on the back of this confirmation.<br />We look forward to your visit.
 </p>
 <p class="center standoff" style="--standoff: 210px; font-family: Georgia, serif; font-size: 24px">
-	Phone (250) 245-7422
+	Phone {LODGE_PHONE}
 </p>

@@ -31,11 +31,7 @@
 </div>
 
 <div class="mx-auto max-w-2xl">
-    <h1 class="mb-1 text-lg font-semibold">Search all fields</h1>
-    <p class="text-muted-foreground mb-4 text-sm">
-        Matches phone, address, email, and reservation number across all
-        records.
-    </p>
+    <h1 class="mb-4 text-lg font-semibold">Search all fields</h1>
 
     <div class="mb-5 flex gap-2">
         <div class="relative flex-1">

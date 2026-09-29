@@ -4,10 +4,10 @@ Feature: classify deposit and prepayment activity for daily cash reporting
 
   As Reservation clerk, Front-desk supervisor
   I want to classify deposit and prepayment activity for daily cash reporting
-  So that so that deposits received, deposits applied, and prepayments are correctly reflected in the daily cash package
+  So that deposits received, deposits applied, and prepayments are correctly reflected in the daily cash package
 
   Background:
-    Given when staff prepare daily cash totals and appendices from the print menu workflow
+    Given staff record deposits and prepayments that feed the daily cash totals and appendices
 
   Scenario: Acceptance criteria
     Then Deposit activity can be recorded as received, applied, refunded, or kept.

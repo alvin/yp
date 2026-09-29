@@ -4,13 +4,13 @@ Feature: preserve manual adjustment visibility
 
   As Front-desk supervisor
   I want to preserve manual adjustment visibility
-  So that they can keep the adjustment work visible outside durable stored adjustments until a storage decision is approved
+  So that staff tips and coded adjustments are still written on the printed sheet by hand while the lodge decides whether the system should store them
 
   Background:
-    Given a front-desk supervisor is using manual staff-tip or coded adjustment handling during reconciliation
+    Given a front-desk supervisor balances the day on the printed Daily Cash Activity Report
 
   Scenario: Acceptance criteria
-    Then Manual staff-tip and coded adjustment work remains visible during reconciliation.
-    And The workflow is not hidden behind durable stored adjustments before approval.
-    And Staff can continue using the manual process while a storage decision is pending.
-    And The process supports the lodge’s current reconciliation approach.
+    Then The upper section keeps a blank Adjustments column for handwritten entries.
+    And The cash section keeps blank Actual Amount and Adjustments columns beside the calculated amount.
+    And The manual columns print empty; nothing is filled in for staff.
+    And No adjustment is stored in the system until the lodge decides it should be.

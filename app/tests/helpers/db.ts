@@ -4,19 +4,12 @@
 // or with real data in the target environment.
 
 import { createClient } from '@supabase/supabase-js';
-import { ANON_KEY, SERVICE_ROLE_KEY, STAFF_EMAIL, STAFF_PASSWORD, SUPABASE_URL } from './env';
+import { ANON_KEY, STAFF_EMAIL, STAFF_PASSWORD, SUPABASE_URL } from './env';
 
 export type YplClient = ReturnType<typeof anonClient>;
 
 export function anonClient() {
 	return createClient(SUPABASE_URL, ANON_KEY, {
-		db: { schema: 'ypl' },
-		auth: { persistSession: false }
-	});
-}
-
-export function serviceClient() {
-	return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 		db: { schema: 'ypl' },
 		auth: { persistSession: false }
 	});

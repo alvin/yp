@@ -1,4 +1,4 @@
-import { reportKitchenMeal, reportKitchenMealTotalGuests, TODAY } from '$lib/data/queries.js';
+import { guestsInHouse, reportKitchenMeal, TODAY } from '$lib/data/queries.js';
 import type { PageLoad } from './$types.js';
 
 export const load: PageLoad = async ({ url }) => {
@@ -6,6 +6,6 @@ export const load: PageLoad = async ({ url }) => {
 	return {
 		date,
 		rows: await reportKitchenMeal(date),
-		total_guests: await reportKitchenMealTotalGuests(date)
+		total_guests: await guestsInHouse(date)
 	};
 };

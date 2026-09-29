@@ -60,6 +60,28 @@ describe('post room-night and extra charges', () => {
 		}
 	});
 
+	it('posts an extra charge to its daily cash category without being told it', async () => {
+		const client = await staffClient();
+		const [wine] = unwrap(
+			await client
+				.from('inventory_items')
+				.select('inventoryid')
+				.eq('invarchive', false)
+				.eq('invtype', 'Red Wine')
+				.limit(1)
+		) as { inventoryid: number }[];
+		const txid = await rpc<number>('post_charge', {
+			p_reservationguestid: fx.reservationguestid,
+			p_inventoryid: wine.inventoryid,
+			p_quantity: 1,
+			p_transdate: fx.arrival
+		});
+		const [line] = unwrap(
+			await client.from('transactions').select('transtype').eq('transactionid', txid)
+		) as { transtype: string }[];
+		expect(line.transtype).toBe('Liquor');
+	});
+
 	it('updates the reservation total to include posted lines', async () => {
 		const balance = await rpc<number>('reservation_balance', { p_reservationid: fx.reservationid });
 		expect(Number(balance)).toBeGreaterThan(0);
@@ -117,6 +139,25 @@ describe('post room-night and extra charges — the room rate in the charge dial
 			await pickRoom(room);
 			await expect.poll(unitPrice, { timeout: 10_000 }).toBeCloseTo(rate, 2);
 		}
+	});
+
+	it('starts on the Regular rate and follows the rate chosen', async () => {
+		const { room } = rooms[0];
+		await pickRoom(room);
+		const rate = (ratetype: string) =>
+			rpc<number>('effective_room_rate', {
+				p_roomid: room.roomid,
+				p_date: todayISO(),
+				p_ratetype: ratetype
+			}).then(Number);
+		const regular = await rate('Regular');
+		const split = await rate('Split');
+		expect(split).not.toBe(regular);
+		await expect.poll(unitPrice, { timeout: 10_000 }).toBeCloseTo(regular, 2);
+
+		await page.click('#c-rate');
+		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: 'Split' }).click();
+		await expect.poll(unitPrice, { timeout: 10_000 }).toBeCloseTo(split, 2);
 	});
 
 	it('posts the price the clerk types over the rate', async () => {

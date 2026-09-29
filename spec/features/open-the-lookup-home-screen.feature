@@ -4,7 +4,7 @@ Feature: open the lookup home screen
 
   As Front-desk supervisor, Reservation clerk, Operations lead
   I want to open the lookup home screen
-  So that so they can start searching immediately
+  So that they can start searching immediately
 
   Background:
     Given a staff member opens the system

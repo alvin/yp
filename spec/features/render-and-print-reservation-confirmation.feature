@@ -1,13 +1,13 @@
 # id: xJrlmND0d7rWMY8ySsIi
-@status:done @priority:2 @printing @confirmation @documents
+@persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:2 @printing @confirmation @documents
 Feature: render and print reservation confirmation
 
-  As a user
+  As Printing coordinator, Front-desk supervisor
   I want to render and print reservation confirmation
-  So that so that reservation confirmations are produced in the established format
+  So that reservation confirmations are produced in the established format
 
   Background:
-    Given when confirmations are queued from guest document printing
+    Given confirmations are queued for printing in the Print Center
 
   Scenario: Acceptance criteria
     Then The slip shows the guest name and reservation details needed to identify the booking.

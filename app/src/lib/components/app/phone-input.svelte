@@ -7,24 +7,15 @@
 
 	let {
 		value = $bindable(''),
-		id,
-		class: className,
-		placeholder,
-		disabled
+		id
 	}: {
 		value?: string;
 		id?: string;
-		class?: string;
-		placeholder?: string;
-		disabled?: boolean;
 	} = $props();
 </script>
 
 <Input
 	{id}
-	class={className}
-	{placeholder}
-	{disabled}
 	type="tel"
 	inputmode="tel"
 	bind:value

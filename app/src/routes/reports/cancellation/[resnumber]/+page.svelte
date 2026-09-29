@@ -2,16 +2,11 @@
 	import ReportShell from '$lib/components/app/report-shell.svelte';
 	import { dateShort, money } from '$lib/format.js';
 	import { guestDocTabs } from '$lib/report-nav.js';
+	import { LODGE_PHONE } from '$lib/data/reference.js';
+	import GuestLetterhead from '$lib/components/reports/guest-letterhead.svelte';
 
 	let { data } = $props();
 	const r = $derived(data.report);
-
-	// "VICTORIA, BC CAN" — city, region then country, as on the original notice.
-	const cityLine = $derived(
-		[[r.guestcity, r.guestregion].filter(Boolean).join(', '), r.guestcountry]
-			.filter(Boolean)
-			.join(' ')
-	);
 </script>
 
 <svelte:head><title>Cancellation · #{r.resnumber}</title></svelte:head>
@@ -25,20 +20,12 @@
 >
 	<div class="logo">Yellow Point Lodge</div>
 	<h1 style="letter-spacing: 0.45em">CANCELLATION</h1>
-	<div class="letterhead">
-		<div style="text-transform: uppercase">
-			{r.guest}<br />
-			{#if r.guestaddress}{r.guestaddress}<br />{/if}
-			{#if cityLine}{cityLine}<br />{/if}
-			{#if r.guestpczip}{r.guestpczip}{/if}
-		</div>
-		<div class="right">
-			Date Printed: {dateShort(r.date_printed)}<br />
-			Date Cancelled: {dateShort(r.date_cancelled)}<br />
-			{#if r.phone}{r.phone}<br />{/if}
-			Res. No. {r.resnumber}
-		</div>
-	</div>
+	<GuestLetterhead names={r.guest} to={r}>
+		Date Printed: {dateShort(r.date_printed)}<br />
+		Date Cancelled: {dateShort(r.date_cancelled)}<br />
+		{#if r.phone}{r.phone}<br />{/if}
+		Res. No. {r.resnumber}
+	</GuestLetterhead>
 	<p class="center standoff" style="--standoff: 55px">
 		We are sorry that you won't be able to visit us. Please check the information<br />below for
 		accuracy and call us immediately if there are any problems.
@@ -84,6 +71,6 @@
 		able to welcome you again soon.
 	</p>
 	<p class="center standoff" style="--standoff: 250px; font-family: Georgia, serif; font-size: 24px">
-		Phone (250) 245-7422
+		Phone {LODGE_PHONE}
 	</p>
 </ReportShell>

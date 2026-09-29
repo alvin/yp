@@ -116,6 +116,13 @@ describe('remove a charge entered in error', () => {
 	it('reports removing a line that has already gone instead of silently doing nothing', async () => {
 		await expect(rpc('archive_transaction', { p_transactionid: -1 })).rejects.toThrow(/not found/i);
 		await expect(rpc('archive_payment', { p_paymentid: -1 })).rejects.toThrow(/not found/i);
+		// The lines removed above are gone; removing them again is refused too.
+		await expect(rpc('archive_transaction', { p_transactionid: chargeId })).rejects.toThrow(
+			/already removed/i
+		);
+		await expect(rpc('archive_payment', { p_paymentid: paymentId })).rejects.toThrow(
+			/already removed/i
+		);
 	});
 
 	it('removes a line from the reservation screen after confirming', async () => {

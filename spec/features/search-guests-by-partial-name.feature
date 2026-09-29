@@ -6,7 +6,7 @@ Feature: search guests by partial name
   So that a guest is found from the part of the name we can remember, however it is typed
 
   Background:
-    Given staff look a guest up by name, on the lookup home screen or while booking a new reservation
+    Given staff look a guest up by name: on the lookup home screen, while booking, when adding a name to a stay, or in the Print Center
 
   Scenario: Acceptance criteria
     Then Any part of a name matches — the middle or end of a surname, not only its start.

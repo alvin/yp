@@ -7,7 +7,7 @@ Feature: preserve kitchen wording
   So that staff can rely on the report to match the wording entered by front-desk or office teams
 
   Background:
-    Given when kitchen notes are shown in the report
+    Given kitchen notes are shown in the report
 
   Scenario: Acceptance criteria
     Then Kitchen wording appears in the report in a form that closely matches the original entry.

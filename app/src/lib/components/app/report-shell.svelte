@@ -14,7 +14,7 @@
 		orientation = 'portrait',
 		stock = 'letter',
 		backHref,
-		backLabel = 'Back',
+		backLabel,
 		tabs,
 		date,
 		children,
@@ -24,8 +24,8 @@
 		orientation?: 'portrait' | 'landscape';
 		/** The paper this document prints on. */
 		stock?: PaperStock;
-		backHref?: string;
-		backLabel?: string;
+		backHref: string;
+		backLabel: string;
 		/** Sibling reports in the same workflow, shown as tabs. */
 		tabs?: ReportTab[];
 		/** Working date; shows a date picker that reloads this report. */
@@ -34,10 +34,6 @@
 		toolbar?: Snippet;
 	} = $props();
 
-	function back() {
-		if (backHref) goto(backHref);
-		else history.back();
-	}
 
 	function changeDate(d: string) {
 		if (!d) return;
@@ -54,7 +50,7 @@
 <div class="report-root min-h-screen pb-16">
 	<div class="no-print sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
 		<div class="mx-auto flex max-w-[1220px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
-			<Button variant="ghost" size="sm" onclick={back}>
+			<Button variant="ghost" size="sm" href={backHref}>
 				<ArrowLeftIcon /> {backLabel}
 			</Button>
 			<span class="text-muted-foreground truncate text-sm font-medium">{title}</span>

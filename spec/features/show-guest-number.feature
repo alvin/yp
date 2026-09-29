@@ -10,6 +10,6 @@ Feature: show guest number
     Given a staff member opens a guest profile from name search results
 
   Scenario: Acceptance criteria
-    Then The guest number is visible on the guest profile and reservation-history view.
+    Then The guest number is shown on the guest's page, beside their reservation history.
     And The guest number matches the selected guest record from the search results.
-    And The guest number is shown consistently across the future, in-house, and past stay sections.
+    And The guest number is shown once for the guest, not repeated in each of the future, in-house and past sections.

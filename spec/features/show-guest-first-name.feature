@@ -7,7 +7,7 @@ Feature: show guest first name
   So that they can identify the correct guest more easily
 
   Background:
-    Given when reservation staff review date-based search results
+    Given reservation staff review date-based search results
 
   Scenario: Acceptance criteria
     Then Each result row shows the guest's first name.

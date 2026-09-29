@@ -5,6 +5,8 @@ import { makeReservation, rpc, staffClient, todayISO, unwrap, type Fixture } fro
 
 interface Tx {
 	transactionid: number;
+	transtype: string;
+	roomid: number | null;
 	transamount: number;
 	transgstamount: number;
 	transpstamount: number;
@@ -49,11 +51,21 @@ describe('calculate taxes from dated rate tables', () => {
 			p_transdate: today
 		});
 		const tx = await getTx(txid);
+		expect(tx.transtype).toBe('Room');
+		expect(tx.roomid).toBe(r.roomid);
 		expect(tx.transamount).toBe(600);
 		const gst = await rate('GST', today);
 		expect(tx.transgstamount).toBe(r.roomgst ? Math.round(600 * gst * 100) / 100 : 0);
 		const rt = await rate('Room', today);
 		expect(tx.transrtamount).toBe(r.roomrt ? Math.round(600 * rt * 100) / 100 : 0);
+	});
+
+	it('supports a per-line tax breakdown for reporting', async () => {
+		const rows = await rpc<{ line_source: string; tax_total: number }[]>('reservation_ledger', {
+			p_reservationid: fx.reservationid
+		});
+		const charge = rows.find((r) => r.line_source === 'transaction');
+		expect(Number(charge?.tax_total)).toBeGreaterThan(0);
 	});
 
 	it('keeps flagged-off taxes at zero', async () => {

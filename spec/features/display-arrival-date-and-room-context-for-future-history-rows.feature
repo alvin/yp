@@ -7,7 +7,7 @@ Feature: display arrival date and room context for future history rows
   So that they can see what is planned and which room is expected
 
   Background:
-    Given when staff review upcoming reservations on a guest profile
+    Given staff review upcoming reservations on a guest profile
 
   Scenario: Acceptance criteria
     Then Upcoming reservation rows show the arrival date.

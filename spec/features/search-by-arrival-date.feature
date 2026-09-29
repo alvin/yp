@@ -1,16 +1,16 @@
 # id: FuHfeQfq3i6u8Ow9mrQt
-@persona:reservation-clerk @status:done @priority:4 @search @date @arrival
+@persona:reservation-clerk @persona:front-desk-supervisor @status:done @priority:5 @search @date @arrival @results-list
 Feature: search by arrival date
 
-  As Reservation clerk
+  As Reservation clerk, Front-desk supervisor
   I want to search by arrival date
-  So that they can find reservations arriving on that date
+  So that staff can quickly see who is expected to arrive on a chosen date
 
   Background:
-    Given a clerk selects a single date and uses the default date search mode
+    Given a clerk searches a single date without choosing another mode
 
   Scenario: Acceptance criteria
-    Then The selected date is treated as an arrival date search by default.
-    And The results show reservations arriving on the chosen date.
-    And The search is driven from a single selected date.
+    Then The date search defaults to arrivals unless another mode is chosen.
+    And The results show the reservations arriving on the chosen date, and only those.
+    And Each row shows the stay's dates, party size and the deposit still held — received, less any refunded, applied to the bill or kept.
     And Staff can open a listed reservation from the results.

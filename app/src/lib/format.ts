@@ -29,7 +29,6 @@ const MONTHS_LONG = [
   "November",
   "December",
 ];
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Parse an ISO date ('YYYY-MM-DD') to a local Date without timezone drift. */
 function parse(d: string | Date | null | undefined): Date | null {
@@ -62,13 +61,6 @@ export function dateLong(d: string | Date | null | undefined): string {
   return `${MONTHS_LONG[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
 }
 
-/** Mon, Nov 12 — list rows. */
-export function dateWeekday(d: string | Date | null | undefined): string {
-  const dt = parse(d);
-  if (!dt) return "";
-  return `${WEEKDAYS[dt.getDay()]}, ${MONTHS_SHORT[dt.getMonth()]} ${dt.getDate()}`;
-}
-
 /** $1,234.50 (always two decimals, negatives as -$52.00). */
 export function money(n: number | null | undefined): string {
   const v = Number(n ?? 0);
@@ -89,14 +81,6 @@ export function moneyAcct(n: number | null | undefined): string {
   return v < 0 ? `($${abs})` : `$${abs}`;
 }
 
-/** Plain two-decimal number, no currency symbol (cash report columns). */
-export function amount(n: number | null | undefined): string {
-  return Number(n ?? 0).toLocaleString("en-CA", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 /** "December 24, 2025  05:08 PM" — printed report footer style. */
 export function footerTimestamp(now: Date = new Date()): string {
   const h24 = now.getHours();
@@ -113,7 +97,7 @@ export function addDays(d: string, days: number): string {
   return toISO(dt);
 }
 
-export function toISO(d: Date): string {
+function toISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
   ).padStart(2, "0")}`;

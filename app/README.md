@@ -1,9 +1,9 @@
 # Yellow Point Lodge — Front Desk
 
 Production front desk system for Yellow Point Lodge, built with SvelteKit
-(Svelte 5) and Supabase. All business rules — reservation numbering, the
-one-year booking horizon, tax calculation, US→CDN conversion, deposit
-refund/kept handling — live in the `ypl` database schema (triggers +
+(Svelte 5) and Supabase. All business rules — among them reservation
+numbering, the one-year booking horizon, tax calculation, US→CDN conversion,
+deposit refund/kept handling — live in the `ypl` database schema (triggers +
 RPCs), so the data stays consistent even when rows are edited directly in
 Supabase.
 
@@ -120,22 +120,19 @@ npm run cf:preview   # build and serve locally through workerd
 - `src/lib/pending-charges.ts` — charges and the deposit captured while a stay
   is being booked, posted through the ordinary workflow RPCs once the
   reservation exists.
-- `src/lib/components/app/guest-search.svelte` — the one guest lookup, shared by
-  the lookup screen, the new-reservation guest panel, the add-a-name dialog and
-  the Print Center, so partial-name search behaves the same everywhere.
+- `src/lib/components/app/guest-search.svelte` — the one guest lookup, used
+  wherever staff find a guest, so partial-name search behaves the same
+  everywhere.
 - `src/lib/components/app/shared-room-badge.svelte` — the red *Shared* mark for
-  a room two live reservations hold at once, on the date search results and on
-  the reservation screen. "Shared" means a shared *room*; the other names on a
-  booking are introduced with "with …".
+  a room two live reservations hold at once. "Shared" means a shared *room*;
+  the other names on a booking are introduced with "with …".
 
-Screens are intentionally minimal: Lookup (home), Name/Date/All-fields search
-results, Guest history, the Reservation transaction screen, the Print Center,
-and the Daily Cash Activity Report with its appendices.
+Screens are intentionally minimal and follow the client's original wireframes in
+`original_spec/wireframes/`, starting from the Lookup screen (home).
 
 ## Verification
 
 - `supabase/tests/business_logic_smoke.sql` — full workflow smoke test of the
   database layer (transactional; rolls back).
-- API-level and browser-level end-to-end checks were run against the local
-  stack: sign-in gate, reservation creation, charges/payments, room moves,
-  cancellation with deposit refund, and every printed report.
+- `npm test` — one test in `tests/features/` per story in `spec/features/`;
+  see `tests/README.md`.

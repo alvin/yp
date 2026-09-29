@@ -11,5 +11,5 @@ Feature: show room availability during booking
   Scenario: Acceptance criteria
     Then The room list follows the lodge's own room order.
     And Each room shows its brief bed-layout description.
-    And Rooms already occupied for the stay window are flagged as unavailable.
+    And Once the stay's dates are entered, a room another stay already holds for any of those nights is marked Booked in the room list; it can still be chosen, as the lodge shares rooms on purpose.
     And Cancelled reservations do not block a room's availability.

@@ -10,7 +10,7 @@ Feature: keep guest notes private
     Given staff add notes for internal follow-up
 
   Scenario: Acceptance criteria
-    Then A note can be added to the current stay for office use.
-    And The note is visible on the transaction screen.
-    And The note does not appear on printed guest documents.
-    And The note remains available for staff to review later during the stay.
+    Then A note can be kept on the guest record for office use.
+    And The note opens from the transaction screen and from the guest's page.
+    And The note does not appear on printed guest documents or operational reports.
+    And The note stays with the guest for staff to review on any later stay.

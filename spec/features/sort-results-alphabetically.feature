@@ -7,9 +7,9 @@ Feature: sort results alphabetically
   So that they can find guests faster in a predictable order
 
   Background:
-    Given when reservation staff review date-based search results
+    Given reservation staff review date-based search results
 
   Scenario: Acceptance criteria
-    Then Results are ordered alphabetically by guest last name.
+    Then Within each section, results are ordered alphabetically by guest last name, then first name.
     And The ordering is consistent for the same search conditions.
     And Names with the same last name remain grouped together in the list.

@@ -7,7 +7,7 @@ Feature: show quantity per item in items-cashed-out appendix
   So that the quantity for each item is visible for checking
 
   Background:
-    Given when a front-desk supervisor reviews the items-cashed-out appendix
+    Given a front-desk supervisor reviews the items-cashed-out appendix
 
   Scenario: Acceptance criteria
     Then Each item shows a quantity in the appendix.

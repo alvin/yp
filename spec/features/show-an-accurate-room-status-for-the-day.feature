@@ -13,4 +13,4 @@ Feature: show an accurate room status for the day
     And A room reads In House only on a day it is held with no arrival, departure or move in it.
     And The room a party leaves on a move day reads Move Out, on the housekeeping report and the In House report.
     And The In House report prints Move Out beside Move In.
-    And A party moving rooms is counted once in the In House report's total guests.
+    And A party moving rooms is counted once in Total Guests, on the In House report and the Kitchen/Meal report alike.

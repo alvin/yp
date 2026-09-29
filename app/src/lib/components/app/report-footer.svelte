@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { footerTimestamp } from '$lib/format.js';
-
-	let { page = 'Page 1 of 1' }: { page?: string } = $props();
 </script>
 
+<!-- The page numbers print in the page margin; see .report-page:has(.footer). -->
 <div class="footer">
 	<span>{footerTimestamp()}</span>
-	<span>{page}</span>
 </div>

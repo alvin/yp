@@ -72,7 +72,6 @@
         { match: "in_house", label: "In house" },
         { match: "occupancy", label: "In house" },
         { match: "overlap", label: "Overlapping" },
-        { match: "date_match", label: "Match" },
         { match: "departure", label: "Departures" },
     ];
     const sections = $derived(

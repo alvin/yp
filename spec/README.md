@@ -4,8 +4,6 @@ The living specification for **Yellow Point**, kept in sync with
 [UserForge](https://userforge.com). Written to be built from — by engineers and
 coding agents — while stakeholders track progress in the UserForge dashboard.
 
-_6 personas · 114 features · 24 wireframes._
-
 ## What's here
 
 | Folder | What it is |

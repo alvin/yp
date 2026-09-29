@@ -4,6 +4,7 @@
 
 import {
 	TODAY,
+	guestsInHouse,
 	reportCheckInFolio,
 	reportCheckoutBillHeader,
 	reportCheckoutBillLines,
@@ -13,7 +14,6 @@ import {
 	reportHousekeeping,
 	reportInHouse,
 	reportKitchenMeal,
-	reportKitchenMealTotalGuests,
 	reportManualSales,
 	reportStayRooms
 } from '$lib/data/queries.js';
@@ -36,7 +36,7 @@ export interface BatchReports {
 	housekeeping: HousekeepingRow[];
 	inHouse: InHouseRow[];
 	kitchenRows: KitchenMealRow[];
-	kitchenTotalGuests: number;
+	totalGuests: number;
 	manualSales: ManualSalesRow[];
 }
 
@@ -58,10 +58,8 @@ export interface BatchFolio {
 	receipts: FolioReceipt[];
 }
 
-const DEFAULT_INCLUDE = 'reports,confirmations,folios,bills';
-
 // One failed document must not sink the whole batch — the rest of the set
-// still prints, and the missing page surfaces as a skipped count on screen.
+// still prints; the one that failed is left out and logged.
 function orNull<T>(p: Promise<T>): Promise<T | null> {
 	return p.catch((e) => {
 		console.error('Batch print: skipping a document that failed to load', e);
@@ -70,14 +68,14 @@ function orNull<T>(p: Promise<T>): Promise<T | null> {
 }
 
 async function loadReports(date: string): Promise<BatchReports> {
-	const [housekeeping, inHouse, kitchenRows, kitchenTotalGuests, manualSales] = await Promise.all([
+	const [housekeeping, inHouse, kitchenRows, totalGuests, manualSales] = await Promise.all([
 		reportHousekeeping(date),
 		reportInHouse(date),
 		reportKitchenMeal(date),
-		reportKitchenMealTotalGuests(date),
+		guestsInHouse(date),
 		reportManualSales(date)
 	]);
-	return { housekeeping, inHouse, kitchenRows, kitchenTotalGuests, manualSales };
+	return { housekeeping, inHouse, kitchenRows, totalGuests, manualSales };
 }
 
 async function loadConfirmations(date: string): Promise<BatchConfirmation[]> {
@@ -129,18 +127,12 @@ async function loadBills(date: string): Promise<BatchBill[]> {
 export const load: PageLoad = async ({ url }) => {
 	// Tomorrow is the default batch: the client preps the next day's set each evening.
 	const date = url.searchParams.get('date') ?? addDays(TODAY, 1);
-	const include = new Set(
-		(url.searchParams.get('include') ?? DEFAULT_INCLUDE)
-			.split(',')
-			.map((s) => s.trim())
-			.filter(Boolean)
-	);
 
 	const [reports, confirmations, folios, bills] = await Promise.all([
-		include.has('reports') ? loadReports(date) : null,
-		include.has('confirmations') ? loadConfirmations(date) : [],
-		include.has('folios') ? loadFolios(date) : [],
-		include.has('bills') ? loadBills(date) : []
+		loadReports(date),
+		loadConfirmations(date),
+		loadFolios(date),
+		loadBills(date)
 	]);
 
 	return { date, reports, confirmations, folios, bills };

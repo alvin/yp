@@ -33,36 +33,46 @@ describe('price charges from the lodge price lists', () => {
 		expect(tx[0].transamount).toBe(Math.round(items[0].invamount * 3 * 100) / 100);
 	});
 
-	it('defaults a room-night charge to the effective room rate × nights', async () => {
+	it('defaults a room-night charge to the rate of the type chosen × nights', async () => {
 		const client = await staffClient();
-		// Find a room-rate row and use a date inside its window.
-		const rates = unwrap(
+		// A room whose Regular and Split rates differ today, read from the rate table.
+		const rows = unwrap(
 			await client
 				.from('room_rates')
-				.select('roomid, roomrate, roomratestartdate, roomrateenddate')
+				.select('roomid, roomratetype, roomrate')
 				.eq('roomratearchive', false)
-				.limit(1)
-		) as { roomid: number; roomrate: number; roomratestartdate: string }[];
-		if (!rates.length) return; // environment without seeded room rates
-		const date = rates[0].roomratestartdate.slice(0, 10);
-		const effective = await rpc<number | null>('effective_room_rate', {
-			p_roomid: rates[0].roomid,
-			p_date: date
-		});
-		expect(effective).not.toBeNull();
+				.lte('roomratestartdate', today)
+				.gte('roomrateenddate', today)
+				.in('roomratetype', ['Regular', 'Split'])
+		) as { roomid: number; roomratetype: string; roomrate: number }[];
+		const byRoom = new Map<number, Record<string, number>>();
+		for (const r of rows) byRoom.set(r.roomid, { ...byRoom.get(r.roomid), [r.roomratetype]: Number(r.roomrate) });
+		const [roomid, rate] = [...byRoom].find(([, t]) => t.Regular && t.Split && t.Regular !== t.Split)!;
 
-		const txid = await rpc<number>('post_room_nights', {
-			p_reservationguestid: fx.reservationguestid,
-			p_roomid: rates[0].roomid,
-			p_occupancyin: fx.arrival,
-			p_occupancyout: fx.departure,
-			p_rate: null,
-			p_transdate: date
-		});
-		const tx = unwrap(
-			await client.from('transactions').select('transamount, transquantity').eq('transactionid', txid)
-		) as { transamount: number; transquantity: number }[];
-		expect(tx[0].transamount).toBe(Math.round(Number(effective) * tx[0].transquantity * 100) / 100);
+		const post = (ratetype?: string) =>
+			rpc<number>('post_room_nights', {
+				p_reservationguestid: fx.reservationguestid,
+				p_roomid: roomid,
+				p_occupancyin: fx.arrival,
+				p_occupancyout: fx.departure,
+				p_transdate: today,
+				...(ratetype ? { p_ratetype: ratetype } : {})
+			});
+		const line = async (txid: number) =>
+			(
+				unwrap(
+					await client
+						.from('transactions')
+						.select('transamount, transquantity')
+						.eq('transactionid', txid)
+				) as { transamount: number; transquantity: number }[]
+			)[0];
+
+		const regular = await line(await post());
+		expect(regular.transquantity).toBe(3);
+		expect(Number(regular.transamount)).toBe(Math.round(rate.Regular * 3 * 100) / 100);
+		const split = await line(await post('Split'));
+		expect(Number(split.transamount)).toBe(Math.round(rate.Split * 3 * 100) / 100);
 	});
 
 	it('lets a manually supplied amount win over the list price', async () => {

@@ -10,7 +10,8 @@ Feature: record room moves
     Given a guest changes rooms during a stay
 
   Scenario: Acceptance criteria
-    Then A room move can be added for the current stay.
-    And The move shows both the room being left and the room being entered.
-    And The stay keeps the room move as part of its occupancy history.
-    And The move is available for staff to review while working the reservation.
+    Then A room move can be added for the current stay, naming the room being left, the new room and the move date.
+    And The room being left closes on the move date and the new room opens on it, running to the end of the stay.
+    And Both rooms stay in the stay history, for staff to review while working the reservation.
+    And The party size carries over to the new room.
+    And The move date offers only the dates a move can fall on, starting on today when today is one of them and otherwise on the first.

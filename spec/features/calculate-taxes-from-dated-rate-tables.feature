@@ -1,4 +1,5 @@
-@persona:operations-lead @persona:front-desk-supervisor @status:done @priority:5 @business-logic @taxes @rates
+# id: 1hBaJ2NzD7BeKr9rz9WP
+@persona:operations-lead @persona:front-desk-supervisor @status:done @priority:5 @business-logic @taxes @rates @reporting
 Feature: calculate taxes from dated rate tables
 
   As Operations lead, Front-desk supervisor
@@ -13,3 +14,4 @@ Feature: calculate taxes from dated rate tables
     And A tax whose flag is off for the room or item stays at zero.
     And Editing the amount, date, item, or room recomputes the taxes.
     And Tax amounts supplied by the legacy import are preserved as stored.
+    And Each charge on the reservation ledger carries its tax total.

@@ -17,5 +17,5 @@
 	backHref="/print"
 	backLabel="Print Center"
 >
-	<InHouseBody date={data.date} rows={data.rows} />
+	<InHouseBody date={data.date} rows={data.rows} totalGuests={data.total_guests} />
 </ReportShell>

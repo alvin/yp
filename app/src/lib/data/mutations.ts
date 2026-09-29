@@ -4,6 +4,7 @@
 // here and writes made directly in Supabase behave identically.
 
 import { supabase, unwrap } from './client';
+import type { RoomRateType } from './types';
 
 export interface NewGuestInput {
 	lastname: string;
@@ -242,6 +243,7 @@ export async function postRoomNights(
 	occupancyout: string,
 	rate: number | null,
 	transdate: string,
+	ratetype: RoomRateType,
 	notes?: string | null
 ): Promise<number> {
 	return unwrap(
@@ -252,7 +254,8 @@ export async function postRoomNights(
 			p_occupancyout: occupancyout,
 			p_rate: rate,
 			p_transdate: transdate,
-			p_notes: notes ?? null
+			p_notes: notes ?? null,
+			p_ratetype: ratetype
 		})
 	);
 }
@@ -263,7 +266,6 @@ export async function postCharge(
 	quantity: number,
 	transdate: string,
 	amount: number | null,
-	transtype: string | null,
 	notes?: string | null
 ): Promise<number> {
 	return unwrap(
@@ -273,7 +275,6 @@ export async function postCharge(
 			p_quantity: quantity,
 			p_transdate: transdate,
 			p_amount: amount,
-			p_transtype: transtype,
 			p_notes: notes ?? null
 		})
 	);

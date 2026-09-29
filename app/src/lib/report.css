@@ -112,16 +112,6 @@
 	text-align: right;
 	white-space: nowrap;
 }
-.report-page .group {
-	font-weight: 700;
-	font-size: 18px;
-	padding-top: 18px;
-}
-.report-page .subtotal td,
-.report-page tr.subtotal td {
-	border-top: 1px solid #aaa;
-	font-weight: 700;
-}
 .report-page .total td,
 .report-page tr.total td {
 	border-top: 2px solid #444;
@@ -136,11 +126,6 @@
 	justify-content: space-between;
 	font-size: 14px;
 	color: #222;
-}
-.report-page .hand {
-	font-family: 'Comic Sans MS', 'Bradley Hand', cursive;
-	font-size: 24px;
-	color: #111;
 }
 .report-page .standoff {
 	margin-top: calc(var(--standoff, 0px) * var(--gap));
@@ -157,9 +142,6 @@
 	min-width: 180px;
 	height: 1em;
 }
-.report-page .muted {
-	color: #555;
-}
 .report-page .small {
 	font-size: 13px;
 }
@@ -172,6 +154,20 @@
 .report-page b,
 .report-page strong {
 	font-weight: 700;
+}
+
+/* Printed reports number their pages, as the originals did ("Page 2 of 4").
+   The browser fills the numbers into the page margin, so a report that runs
+   long is numbered however many pages it takes. */
+.report-page:has(.footer) {
+	page: numbered;
+}
+@page numbered {
+	@bottom-right {
+		content: 'Page ' counter(page) ' of ' counter(pages);
+		font: 14px Arial, Helvetica, sans-serif;
+		color: #222;
+	}
 }
 
 @media print {

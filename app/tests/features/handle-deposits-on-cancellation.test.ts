@@ -1,6 +1,8 @@
 // Story: spec/features/handle-deposits-on-cancellation.feature
 
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Page } from 'playwright';
+import { APP_URL, closeApp, openAppPage } from '../helpers/app';
 import { makeReservation, rpc, staffClient, unwrap } from '../helpers/db';
 
 async function paymentsFor(rgid: number) {
@@ -94,5 +96,38 @@ describe('handle deposits on cancellation', () => {
 		expect(rows[0].rescancelled).toBe(true);
 		expect(rows[0].resdatecancelled.slice(0, 10)).toBe(fx.arrival);
 		expect(rows[0].resnotes).toContain('QA cancellation');
+	});
+});
+
+describe('handle deposits on cancellation — the cancel dialog', () => {
+	let page: Page;
+
+	beforeAll(async () => {
+		page = await openAppPage();
+	});
+
+	afterAll(async () => {
+		await closeApp(page);
+	});
+
+	it('shows the deposit still held, not the deposit first received', async () => {
+		const fx = await makeReservation();
+		for (const [category, amount] of [
+			['Deposit (Received)', 100],
+			['Deposit (Received)', 50],
+			['Deposit (Applied)', 40]
+		] as const) {
+			await rpc('record_payment', {
+				p_reservationguestid: fx.reservationguestid,
+				p_paymentcategory: category,
+				p_paymenttype: 'Visa',
+				p_amount: amount,
+				p_paymentdate: fx.arrival
+			});
+		}
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+		const dialog = page.getByRole('dialog');
+		await expect.poll(() => dialog.textContent(), { timeout: 10_000 }).toContain('$110.00');
 	});
 });

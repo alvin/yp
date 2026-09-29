@@ -10,6 +10,7 @@ Feature: handle deposits on cancellation
 
   Scenario: Acceptance criteria
     Then Staff choose whether the deposit is refunded or kept when cancelling.
+    And The cancel dialog shows the deposit still held: received, less any already refunded, applied to the bill or kept.
     And A refund writes a negative deposit-refund line dated on the cancellation day.
     And A kept deposit writes a deposit-kept line so the money is recognized.
     And After either choice the reservation no longer holds a deposit.

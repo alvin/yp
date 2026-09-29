@@ -4,7 +4,7 @@ Feature: show itemized charges, tax lines, payments, and balance on the check-ou
 
   As Printing coordinator, Front-desk supervisor, Reservation clerk
   I want to show itemized charges, tax lines, payments, and balance on the check-out bill
-  So that so the bill presents a complete breakdown with taxes, payments, and the final balance
+  So that the bill presents a complete breakdown with taxes, payments, and the final balance
 
   Background:
     Given a check-out bill is printed for a departing guest

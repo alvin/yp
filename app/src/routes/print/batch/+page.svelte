@@ -18,18 +18,18 @@
 
 	let { data } = $props();
 
-	const reportCount = $derived(data.reports ? 4 : 0);
+	// Housekeeping, In House, Kitchen/Meal and Manual Sales print every day.
+	const reportCount = 4;
 	const guestDocCount = $derived(
 		data.confirmations.length + data.folios.length + data.bills.length
 	);
 	const totalPages = $derived(reportCount + guestDocCount);
 
 	const countLine = $derived.by(() => {
-		if (!totalPages) return 'Nothing to print';
 		const n = (count: number, word: string) =>
 			count ? `${count} ${word}${count === 1 ? '' : 's'}` : '';
 		const parts = [
-			data.reports ? `${reportCount} reports` : '',
+			`${reportCount} reports`,
 			n(data.confirmations.length, 'confirmation'),
 			n(data.folios.length, 'folio'),
 			n(data.bills.length, 'bill')
@@ -121,18 +121,7 @@
 		</div>
 	</div>
 
-	{#if !totalPages}
-		<div
-			class="no-print mx-auto mt-24 max-w-md rounded-lg border border-dashed bg-card p-8 text-center"
-		>
-			<p class="text-sm font-medium">Nothing to print for {dateMed(data.date)}</p>
-			<p class="text-muted-foreground mt-1 text-sm">
-				No reports or guest documents are queued for this date. Pick another date above.
-			</p>
-		</div>
-	{:else}
-		{#if data.reports}
-			<div class="batch-group" data-stock="letter" data-testid="group-letter">
+		<div class="batch-group" data-stock="letter" data-testid="group-letter">
 				<div class="batch-heading no-print">
 					{STOCK_LABEL.letter} · letter · {pagesIn.letter} pages
 				</div>
@@ -142,14 +131,18 @@
 				</div>
 				<div class="batch-caption landscape no-print">In House Report</div>
 				<div class="report-page landscape">
-					<InHouseBody date={data.date} rows={data.reports.inHouse} />
+					<InHouseBody
+						date={data.date}
+						rows={data.reports.inHouse}
+						totalGuests={data.reports.totalGuests}
+					/>
 				</div>
 				<div class="batch-caption landscape no-print">Kitchen/Meal Report</div>
 				<div class="report-page landscape">
 					<KitchenBody
 						date={data.date}
 						rows={data.reports.kitchenRows}
-						totalGuests={data.reports.kitchenTotalGuests}
+						totalGuests={data.reports.totalGuests}
 					/>
 				</div>
 				<div class="batch-caption no-print">Manual Sales List</div>
@@ -157,7 +150,6 @@
 					<ManualSalesBody date={data.date} rows={data.reports.manualSales} />
 				</div>
 			</div>
-		{/if}
 		{#if guestDocCount}
 			<div class="batch-group" data-stock="a5" data-testid="group-a5">
 				<div class="batch-heading no-print">
@@ -185,10 +177,14 @@
 				{/each}
 			</div>
 		{/if}
-	{/if}
 </div>
 
 <style>
+	/* The batch is one print job, so its page count would run across every
+	   report in it; reports printed here are left unnumbered instead. */
+	.batch-group .report-page {
+		page: batch;
+	}
 	.batch-caption {
 		width: 980px;
 		margin: 28px auto -24px;

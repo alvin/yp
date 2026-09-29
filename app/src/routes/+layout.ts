@@ -1,5 +1,5 @@
 // Client-rendered app backed by the `ypl` schema in Supabase. Staff sign in
-// once; reference data (rooms, inventory, lookups, rates) loads with the shell.
+// once; reference data (rooms, inventory, lookups) loads with the shell.
 export const ssr = false;
 export const prerender = false;
 
@@ -22,5 +22,4 @@ export const load: LayoutLoad = async ({ url }) => {
 	if (session) {
 		await loadReference();
 	}
-	return { session };
 };

@@ -17,7 +17,6 @@ export interface PendingItemLine {
 	description: string;
 	quantity: number;
 	unit: number;
-	transtype: string;
 }
 
 export interface PendingPaymentLine {
@@ -66,8 +65,7 @@ export async function postPendingLines(
 				line.inventoryid,
 				line.quantity,
 				date,
-				round2(line.unit * line.quantity),
-				line.transtype
+				round2(line.unit * line.quantity)
 			);
 		} else {
 			await recordPayment(

@@ -12,14 +12,13 @@
     import { Label } from "$lib/components/ui/label/index.js";
     import * as Card from "$lib/components/ui/card/index.js";
     import { Combobox } from "$lib/components/ui/combobox/index.js";
-    import { Badge } from "$lib/components/ui/badge/index.js";
     import { Textarea } from "$lib/components/ui/textarea/index.js";
     import ChargeBasket from "$lib/components/app/charge-basket.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
     import PhoneInput from "$lib/components/app/phone-input.svelte";
     import { GUEST_DIETS, SALUTATIONS } from "$lib/data/reference.js";
     import { bedTypeOptions, roomOptions, textOptions } from "$lib/options.js";
-    import { getGuest, guestKitchenMeal } from "$lib/data/queries.js";
+    import { getGuest, guestKitchenMeal, roomsBooked } from "$lib/data/queries.js";
     import {
         addHousekeepingNote,
         createGuest,
@@ -152,10 +151,35 @@
             bookedBy = email.slice(0, 2).toUpperCase();
     });
 
-    // Room
-    const rooms = roomOptions();
+    // Room. Once the nights are known, a room another stay already holds
+    // for any of them is marked Booked. It stays selectable — the lodge
+    // shares rooms on purpose — but the desk sees it before choosing.
+    const allRooms = roomOptions();
     let roomId = $state(
-        src?.roomid ? String(src.roomid) : (rooms[0]?.value ?? ""),
+        src?.roomid ? String(src.roomid) : (allRooms[0]?.value ?? ""),
+    );
+    let booked = $state(new Set<number>());
+    let bookedLookup = 0;
+    $effect(() => {
+        const from = arrival;
+        const to = departure;
+        const lookup = ++bookedLookup;
+        if (!from || !to || to <= from) {
+            booked = new Set();
+            return;
+        }
+        roomsBooked(from, to)
+            .then((ids) => {
+                if (lookup === bookedLookup) booked = ids;
+            })
+            .catch(() => {
+                if (lookup === bookedLookup) booked = new Set();
+            });
+    });
+    const rooms = $derived(
+        allRooms.map((o) =>
+            booked.has(Number(o.value)) ? { ...o, hint: "Booked" } : o,
+        ),
     );
     const salutationOptions = textOptions(SALUTATIONS);
     const bedTypes = bedTypeOptions();
@@ -224,9 +248,6 @@
                 groupname: groupName.trim() || null,
                 roomid: Number(roomId) || null,
                 numguests: adults + children,
-                // The stay this one was re-booked from, so the pair can be
-                // read back from either end.
-                notes: src ? `Re-booked from #${src.resnumber}` : null,
             });
             // Everything below happens after the reservation exists. If any
             // of it fails the booking still stands, so report what did not
@@ -443,7 +464,7 @@
             <Card.Header class="border-b pb-4">
                 <Card.Title class="text-base">Housekeeping & diet</Card.Title>
                 <Card.Description>
-                    Prints on the housekeeping and kitchen reports.
+                    Prints on the housekeeping and kitchen reports, confirmation and check-in folio.
                 </Card.Description>
             </Card.Header>
             <Card.Content class="space-y-4">
@@ -484,7 +505,6 @@
             <Card.Header class="border-b pb-4">
                 <div class="flex items-center justify-between">
                     <Card.Title class="text-base">Reservation</Card.Title>
-                    <Badge variant="secondary">Res # assigned on save</Badge>
                 </div>
             </Card.Header>
             <Card.Content class="space-y-4">
@@ -523,9 +543,7 @@
                         class="text-destructive flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs"
                     >
                         <AlertTriangleIcon class="size-4 shrink-0" />
-                        The lodge books only one year ahead. Latest arrival is {dateMed(
-                            data.maxDate,
-                        )}.
+                        Latest arrival is {dateMed(data.maxDate)}.
                     </div>
                 {:else if nights > 0}
                     <p class="text-muted-foreground text-xs">
@@ -600,9 +618,6 @@
                         options={rooms}
                         searchPlaceholder="Room name or number…"
                     />
-                    <p class="text-muted-foreground text-xs">
-                        Room moves can be added later from the reservation.
-                    </p>
                 </div>
             </Card.Content>
         </Card.Root>

@@ -1,6 +1,8 @@
 // TypeScript shapes for the Yellow Point Lodge `ypl` schema and its report RPCs.
-// Table rows preserve the Access-derived column names so this mock layer can be
-// swapped for Supabase RPC calls without changing any screen code.
+// Table rows keep the Access-derived column names the database uses.
+
+/** The three rates every room carries; a room charge is priced at one of them. */
+export type RoomRateType = 'Regular' | 'Special' | 'Split';
 
 // ---------------------------------------------------------------------------
 // Table rows
@@ -25,94 +27,6 @@ export interface Guest {
 	guestvoid: boolean;
 	guestnotes: string | null;
 	guestarchive: boolean;
-}
-
-export interface Reservation {
-	reservationid: number;
-	resnumber: number;
-	resbookingdate: string | null;
-	resbookedby: string;
-	resgroupname: string | null;
-	resarrivaldate: string;
-	resdeparturedate: string;
-	numnights: number | null;
-	numrooms: number;
-	numadults: number;
-	numchildren: number | null;
-	resconfirmed: boolean;
-	resdateconfirmed: string | null;
-	rescancelled: boolean;
-	resdatecancelled: string | null;
-	resnotes: string | null;
-	resarchive: boolean;
-	resarrivaltime: string | null;
-	bedtype: string | null;
-}
-
-export interface ReservationGuest {
-	reservationguestid: number;
-	reservationid: number;
-	guestid: number;
-	primaryguest: boolean;
-	checkindate: string;
-	checkintime: string | null;
-	checkoutdate: string;
-	checkouttime: string | null;
-	guestinhouse: boolean;
-	percentageofbill: number;
-	vehicledescription: string | null;
-	vehiclelicenseplate: string | null;
-	rgnotes: string | null;
-	rgarchive: boolean;
-}
-
-export interface RoomAssignment {
-	occupancyid: number;
-	reservationguestid: number;
-	roomid: number;
-	occupancyin: string;
-	occupancyout: string;
-	occupancynumguests: number | null;
-	occupancynotes: string | null;
-	occupancyarchive: boolean;
-}
-
-export interface Transaction {
-	transactionid: number;
-	reservationguestid: number;
-	transdate: string;
-	transtype: string;
-	inventoryid: number | null;
-	roomid: number | null;
-	transquantity: number;
-	transamount: number | null;
-	transgstamount: number | null;
-	transpstamount: number | null;
-	transhstamount: number | null;
-	transltamount: number | null;
-	transrtamount: number | null;
-	transhtamount: number | null;
-	transdmtamount: number | null;
-	transnotes: string | null;
-	transarchive: boolean;
-	occupancyin: string | null;
-	occupancyout: string | null;
-}
-
-export interface Payment {
-	paymentid: number;
-	reservationguestid: number;
-	paymentcode: string;
-	paymentcategory: string;
-	paymenttype: string;
-	paymentdate: string | null;
-	paymentamount: number | null;
-	paymentcurrency: string;
-	ccname: string | null;
-	paymentamountcdn: number | null;
-	ccnotes: string | null;
-	paymentnotes: string | null;
-	paymentarchive: boolean;
 }
 
 export interface HousekeepingNote {
@@ -179,11 +93,6 @@ export interface PaymentType {
 	paymenttype: string;
 	paymenttypeorder: number;
 }
-export interface TransactionType {
-	transactiontype: string;
-	transactiontypeorder: number;
-}
-
 // ---------------------------------------------------------------------------
 // RPC result shapes (one type per `ypl` function the screens call)
 // ---------------------------------------------------------------------------
@@ -211,8 +120,6 @@ export interface AllFieldsRow {
 }
 
 export type DateMode = 'arrivals' | 'departures' | 'both' | 'in_house' | 'occupancy';
-export type RangeMode = 'overlap' | 'arrivals' | 'departures' | 'occupancy';
-
 export interface DateSearchRow {
 	reservationid: number;
 	reservationguestid: number;
@@ -278,6 +185,7 @@ export interface ReservationSummary {
 	last_room_out: string | null;
 	occupancy_guest_count: number;
 	balance_owing: number;
+	deposit_held: number;
 }
 
 export type HistoryBucket = 'future' | 'present' | 'past';

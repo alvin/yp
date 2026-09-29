@@ -82,7 +82,7 @@
                 class="text-muted-foreground mx-auto flex max-w-[1200px] items-center justify-between px-4 text-xs sm:px-6"
             >
                 <span>Yellow Point Lodge · Front Desk</span>
-                <span>61 rooms · Vancouver Island</span>
+                <span>Copyright © {new Date().getFullYear()} Yellow Point Lodge</span>
             </div>
         </footer>
     </div>

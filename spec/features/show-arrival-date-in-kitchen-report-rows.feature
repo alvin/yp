@@ -4,10 +4,10 @@ Feature: show arrival date in kitchen report rows
 
   As Operations lead
   I want to show arrival date in kitchen report rows
-  So that so that they can quickly confirm stay timing context
+  So that they can quickly confirm stay timing context
 
   Background:
-    Given when kitchen staff review meal report entries
+    Given kitchen staff review meal report entries
 
   Scenario: Acceptance criteria
     Then Arrival date appears on the filtered kitchen report for each listed stay.

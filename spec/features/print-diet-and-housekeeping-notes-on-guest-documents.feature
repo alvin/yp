@@ -14,3 +14,5 @@ Feature: print diet and housekeeping notes on guest documents
     And The check-in folio shows the same diet and housekeeping note.
     And Where a housekeeping note has been revised, only the latest one prints, as on the housekeeping report.
     And A stay with neither note prints as it did before.
+    And Office notes — guest notes, request notes and room notes — never print on a guest document.
+    And Saving the diet notes or housekeeping note on the reservation screen changes only that note: the diet is not repeated, and earlier housekeeping notes are not carried into the new one.

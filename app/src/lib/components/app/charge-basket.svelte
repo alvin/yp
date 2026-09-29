@@ -13,10 +13,8 @@
     import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
     import { round2 } from "$lib/charges.js";
-    import {
-        INV_TYPE_TO_TRANSTYPE,
-        inventoryById,
-    } from "$lib/data/reference.js";
+    import { inventoryById } from "$lib/data/reference.js";
+    import { money } from "$lib/format.js";
     import {
         itemOptions,
         paymentCategoryOptions,
@@ -58,7 +56,6 @@
                 description: item.invitemdescription ?? item.invtype ?? "Item",
                 quantity: Math.max(1, Number(qty) || 1),
                 unit: round2(Number(unit) || 0),
-                transtype: INV_TYPE_TO_TRANSTYPE[item.invtype] ?? "Misc.",
             },
         ];
         itemId = "";
@@ -129,7 +126,7 @@
                         >
                         {#if l.kind === "item"}
                             <span class="text-muted-foreground block text-xs">
-                                {l.quantity} × ${l.unit.toFixed(2)}
+                                {l.quantity} × {money(l.unit)}
                             </span>
                         {/if}
                     </span>

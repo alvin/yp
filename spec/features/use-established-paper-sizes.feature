@@ -14,3 +14,4 @@ Feature: use established paper sizes
     And Daily reports print on letter paper; guest slips and folios print on the smaller folio paper.
     And The printed output stays consistent with the document’s normal layout.
     And Staff do not need to adjust paper size manually for each print job.
+    And A guest document opened on its own prints on the same paper as it does in the batch.

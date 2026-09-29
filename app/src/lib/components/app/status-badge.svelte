@@ -17,11 +17,9 @@
 		in_house: { label: 'In house', variant: 'secondary' },
 		occupancy: { label: 'In house', variant: 'secondary' },
 		overlap: { label: 'Overlapping', variant: 'secondary' },
-		date_match: { label: 'Match', variant: 'secondary' },
 		future: { label: 'Future', variant: 'default' },
 		present: { label: 'In house', variant: 'success' },
 		past: { label: 'Past', variant: 'secondary' },
-		confirmed: { label: 'Confirmed', variant: 'success' },
 		cancelled: { label: 'Cancelled', variant: 'destructive' }
 	};
 

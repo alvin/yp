@@ -10,7 +10,6 @@
         />
     </head>
     <body
-        data-feature-base="/features/"
         data-wireframe-base="/original_spec/wireframes/html/"
         data-report-base="/original_spec/reports/"
     >
@@ -18,7 +17,7 @@
             <header class="topbar">
                 <h1>Yellow Point Lodge Front Desk Scope</h1>
                 <div class="meta">
-                    Start here · screens · reports · features · operating notes
+                    Start here · screens · reports · operating notes
                 </div>
             </header>
 
@@ -53,10 +52,6 @@
                         reservations, reports, and print flows.
                     </p>
                     <p>
-                        <strong>Feature:</strong>
-                        <code>lookup_screen.feature</code>
-                    </p>
-                    <p>
                         <strong>Primary paths:</strong>
                         <a
                             href="/original_spec/wireframes/html/print_screen.html"
@@ -80,10 +75,6 @@
                         reservation history.
                     </p>
                     <p>
-                        <strong>Feature:</strong>
-                        <code>name_search_results.feature</code>
-                    </p>
-                    <p>
                         <strong>Next step:</strong>
                         <a
                             href="/original_spec/wireframes/html/transaction_screen.html"
@@ -101,10 +92,6 @@
                     <p>
                         Date-based reservation list with last name, first name,
                         room, and transaction-screen selection.
-                    </p>
-                    <p>
-                        <strong>Feature:</strong>
-                        <code>date_search_results.feature</code>
                     </p>
                     <p>
                         <strong>Next step:</strong>
@@ -125,10 +112,6 @@
                         Main reservation screen for guest details, room moves,
                         report notes, charges, deposits, payments, cancellation,
                         re-booking, and single-record printing.
-                    </p>
-                    <p>
-                        <strong>Feature:</strong>
-                        <code>transaction_screen.feature</code>
                     </p>
                     <p>
                         <strong>Output groups:</strong>
@@ -155,10 +138,6 @@
                     <p>
                         Batch and individual printing for daily reports and
                         guest-facing forms.
-                    </p>
-                    <p>
-                        <strong>Feature:</strong>
-                        <code>print_screen.feature</code>
                     </p>
                     <p>
                         <strong>Report groups:</strong>
@@ -209,16 +188,10 @@
                             >Items Cashed Out</a
                         >
                     </p>
-                    <p>
-                        <strong>Feature:</strong>
-                        <code>daily_cash_reporting.feature</code>
-                    </p>
                 </section>
             </div>
 
-            <div class="strip" id="scope-docs-and-features">
-                Scope documents and features
-            </div>
+            <div class="strip" id="scope-docs">Scope documents</div>
             <div class="grid-2">
                 <section class="panel">
                     <h2>Scope documents</h2>
@@ -238,27 +211,6 @@
                         </li>
                         <li><a href="/original_spec/reports/">Reports</a></li>
                     </ul>
-                </section>
-                <section class="panel">
-                    <h2>Feature files</h2>
-                    <p>
-                        Preview the acceptance criteria directly from these
-                        pages. The feature files stay clean Gherkin; navigation
-                        context is handled in the shared HTML layer.
-                    </p>
-                    <p>
-                        <strong>Screen flow:</strong>
-                        <code>lookup_screen.feature</code>,
-                        <code>name_search_results.feature</code>,
-                        <code>date_search_results.feature</code>,
-                        <code>transaction_screen.feature</code>,
-                        <code>print_screen.feature</code>
-                    </p>
-                    <p>
-                        <strong>Reporting:</strong>
-                        <code>printed_outputs.feature</code>,
-                        <code>daily_cash_reporting.feature</code>
-                    </p>
                 </section>
             </div>
 
@@ -284,11 +236,6 @@
                         The DCAR remains a major scope area: it must balance,
                         support manual adjustments, and stay close to current
                         practice.
-                    </li>
-                    <li>
-                        Unresolved flow alignment items are tracked in the
-                        <code>features/*.questions</code> files beside the
-                        related feature files.
                     </li>
                 </ul>
             </section>

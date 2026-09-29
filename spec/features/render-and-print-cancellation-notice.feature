@@ -1,13 +1,13 @@
 # id: d4vJlSrqpNbLcntdoaOS
-@status:done @priority:2 @printing @cancellation @documents
+@persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:2 @printing @cancellation @documents
 Feature: render and print cancellation notice
 
-  As a user
+  As Printing coordinator, Front-desk supervisor
   I want to render and print cancellation notice
-  So that so that formal cancellation notices are produced consistently
+  So that formal cancellation notices are produced consistently
 
   Background:
-    Given when staff process cancellations from guest document printing
+    Given staff print cancellation notices from the Print Center
 
   Scenario: Acceptance criteria
     Then The notice shows the guest name and reservation details needed to identify the booking.

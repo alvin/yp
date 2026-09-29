@@ -128,15 +128,11 @@ The name-search return screen needs to show:
 - a guest-notes button
 - reservation selection leading to the transaction screen
 
-Unresolved presentation questions for this screen are tracked in [`name_search_results.questions`](../features/name_search_results.questions).
-
 ### [Date Search Results](wireframes/html/date_search_results.html)
 
 The wireframe note describes:
 
 - a simple alphabetical list of guests arriving on the selected date
-
-Unresolved date-search matching questions are tracked in [`date_search_results.questions`](../features/date_search_results.questions).
 
 ### [Transaction Screen](wireframes/html/transaction_screen.html)
 
@@ -255,18 +251,6 @@ The daily cash flow needs to preserve these points:
 - supporting appendix reports provide the detailed breakdown behind the DCAR
 - manual adjustments are part of the intended workflow
 - weekly spreadsheet entry remains a deliberate manual control point
-
-## Scope questions
-
-Unresolved scope questions are tracked next to the related feature files:
-
-- [`lookup_screen.questions`](../features/lookup_screen.questions)
-- [`name_search_results.questions`](../features/name_search_results.questions)
-- [`date_search_results.questions`](../features/date_search_results.questions)
-- [`transaction_screen.questions`](../features/transaction_screen.questions)
-- [`print_screen.questions`](../features/print_screen.questions)
-- [`printed_outputs.questions`](../features/printed_outputs.questions)
-- [`daily_cash_reporting.questions`](../features/daily_cash_reporting.questions)
 
 ## Scope-aligned requirement checklist
 

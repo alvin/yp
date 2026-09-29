@@ -3,6 +3,8 @@
 // the workflow (the spec's daily-cash and printing wireframes show exactly
 // this pattern).
 
+import type { GuestDocument } from './data/types.js';
+
 export interface ReportTab {
 	label: string;
 	href: string;
@@ -40,14 +42,17 @@ export function opsTabs(date: string, current: string): ReportTab[] {
 	}));
 }
 
+/** The guest documents: `key` is the print queue's name for it, `slug` its report route. */
+export const GUEST_DOCUMENTS: { key: GuestDocument; label: string; slug: string }[] = [
+	{ key: 'confirmation', label: 'Confirmation', slug: 'confirmation' },
+	{ key: 'check_in_folio', label: 'Check-in folio', slug: 'check-in-folio' },
+	{ key: 'checkout_bill', label: 'Check-out bill', slug: 'checkout-bill' },
+	{ key: 'cancellation_notice', label: 'Cancellation', slug: 'cancellation' }
+];
+
 /** Guest documents for one reservation. */
 export function guestDocTabs(resnumber: number, current: string): ReportTab[] {
-	return [
-		{ label: 'Confirmation', slug: 'confirmation' },
-		{ label: 'Check-in folio', slug: 'check-in-folio' },
-		{ label: 'Check-out bill', slug: 'checkout-bill' },
-		{ label: 'Cancellation', slug: 'cancellation' }
-	].map((t) => ({
+	return GUEST_DOCUMENTS.map((t) => ({
 		label: t.label,
 		href: `/reports/${t.slug}/${resnumber}`,
 		current: t.slug === current

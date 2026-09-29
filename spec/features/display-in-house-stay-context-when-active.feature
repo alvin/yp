@@ -7,7 +7,7 @@ Feature: display in-house stay context when active
   So that they can immediately identify the active stay and its current room context
 
   Background:
-    Given when staff review a guest who is currently staying at the lodge
+    Given staff review a guest who is currently staying at the lodge
 
   Scenario: Acceptance criteria
     Then The current in-house stay appears in the in-house section.

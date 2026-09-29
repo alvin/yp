@@ -1,6 +1,6 @@
 // Story: spec/features/show-donation-line-in-daily-cash-upper-section.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
+import { isolatedDate, makeReservation, rpc, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
 
@@ -29,5 +29,17 @@ describe('show donation line in daily cash upper section', () => {
 	it('includes the donation in the upper total and receipts', async () => {
 		expect(Number(await rpc('report_dcar_total', { p_date: fx.arrival }))).toBe(25);
 		expect(Number(await rpc('report_dcar_receipts_total', { p_date: fx.arrival }))).toBe(25);
+	});
+});
+
+describe('show donation line in daily cash upper section — at zero', () => {
+	it('prints the Donation line in the upper adjustments, even at zero', async () => {
+		const upper = await rpc<{ group_name: string; item: string; amount: number }[]>(
+			'report_dcar_upper',
+			{ p_date: isolatedDate() }
+		);
+		const donation = upper.find((r) => r.group_name === 'Adjustments' && r.item === 'Donation');
+		expect(donation).toBeDefined();
+		expect(Number(donation!.amount)).toBe(0);
 	});
 });

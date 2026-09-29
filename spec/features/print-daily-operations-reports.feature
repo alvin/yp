@@ -1,16 +1,17 @@
 # id: aTIpm3uEewevs4fkXjF7
-@persona:printing-coordinator @status:done @priority:5 @printing @daily-operations @date-range
+@persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @daily-operations @reports @date-range
 Feature: print daily operations reports
 
-  As Printing coordinator
+  As Printing coordinator, Front-desk supervisor
   I want to print daily operations reports
-  So that the lodge can batch the right daily operations reports for printing without extra manual sorting
+  So that the lodge can print the exact daily report needed for any date without extra manual sorting
 
   Background:
-    Given the coordinator needs reports for a specific date range that is supported
+    Given the coordinator prints daily operations reports from the Print Center
 
   Scenario: Acceptance criteria
-    Then The user can choose a start date and an end date for the print run.
-    And Only reports within the selected supported date range are included.
+    Then The user chooses one report date, and each daily report in the print menu opens for that date.
+    And The printed report is for the chosen date, and can be re-dated from the report screen.
+    And An optional end date feeds only the report that takes a range, the 7-day kitchen report; without one, that report runs seven days from the report date.
+    And Printed reports number their pages, as the lodge's originals did.
     And The print output matches the lodge’s standard report formatting and naming.
-    And The user can review the selected range before sending it to print.

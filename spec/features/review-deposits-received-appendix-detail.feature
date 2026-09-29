@@ -1,5 +1,5 @@
 # id: bappxRCwIkBDUZiRZ51Q
-@persona:daily-cash-reviewer @persona:front-desk-supervisor @status:done @priority:5 @dcar @deposits @appendix @detail
+@persona:daily-cash-reviewer @persona:front-desk-supervisor @status:done @priority:5 @dcar @deposits @appendix @detail @grouping
 Feature: review deposits received appendix detail
 
   As Daily cash reviewer, Front-desk supervisor
@@ -10,7 +10,7 @@ Feature: review deposits received appendix detail
     Given staff open the appendix details viewer for the daily cash report
 
   Scenario: Acceptance criteria
-    Then Deposit received detail is grouped by payment type
-    And Each line shows its payment amount, funds, and Canadian value within its group
-    And The day's total matches the deposit line on the Daily Cash Activity Report
-    And Staff can compare the grouped detail to the report total without leaving the viewer
+    Then Deposit received detail is grouped by payment type, lines of one type together.
+    And Each line shows its reservation, guest, payment amount, funds, and Canadian value within its group.
+    And The day's total matches the deposit line on the Daily Cash Activity Report.
+    And Staff can compare the grouped detail to the report total without leaving the viewer.

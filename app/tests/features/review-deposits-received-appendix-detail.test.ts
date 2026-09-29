@@ -45,11 +45,6 @@ describe('review deposits received appendix detail', () => {
 		expect(Number(visa.pymt_cdn)).toBe(175);
 	});
 
-	it('groups the lines by payment type', () => {
-		const types = rows.map((r) => r.payment_type);
-		expect(types).toEqual([...types].sort());
-	});
-
 	it('ties the day total to the DCAR deposit line', async () => {
 		const total = rows.reduce((s, r) => s + Number(r.pymt_cdn), 0);
 		const upper = await rpc<{ item: string; amount: number }[]>('report_dcar_upper', {
@@ -59,5 +54,40 @@ describe('review deposits received appendix detail', () => {
 			Number(upper.find((r) => r.item === 'Deposit (Received)')?.amount),
 			2
 		);
+	});
+});
+
+describe('review deposits received appendix detail — grouping by payment type', () => {
+	let groupFx: Fixture;
+	let groupRows: DepRow[];
+
+	beforeAll(async () => {
+		groupFx = await makeReservation();
+		for (const [type, amount] of [
+			['Visa', 100],
+			['Cash', 50],
+			['Visa', 80]
+		] as const) {
+			await rpc('record_payment', {
+				p_reservationguestid: groupFx.reservationguestid,
+				p_paymentcategory: 'Deposit (Received)',
+				p_paymenttype: type,
+				p_amount: amount,
+				p_paymentdate: groupFx.arrival
+			});
+		}
+		groupRows = await rpc('report_deposits_received', { p_date: groupFx.arrival });
+	});
+
+	it('keeps lines of the same payment type together', () => {
+		const types = groupRows.map((r) => r.payment_type);
+		expect(types).toEqual(['Cash', 'Visa', 'Visa']);
+	});
+
+	it('shows funds and Canadian amounts on every line within a group', () => {
+		for (const r of groupRows) {
+			expect(r.funds).toBeTruthy();
+			expect(Number(r.pymt_cdn)).toBeGreaterThan(0);
+		}
 	});
 });

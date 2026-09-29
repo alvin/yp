@@ -1,34 +1,20 @@
 <script lang="ts">
 	import type { CheckoutBillHeader, CheckoutBillLine } from '$lib/data/types.js';
 	import { dateShort, money } from '$lib/format.js';
+	import GuestLetterhead from './guest-letterhead.svelte';
 
 	let { h, lines }: { h: CheckoutBillHeader; lines: CheckoutBillLine[] } = $props();
 
 	const charges = $derived(lines.filter((l) => l.sort_group === 'charges'));
 	const settlements = $derived(lines.filter((l) => l.sort_group === 'settlements'));
-
-	// "DELTA, BC CAN" — city, region then country, as on the original bill.
-	const cityLine = $derived(
-		[[h.guestcity, h.guestregion].filter(Boolean).join(', '), h.guestcountry]
-			.filter(Boolean)
-			.join(' ')
-	);
 </script>
 
 <div class="logo">Yellow Point Lodge</div>
-<div class="letterhead">
-	<div style="text-transform: uppercase">
-		{#each (h.guest_names ?? h.guest).split('\n') as guest_line (guest_line)}{guest_line}<br />{/each}
-		{#if h.guestaddress}{h.guestaddress}<br />{/if}
-		{#if cityLine}{cityLine}<br />{/if}
-		{#if h.guestpczip}{h.guestpczip}{/if}
-	</div>
-	<div class="right">
-		Date Printed: {dateShort(h.date_printed)}<br /><br />
-		{#if h.phone}{h.phone}<br />{/if}
-		Res. No. {h.resnumber}
-	</div>
-</div>
+<GuestLetterhead names={h.guest_names ?? h.guest} to={h}>
+	Date Printed: {dateShort(h.date_printed)}<br /><br />
+	{#if h.phone}{h.phone}<br />{/if}
+	Res. No. {h.resnumber}
+</GuestLetterhead>
 <div class="rule"></div>
 <div class="large-line">
 	<span>Arrival: {dateShort(h.arrival_date)}</span><span

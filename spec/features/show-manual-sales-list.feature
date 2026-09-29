@@ -4,12 +4,12 @@ Feature: show manual sales list
 
   As Operations lead, Front-desk supervisor
   I want to show manual sales list
-  So that so that they can produce the internal manual sales list output from the correct report path
+  So that they can print the day's manual sales sheet from the print menu
 
   Background:
-    Given when staff choose daily operations reports in the print menu
+    Given staff choose daily operations reports in the print menu
 
   Scenario: Acceptance criteria
     Then The liquor-charge list appears as a selectable option in the print menu.
-    And Selecting the liquor-charge list opens the expected charge list for printing.
-    And The output supports staff review of liquor-related charges for the day.
+    And Selecting it opens the Manual Sales List for the chosen date: each occupied room in room order, with its reservation number and guest.
+    And The sheet carries no charges; staff fill it in by hand, as on the lodge's original.

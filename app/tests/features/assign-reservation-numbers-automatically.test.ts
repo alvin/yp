@@ -1,7 +1,7 @@
 // Story: spec/features/assign-reservation-numbers-automatically.feature
 
 import { describe, expect, it } from 'vitest';
-import { makeReservation, rpc, staffClient, uid, unwrap, isolatedDate, addDays } from '../helpers/db';
+import { makeReservation, staffClient, uid, unwrap, isolatedDate, addDays } from '../helpers/db';
 
 describe('assign reservation numbers automatically', () => {
 	it('assigns the next in-house number when none is supplied', async () => {

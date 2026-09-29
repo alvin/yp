@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, type Fixture } from '../helpers/db';
+import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 let inside: Fixture;
 let page: Page;
@@ -42,5 +42,30 @@ describe('print filtered kitchen report for selected date', () => {
 		const sheet = await page.textContent('.report-page');
 		expect(sheet).toContain('Kitchen Report');
 		expect(sheet).toContain('Arrival Date between');
+	});
+});
+
+describe('print filtered kitchen report for selected date — blank records', () => {
+	it('leaves out a diet record with neither a diet nor notes', async () => {
+		const blank = await makeReservation();
+		const db = await staffClient();
+		unwrap(
+			await db
+				.from('kitchen_meals')
+				.insert({ guestid: blank.guestid, guestdiet: '', kitchenmealnotes: '  ', kmarchive: false })
+				.select('kitchenmealid')
+		);
+		const rows = await rpc<{ resnumber: number }[]>('report_kitchen_meal_filtered', {
+			p_from: blank.arrival,
+			p_to: blank.arrival
+		});
+		expect(rows.map((r) => r.resnumber)).not.toContain(blank.resnumber);
+
+		await rpc('save_kitchen_meal', { p_guestid: blank.guestid, p_guestdiet: 'Vegan', p_notes: '' });
+		const withDiet = await rpc<{ resnumber: number }[]>('report_kitchen_meal_filtered', {
+			p_from: blank.arrival,
+			p_to: blank.arrival
+		});
+		expect(withDiet.map((r) => r.resnumber)).toContain(blank.resnumber);
 	});
 });

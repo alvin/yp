@@ -4,7 +4,7 @@ Feature: view guest details for a selected name match
 
   As Front-desk supervisor, Reservation clerk
   I want to view guest details for a selected name match
-  So that so they can see the guest’s contact information
+  So that they can see the guest’s contact information
 
   Background:
     Given a staff member lands on the name search results screen for a selected name match

@@ -7,7 +7,7 @@ Feature: support departure mode
   So that they can search for guests leaving on the chosen date
 
   Background:
-    Given when the selected search mode is departures
+    Given the selected search mode is Departures
 
   Scenario: Acceptance criteria
     Then The search returns stays that depart on the selected date.

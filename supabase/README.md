@@ -22,7 +22,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | Path | Purpose |
 |---|---|
 | `migrations/0001_extensions.sql` | PostgreSQL extensions and the `ypl` schema |
-| `migrations/0002_schema.sql` | 60 production tables in `ypl`, renamed from Access source tables to intuitive snake_case names |
+| `migrations/0002_schema.sql` | The production tables in `ypl`, renamed from Access source tables to intuitive snake_case names |
 | `migrations/0003_views_and_reports.sql` | `ypl` views/RPCs for search, screens, ledgers, report queues, printed outputs, and DCAR appendices |
 | `migrations/0004_security.sql` | Supabase grants and RLS for the `ypl` production schema |
 | `migrations/0005_business_logic.sql` | Business logic in the database: consistency triggers plus every workflow write RPC |
@@ -34,6 +34,8 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0011_guest_document_notes.sql` | The diet and the housekeeping note print on both the confirmation and the check-in folio, read the way the kitchen and housekeeping reports read them |
 | `migrations/0012_undo_room_move.sql` | A room move can be undone: the stay keeps the room it was leaving |
 | `migrations/0013_accurate_occupancy_status.sql` | A room's status for a day is worked out, never assumed: Future, Past and Move Out join Arrive Today, Move In, In House and Depart Today |
+| `migrations/0014_one_rule_each.sql` | Each reporting rule written once: rooms held on a day, guests in house, deposit held, the current housekeeping note and the diets that count, daily cash lines that add up to their totals, a charge's daily cash category; removal of an already-removed line fails |
+| `migrations/0015_room_rate_type.sql` | A room night is priced at the rate type chosen — Regular, Special or Split — as Access asked |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -44,22 +46,7 @@ This README is the central Supabase documentation. Import-output directories do 
 
 ## Migration order
 
-Apply migrations in filename order:
-
-1. `0001_extensions.sql`
-2. `0002_schema.sql`
-3. `0003_views_and_reports.sql`
-4. `0004_security.sql`
-5. `0005_business_logic.sql`
-6. `0006_ux_refinements.sql`
-7. `0007_note_text.sql`
-8. `0008_input_refinements.sql`
-9. `0009_rebooking.sql`
-10. `0010_output_refinements.sql`
-11. `0011_guest_document_notes.sql`
-12. `0012_undo_room_move.sql`
-13. `0013_accurate_occupancy_status.sql`
-
+Apply every file in `migrations/` in filename order (`migrations/*.sql` expands in that order).
 Then load `seed.sql` for repeatable reference/configuration data.
 
 ## Business logic lives in the database
@@ -73,7 +60,7 @@ table editor, SQL editor, or import:
 | `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out and to the room assignments that ran to the reservation's own dates (mid-stay move windows keep theirs) |
 | `reservation_guests` | Check-in/out default from the reservation; exactly one primary guest per reservation |
 | `room_assignments` | Date validation; guest count defaults from the reservation |
-| `transactions` | Auto-completes the amount from the price list (manual overrides always win) and recomputes all seven tax columns from room/inventory tax flags × the rate effective on the transaction date |
+| `transactions` | Auto-completes the amount from the price list (manual overrides always win) and recomputes every tax column from room/inventory tax flags × the rate effective on the transaction date |
 | `payments` | Payment code derives from the category, payment date defaults, `paymentamountcdn` converts US funds at the effective exchange rate |
 
 Legacy-import safety: triggers only fill missing values and only recompute
@@ -88,27 +75,44 @@ one call), `update_reservation`, `confirm_reservation`, `set_reservation_notes`,
 `cancel_reservation(p_deposit_handling => none|refund|keep)`. Re-booking is
 not an RPC: next season's stay is written by `create_reservation` like any
 other, and the screen carries the party, room and dates forward.
-Guests on a stay: `add_reservation_guest`, `update_reservation_guest`,
-`set_guest_in_house`, `archive_reservation_guest`.
+Guests on a stay: `add_reservation_guest`, `update_reservation_guest`.
 Rooms: `assign_room`, `record_room_move` (splits the occupancy at the move
 date, preserving both rooms in history), `undo_room_move` (the room being left
 runs on to the end of the move and the move is archived; a stay that moved out
 and back is left in one room; where two rooms moved on the same day the caller
-names the one to go back to), `update_room_assignment`,
-`archive_room_assignment`, `room_directory(p_in, p_out)` for room-selection
-help with availability.
-Charges: `post_room_nights`, `post_charge`, `archive_transaction`,
+names the one to go back to), `update_room_assignment`, `room_directory(p_in,
+p_out)` for room selection — the booking screen marks a room another stay holds
+for any of the nights as Booked.
+Charges: `post_room_nights` (priced at the rate type chosen, Regular unless
+Special or Split is given), `post_charge` (posts to the item's daily cash
+category, `charge_category`, unless told otherwise), `archive_transaction`,
 `sell_gift_certificate` (charge line + matching receipt).
 Payments: `record_payment` (all categories; refund categories store negative),
 `archive_payment`.
 `archive_transaction`/`archive_payment` are how a line entered in error is
 removed: the row is archived, not deleted, so it leaves the ledger, the balance
 and every report while the correction stays auditable. Both raise when the line
-is already gone rather than silently doing nothing.
+does not exist or is already removed, rather than silently doing nothing; so do
+`archive_housekeeping_note` and `archive_kitchen_meal`.
 Notes: `add_housekeeping_note`, `archive_housekeeping_note`,
 `save_kitchen_meal`, `archive_kitchen_meal`.
 
-### Read helpers worth knowing (0010–0012)
+### Read helpers worth knowing
+
+`rooms_held(p_from, p_to, p_include_cancelled)` (0014) — the one definition of
+which room windows are touched on a day or across a range: arriving, staying,
+moving or leaving, with removed rooms, removed guest names and archived stays
+never counted. The housekeeping, In House and manual sales reports, the guest
+total and both date searches read it. Room availability and room sharing ask a
+different question — who holds a room *overnight* — and keep their own night
+rule, so a room left on the 5th is free for an arrival on the 5th.
+
+`guests_in_house(p_date)` (0014) — Total Guests on the In House and
+Kitchen/Meal reports, a party moving rooms counted once.
+
+`reservation_deposit_held(p_reservationid)` (0014) — the deposit still held on
+a stay: received, less refunded, applied or kept. `v_reservation_summary`
+carries it as `deposit_held`; the date search and the cancel dialog show it.
 
 `report_stay_rooms(p_reservationid)` — every room a stay occupies with its own
 dates and party size, in stay order. The check-in folio and the confirmation
@@ -120,9 +124,11 @@ certificates received against a stay, oldest first. The check-in folio prints
 all of them, not the deposit alone.
 
 `stay_diet_notes(p_reservationid)` / `stay_housekeeping_notes(p_reservationid)`
-(0011) — the diet and housekeeping note a stay carries, worded as the kitchen
-and housekeeping reports print them (the latest housekeeping note per guest).
-The confirmation and the check-in folio both print them.
+— the diet and housekeeping note a stay carries, read from `v_kitchen_diets`
+(diet records that are neither removed nor blank) and
+`v_current_housekeeping_notes` (the latest note per guest) — the same views the
+kitchen and housekeeping reports read. The confirmation and the check-in folio
+print them.
 
 `room_moves(p_reservationid)` (0012) — the room windows of a stay that are
 moves, each with the window it moved from. `record_room_move` doesn't link the
@@ -157,7 +163,7 @@ cancel → reports) inside one transaction and rolls back.
 
 ## Core production tables
 
-The Access source contains 60 tables. All 60 are represented in `ypl` with readable names.
+Every Access source table is represented in `ypl` with a readable name.
 
 | Workflow area | Production tables |
 |---|---|
@@ -186,14 +192,14 @@ Use tables directly for table-editor/admin work. Use views/RPCs when the applica
 ### Search and navigation
 
 - `ypl.search_guests_by_name(p_query, p_limit)` — partial-string match on
-  last/first/display name and company. Every keyword must match, so extra
-  characters narrow rather than widen. Guests sharing a stay with a match come
-  back after the direct matches (`match_kind`), so a booking held under two
-  names is found from either; `other_names` carries the second name.
-- `ypl.search_all_fields(p_query)` — broad match over guest name, company,
+  last, first and display name. Every keyword must match, so extra characters
+  narrow rather than widen; `other_names` carries the other names the guest's
+  stays are booked under.
+- `ypl.search_all_fields(p_query)` — broad match over guest name, guest number,
   phones, address and email plus reservation number and group. Several keywords
   may be entered; a record is returned once, only when it carries them all, with
-  `matched_on`/`detail` naming the fields that matched.
+  `matched_on`/`detail` naming the fields that matched. Phone numbers match
+  however either side is punctuated.
 - `ypl.search_pattern(p_term)` / `ypl.search_patterns(p_query)` — how a typed
   entry becomes LIKE patterns: keywords split on whitespace, placeholder
   punctuation at either end dropped (`-illington` finds `Shillington`), `*`
@@ -258,7 +264,7 @@ Generated `*.sql` files under `supabase/legacy_import/` are ignored by git becau
 
 The full import script:
 
-- exports all 60 Access source tables,
+- exports every Access source table,
 - rewrites Access `tbl...` table targets to production `ypl.*` table names,
 - preserves all old operational data and sensitive fields for the air-gapped deployment,
 - loads with `session_replication_role = replica` so the business-logic
@@ -270,8 +276,8 @@ The full import script:
 
 The path is verified end-to-end against the real `.accdb`: all tables load with
 zero referential orphans, no duplicate reservation numbers, `numnights`
-consistent with stay dates, and every report/search RPC runs in tens of
-milliseconds on the full dataset (~31k reservations, ~76k payments). Note that
+consistent with stay dates, and report and search RPCs run in tens of milliseconds on the full dataset,
+except `search_all_fields`, which takes a few hundred. Note that
 `mdb-count` under-reports row counts on some tables; `mdb-export` (which the
 import uses) is authoritative.
 
@@ -301,15 +307,12 @@ direct database password is needed for schema work:
 
 ```sh
 export SUPABASE_ACCESS_TOKEN=…   # app/.env carries one
-python3 tools/run_remote_sql.py evapfimnlxwckgbllzys \
-  migrations/0001_extensions.sql migrations/0002_schema.sql \
-  migrations/0003_views_and_reports.sql migrations/0004_security.sql \
-  migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
-  migrations/0007_note_text.sql migrations/0008_input_refinements.sql \
-  migrations/0009_rebooking.sql migrations/0010_output_refinements.sql \
-  migrations/0011_guest_document_notes.sql migrations/0012_undo_room_move.sql \
-  migrations/0013_accurate_occupancy_status.sql seed.sql
+python3 tools/run_remote_sql.py evapfimnlxwckgbllzys migrations/*.sql seed.sql
 ```
+
+A single new migration is applied the same way, naming only that file. Wrap it
+in `begin … commit` when it drops and recreates functions the app is using, so a
+failure part-way leaves the old definitions in place.
 
 Two things the Management API cannot do, because they need a *direct* session:
 

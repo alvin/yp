@@ -7,7 +7,7 @@ Feature: represent multi-name reservation participation within history context
   So that they can understand the guest’s role in shared bookings without confusion
 
   Background:
-    Given when staff review a guest tied to a reservation shared with other names
+    Given staff review a guest whose reservation is booked under other names too
 
   Scenario: Acceptance criteria
     Then A stay booked under more than one name names the others alongside it.

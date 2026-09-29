@@ -1,6 +1,6 @@
 # Screen Navigation and Traceability
 
-This document shows how the screens, report groups, and feature files fit together.
+This document shows how the screens and report groups fit together.
 
 ## Primary navigation flow
 
@@ -43,20 +43,13 @@ flowchart TD
 
 ## Screen map
 
-| Screen | Wireframe | Feature |
-|---|---|---|
-| Lookup Screen | [Lookup Screen](wireframes/html/lookup_screen.html) | [Lookup Screen feature](../features/lookup_screen.feature) |
-| Name Search Results | [Name Search Results](wireframes/html/name_search_results.html) | [Name Search Results feature](../features/name_search_results.feature) |
-| Date Search Results | [Date Search Results](wireframes/html/date_search_results.html) | [Date Search Results feature](../features/date_search_results.feature) |
-| Transaction Screen | [Transaction Screen](wireframes/html/transaction_screen.html) | [Transaction Screen feature](../features/transaction_screen.feature) |
-| Print Screen | [Print Screen](wireframes/html/print_screen.html) | [Print Screen feature](../features/print_screen.feature) |
-
-## Reporting feature pack
-
-| Coverage area | Feature |
+| Screen | Wireframe |
 |---|---|
-| Guest documents and operational report fidelity | [Printed Outputs feature](../features/printed_outputs.feature) |
-| Daily Cash Activity Report and appendix workflow | [Daily Cash Reporting feature](../features/daily_cash_reporting.feature) |
+| Lookup Screen | [Lookup Screen](wireframes/html/lookup_screen.html) |
+| Name Search Results | [Name Search Results](wireframes/html/name_search_results.html) |
+| Date Search Results | [Date Search Results](wireframes/html/date_search_results.html) |
+| Transaction Screen | [Transaction Screen](wireframes/html/transaction_screen.html) |
+| Print Screen | [Print Screen](wireframes/html/print_screen.html) |
 
 ## Report map
 
@@ -93,15 +86,3 @@ flowchart TD
 | [Date Search Results](wireframes/html/date_search_results.html) | Opens reservations that can be printed as [guest documents](reports/index.html#guest-documents) or included in [daily cash reporting](reports/index.html#daily-cash-reporting) from the [Transaction Screen](wireframes/html/transaction_screen.html). |
 | [Transaction Screen](wireframes/html/transaction_screen.html) | Feeds [guest documents](reports/index.html#guest-documents), [operational reports](reports/index.html#operations-reports), and [daily cash reporting](reports/index.html#daily-cash-reporting). |
 | [Print Screen](wireframes/html/print_screen.html) | Batch or individual printing for [guest documents](reports/index.html#guest-documents) and [operational reports](reports/index.html#operations-reports). |
-
-## Scope questions
-
-Unresolved scope questions are tracked next to the related feature files:
-
-- [Lookup Screen questions](../features/lookup_screen.questions)
-- [Name Search Results questions](../features/name_search_results.questions)
-- [Date Search Results questions](../features/date_search_results.questions)
-- [Transaction Screen questions](../features/transaction_screen.questions)
-- [Print Screen questions](../features/print_screen.questions)
-- [Printed Outputs questions](../features/printed_outputs.questions)
-- [Daily Cash Reporting questions](../features/daily_cash_reporting.questions)

@@ -1,10 +1,4 @@
-<script lang="ts">
-	import { cn } from '$lib/utils.js';
-	let { class: className = '', subtitle = 'Front Desk' }: { class?: string; subtitle?: string } =
-		$props();
-</script>
-
-<a href="/" class={cn('flex items-center gap-2.5', className)} aria-label="Yellow Point Lodge — Front Desk home">
+<a href="/" class="flex items-center gap-2.5" aria-label="Yellow Point Lodge — Front Desk home">
 	<span
 		class="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-lg shadow-sm"
 	>
@@ -16,7 +10,7 @@
 	<span class="leading-tight">
 		<span class="block text-sm font-semibold tracking-tight">Yellow Point Lodge</span>
 		<span class="text-muted-foreground block text-[11px] font-medium uppercase tracking-wider"
-			>{subtitle}</span
+			>Front Desk</span
 		>
 	</span>
 </a>

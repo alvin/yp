@@ -7,7 +7,7 @@ Feature: provide appendix drillback
   So that the reviewer can trace the summary back to the related appendix detail for audit confidence
 
   Background:
-    Given when a daily cash summary is being checked and an appendix total needs support
+    Given a daily cash summary is being checked and an appendix total needs support
 
   Scenario: Acceptance criteria
     Then The daily cash summary provides a clear path to the related appendix detail.

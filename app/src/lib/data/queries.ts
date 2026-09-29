@@ -37,6 +37,7 @@ import type {
 	ReservationGuestSummary,
 	ReservationSummary,
 	FolioReceipt,
+	RoomRateType,
 	SharedRoom,
 	StayRoomRow
 } from './types';
@@ -83,7 +84,8 @@ function reservationSummaryRow(row: Record<string, unknown>): ReservationSummary
 		resdatecancelled: d(r.resdatecancelled),
 		first_room_in: d(r.first_room_in),
 		last_room_out: d(r.last_room_out),
-		balance_owing: num(r.balance_owing)
+		balance_owing: num(r.balance_owing),
+		deposit_held: num(r.deposit_held)
 	};
 }
 
@@ -171,7 +173,7 @@ export async function guestKitchenMeal(guestid: number): Promise<KitchenMeal | u
 	return rows[0];
 }
 
-export async function reservationGuestSummaries(
+async function reservationGuestSummaries(
 	reservationid: number
 ): Promise<ReservationGuestSummary[]> {
 	const rows = unwrap(
@@ -241,10 +243,26 @@ export async function reservationLedger(reservationid: number): Promise<LedgerRo
 	}));
 }
 
-/** The nightly rate a room charges on a date — the rate post_room_nights uses when none is given. */
-export async function effectiveRoomRate(roomid: number, date: string): Promise<number | null> {
+/** Rooms another live stay holds for any night from `arrival` to `departure`. */
+export async function roomsBooked(arrival: string, departure: string): Promise<Set<number>> {
+	const rows = unwrap(
+		await supabase.rpc('room_directory', { p_in: arrival, p_out: departure })
+	) as { roomid: number; is_available: boolean }[];
+	return new Set(rows.filter((r) => !r.is_available).map((r) => r.roomid));
+}
+
+/** The nightly rate of a room on a date for a rate type — what post_room_nights charges when no price is given. */
+export async function effectiveRoomRate(
+	roomid: number,
+	date: string,
+	ratetype: RoomRateType
+): Promise<number | null> {
 	const rate = unwrap(
-		await supabase.rpc('effective_room_rate', { p_roomid: roomid, p_date: date })
+		await supabase.rpc('effective_room_rate', {
+			p_roomid: roomid,
+			p_date: date,
+			p_ratetype: ratetype
+		})
 	) as number | string | null;
 	return rate == null ? null : Number(rate);
 }
@@ -369,8 +387,9 @@ export async function reportKitchenMeal(date: string): Promise<KitchenMealRow[]>
 	return unwrap(await supabase.rpc('report_kitchen_meal', { p_date: date }));
 }
 
-export async function reportKitchenMealTotalGuests(date: string): Promise<number> {
-	return unwrap(await supabase.rpc('report_kitchen_meal_total_guests', { p_date: date }));
+/** Guests in house on a day, a party moving rooms counted once — the Total Guests line. */
+export async function guestsInHouse(date: string): Promise<number> {
+	return unwrap(await supabase.rpc('guests_in_house', { p_date: date }));
 }
 
 export async function reportKitchenMealFiltered(
@@ -417,7 +436,6 @@ export async function reportDcarSummary(date: string): Promise<DcarSummary> {
 	const s = rows[0];
 	return {
 		...s,
-		business_date: d(s.business_date)!,
 		upper_total: num(s.upper_total),
 		receipts_total: num(s.receipts_total),
 		balance_owed: num(s.balance_owed)

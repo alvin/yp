@@ -7,7 +7,7 @@ Feature: show guest name
   So that staff can match meal planning details to the correct guest
 
   Background:
-    Given when the filtered kitchen report is viewed
+    Given the filtered kitchen report is viewed
 
   Scenario: Acceptance criteria
     Then Guest name appears on the filtered kitchen report for each listed stay.

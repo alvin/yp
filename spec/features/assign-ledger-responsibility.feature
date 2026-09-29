@@ -7,7 +7,7 @@ Feature: assign ledger responsibility
   So that the clerk can direct each entry to the right guest so settlement and reporting stay accurate
 
   Background:
-    Given when charges and payments must be attributed across more than one reservation guest
+    Given charges and payments must be attributed across more than one reservation guest
 
   Scenario: Acceptance criteria
     Then The transaction screen allows a charge or payment to be assigned to a specific reservation guest.

@@ -4,13 +4,14 @@ Feature: print filtered kitchen report for selected date
 
   As Kitchen coordinator
   I want to print filtered kitchen report for selected date
-  So that so that the kitchen receives only the flagged entries for that date
+  So that the kitchen sees every special-diet guest arriving over the days ahead
 
   Background:
-    Given when staff run allergy-only kitchen output for a chosen service day
+    Given the kitchen coordinator runs the 7-day kitchen report from the Print Center
 
   Scenario: Acceptance criteria
     Then A date range can be selected before the report is printed
-    And The printed report includes only guests and meals within the chosen range
+    And The report lists each guest with a diet on file whose stay arrives within the chosen range
     And The printed report is readable and suitable for kitchen planning
-    And The report excludes records outside the selected range
+    And A stay arriving outside the range is left out, and the range prints in the report heading
+    And A diet record with neither a diet nor notes is left out.

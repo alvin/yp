@@ -40,6 +40,10 @@ describe('use established paper sizes', () => {
 			waitUntil: 'networkidle'
 		});
 		expect(await pageRule(page)).toContain('size: letter landscape');
+		await page.goto(`${APP_URL}/reports/in-house?date=${addDays(fx.arrival, 1)}`, {
+			waitUntil: 'networkidle'
+		});
+		expect(await pageRule(page)).toContain('size: letter landscape');
 	});
 
 	it('prints the daily cash sheet portrait like the original', async () => {

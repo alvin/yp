@@ -1,19 +1,14 @@
 <script lang="ts">
 	import type { FolioReceipt, FolioReport, StayRoomRow } from '$lib/data/types.js';
 	import { dateShort, money } from '$lib/format.js';
+	import { LODGE_PHONE } from '$lib/data/reference.js';
+	import GuestLetterhead from './guest-letterhead.svelte';
 
 	let {
 		r,
 		rooms = [],
 		receipts = []
 	}: { r: FolioReport; rooms?: StayRoomRow[]; receipts?: FolioReceipt[] } = $props();
-
-	// "PORT MOODY, BC CAN" — city, region then country, as on the original folio.
-	const cityLine = $derived(
-		[[r.guestcity, r.guestregion].filter(Boolean).join(', '), r.guestcountry]
-			.filter(Boolean)
-			.join(' ')
-	);
 
 	const vehicle = $derived(
 		[r.vehicle_description, r.vehicle_license_plate].filter(Boolean).join(' ')
@@ -40,19 +35,11 @@
 </script>
 
 <div class="logo">Yellow Point Lodge</div>
-<div class="letterhead">
-	<div style="text-transform: uppercase">
-		{#each (r.guest_names ?? r.guest).split('\n') as guest_line (guest_line)}{guest_line}<br />{/each}
-		{#if r.guestaddress}{r.guestaddress}<br />{/if}
-		{#if cityLine}{cityLine}<br />{/if}
-		{#if r.guestpczip}{r.guestpczip}{/if}
-	</div>
-	<div class="right">
-		{dateShort(r.date_printed)}<br /><br />
-		{#if r.phone}{r.phone}<br />{/if}
-		Res. No. {r.resnumber}
-	</div>
-</div>
+<GuestLetterhead names={r.guest_names ?? r.guest} to={r}>
+	{dateShort(r.date_printed)}<br /><br />
+	{#if r.phone}{r.phone}<br />{/if}
+	Res. No. {r.resnumber}
+</GuestLetterhead>
 <div class="rule"></div>
 <div class="large-line">
 	<span>Arrival: {dateShort(r.arrival_date)}</span><span
@@ -98,5 +85,5 @@
 	Signature:<span class="blank" style="min-width: 720px"></span>
 </p>
 <p class="center standoff" style="--standoff: 70px; font-family: Georgia, serif; font-size: 24px">
-	Phone (250) 245-7422
+	Phone {LODGE_PHONE}
 </p>

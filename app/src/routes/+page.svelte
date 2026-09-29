@@ -111,7 +111,7 @@
 				<GuestSearch
 					id="name-q"
 					bind:query={nameQuery}
-					placeholder="Start typing a last name… (e.g. “adam”)"
+					placeholder="Start typing a name…"
 					onselect={openGuest}
 				>
 					{#snippet emptyAction()}
@@ -121,11 +121,6 @@
 						>.
 					{/snippet}
 				</GuestSearch>
-				{#if !nameQuery.trim()}
-					<p class="text-muted-foreground mt-2 px-1 text-xs">
-						Matches any part of a name — first or last.
-					</p>
-				{/if}
 			</Tabs.Content>
 
 			<!-- Reservation # -->
@@ -201,9 +196,6 @@
 					</div>
 					<Button class="h-11" onclick={runAllSearch}>Search <ArrowRightIcon /></Button>
 				</div>
-				<p class="text-muted-foreground mt-2 px-1 text-xs">
-					Phone, address, email, or reservation number.
-				</p>
 			</Tabs.Content>
 		</Tabs.Root>
 	</div>

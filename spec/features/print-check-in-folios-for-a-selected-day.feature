@@ -4,10 +4,10 @@ Feature: print check-in folios for a selected day
 
   As Printing coordinator, Front-desk supervisor
   I want to print check-in folios for a selected day
-  So that so that front desk has folios ready for check-in
+  So that front desk has folios ready for check-in
 
   Background:
-    Given when the printing coordinator runs guest documents for arrivals
+    Given the printing coordinator runs guest documents for arrivals
 
   Scenario: Acceptance criteria
     Then The printout includes all arrivals for the selected day.

@@ -1,13 +1,13 @@
 # id: OZTxzbkYTXJhA4KXQ2D5
-@status:done @priority:5 @printing @billing @departures
+@persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @billing @departures
 Feature: print check-out bills queue
 
-  As a user
+  As Printing coordinator, Front-desk supervisor
   I want to print check-out bills queue
   So that they can produce the bills needed for guests leaving that day in a single run
 
   Background:
-    Given when staff choose a departure date from the print menu
+    Given staff choose a departure date in the Print Center
 
   Scenario: Acceptance criteria
     Then Staff can select one departure date to build the print run.

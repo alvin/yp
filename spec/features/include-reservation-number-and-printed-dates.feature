@@ -7,7 +7,7 @@ Feature: include reservation number and printed dates
   So that they can identify the reservation and see when the slip was produced
 
   Background:
-    Given when staff print a reservation confirmation slip for a reservation made or confirmed on a given day
+    Given staff print a reservation confirmation slip for a reservation booked or confirmed on a given day
 
   Scenario: Acceptance criteria
     Then The slip shows the reservation number clearly.

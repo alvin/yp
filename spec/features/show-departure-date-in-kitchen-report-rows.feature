@@ -4,10 +4,10 @@ Feature: show departure date in kitchen report rows
 
   As Operations lead
   I want to show departure date in kitchen report rows
-  So that so that they can quickly confirm departure timing context
+  So that they can quickly confirm departure timing context
 
   Background:
-    Given when kitchen staff review meal report entries
+    Given kitchen staff review meal report entries
 
   Scenario: Acceptance criteria
     Then Departure date appears on the filtered kitchen report for each listed stay.

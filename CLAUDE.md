@@ -36,6 +36,12 @@ thing that lets them act, and it stays that way as the system grows.
 - Printed reports clone the originals in `original_spec/reports/` exactly.
 - One story in `spec/features/` ↔ one test in `app/tests/features/`;
   `app/tests/coverage-map.test.ts` fails the build otherwise.
+- The spec is maintained as carefully as the tests. A change in behaviour
+  updates the story's acceptance criteria in the same commit, and its test
+  asserts them; a story that no longer describes the app is a bug. Two stories
+  for one behaviour are merged, not both kept.
+- Docs never state code-level counts or inventories (stories, tests, tables,
+  migrations, screens) — they go stale. Describe; don't enumerate.
 - Each round of client feedback gets a record in `docs/changesets/` — what was
   asked, what shipped, the judgement calls, and how to back each one out. Read
   the latest before revisiting work; add one when you finish a round.

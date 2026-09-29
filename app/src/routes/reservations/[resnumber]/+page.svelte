@@ -2,7 +2,6 @@
     import { toast } from "svelte-sonner";
     import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
     import NotebookIcon from "@lucide/svelte/icons/notebook-pen";
-    import EyeOffIcon from "@lucide/svelte/icons/eye-off";
     import UsersIcon from "@lucide/svelte/icons/users";
     import CarIcon from "@lucide/svelte/icons/car";
     import BedIcon from "@lucide/svelte/icons/bed-double";
@@ -32,6 +31,8 @@
     import SharedRoomBadge from "$lib/components/app/shared-room-badge.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
+    import GuestNotesDialog from "$lib/components/app/guest-notes-dialog.svelte";
+    import { guestDocTabs } from "$lib/report-nav.js";
     import { afterNavigate, invalidateAll } from "$app/navigation";
     import { addDays, bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
     import { ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
@@ -51,7 +52,6 @@
         recordRoomMove,
         undoRoomMove,
         saveKitchenMeal,
-        setGuestNotes,
         setReservationNotes,
         updateReservation,
         updateReservationGuestNotes,
@@ -84,25 +84,40 @@
             moves: d.moves,
             mIn: d.today,
             mOut: d.summary.resdeparturedate,
-            kitchenText: d.kitchen
-                .map((k) =>
-                    [k.guestdiet, k.kitchenmealnotes]
-                        .filter(Boolean)
-                        .join(" — "),
-                )
-                .join("\n"),
-            housekeepingText: d.housekeeping
-                .map((h) => h.housekeepingnotes)
-                .filter(Boolean)
-                .join("\n"),
-            requestText: d.reservationGuests
-                .map((g) => g.rgnotes)
-                .filter(Boolean)
-                .join("\n"),
+            kitchenText: primaryMeal(d)?.kitchenmealnotes ?? "",
+            housekeepingText: currentHousekeepingNote(d),
+            requestText:
+                d.reservationGuests.find(
+                    (g) =>
+                        g.reservationguestid ===
+                        d.summary.primary_reservationguestid,
+                )?.rgnotes ?? "",
             reservationText: d.summary.resnotes ?? "",
         };
     }
     const i = seed();
+
+    // Each notes tab edits the primary guest's own text: the diet notes on
+    // their kitchen record, the housekeeping note in force (the one that
+    // prints), their requests. Showing every guest's text joined and saving
+    // it back would copy other guests' notes onto the primary.
+    function primaryMeal(d: typeof data) {
+        return d.kitchen.find((k) => k.guestid === d.summary.primary_guestid);
+    }
+    function currentHousekeepingNote(d: typeof data): string {
+        const mine = d.housekeeping
+            .filter(
+                (h) =>
+                    h.reservationguestid ===
+                    d.summary.primary_reservationguestid,
+            )
+            .sort(
+                (a, b) =>
+                    (b.hknotesdate ?? "").localeCompare(a.hknotesdate ?? "") ||
+                    b.housekeepingnotesid - a.housekeepingnotesid,
+            );
+        return mine[0]?.housekeepingnotes ?? "";
+    }
 
     let cancelled = $state(i.cancelled);
 
@@ -115,34 +130,10 @@
         return s.resarrivaldate > today ? "future" : "past";
     });
 
-    const deposit = $derived(
-        data.ledger.find((l) => l.line_type === "Deposit (Received)")?.amount ??
-            null,
-    );
+    const deposit = $derived(s.deposit_held || null);
 
-    // Guest notes (office only) — editable, saved to the guest record.
+    // Guest notes (office only), saved to the guest record.
     let notesOpen = $state(false);
-    let guestNotesText = $state("");
-    let savingGuestNotes = $state(false);
-    function openGuestNotes() {
-        guestNotesText = data.guestNotes ?? "";
-        notesOpen = true;
-    }
-    async function saveGuestNotes() {
-        savingGuestNotes = true;
-        try {
-            await setGuestNotes(s.primary_guestid, guestNotesText);
-            notesOpen = false;
-            toast.success("Guest notes saved (office only — never printed)");
-            await invalidateAll();
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not save guest notes.",
-            );
-        } finally {
-            savingGuestNotes = false;
-        }
-    }
 
     // Confirm
     let confirming = $state(false);
@@ -426,9 +417,7 @@
     async function saveNotes(which: string) {
         try {
             if (which === "Kitchen") {
-                const meal = data.kitchen.find(
-                    (k) => k.guestid === s.primary_guestid,
-                );
+                const meal = primaryMeal(data);
                 await saveKitchenMeal(
                     s.primary_guestid,
                     meal?.guestdiet ?? "",
@@ -436,11 +425,12 @@
                     meal?.kitchenmealid ?? null,
                 );
             } else if (which === "Housekeeping") {
-                await addHousekeepingNote(
-                    s.primary_reservationguestid,
-                    housekeepingText,
-                    today,
-                );
+                if (housekeepingText.trim() !== currentHousekeepingNote(data).trim())
+                    await addHousekeepingNote(
+                        s.primary_reservationguestid,
+                        housekeepingText,
+                        today,
+                    );
             } else if (which === "Request") {
                 await updateReservationGuestNotes(
                     s.primary_reservationguestid,
@@ -493,18 +483,7 @@
         }
     }
 
-    const docs = $derived([
-        { label: "Confirmation", href: `/reports/confirmation/${s.resnumber}` },
-        {
-            label: "Check-in folio",
-            href: `/reports/check-in-folio/${s.resnumber}`,
-        },
-        {
-            label: "Check-out bill",
-            href: `/reports/checkout-bill/${s.resnumber}`,
-        },
-        { label: "Cancellation", href: `/reports/cancellation/${s.resnumber}` },
-    ]);
+    const docs = $derived(guestDocTabs(s.resnumber, ""));
 </script>
 
 <svelte:head
@@ -586,7 +565,7 @@
                         <Button
                             variant="secondary"
                             size="sm"
-                            onclick={openGuestNotes}
+                            onclick={() => (notesOpen = true)}
                         >
                             <NotebookIcon /> Guest notes
                             {#if data.guestNotes}<span
@@ -611,10 +590,6 @@
                                 {#if g.primaryguest}<Badge
                                         variant="secondary"
                                         class="text-[10px]">Primary</Badge
-                                    >{/if}
-                                {#if g.guestinhouse}<Badge
-                                        variant="success"
-                                        class="text-[10px]">In house</Badge
                                     >{/if}
                             </div>
                             <div
@@ -767,13 +742,19 @@
                         <Tabs.Trigger value="res">Reservation</Tabs.Trigger>
                     </Tabs.List>
                     <Tabs.Content value="kitchen" class="mt-3 space-y-2">
+                        {#if primaryMeal(data)?.guestdiet}
+                            <p class="text-sm">
+                                <span class="text-muted-foreground">Diet</span>
+                                {primaryMeal(data)?.guestdiet}
+                            </p>
+                        {/if}
                         <Textarea
                             bind:value={kitchenText}
                             rows={4}
                             placeholder="Diet, allergies, meal preferences"
                         />
                         <p class="text-muted-foreground text-xs">
-                            Prints on the kitchen report.
+                            Prints on the kitchen report, confirmation and check-in folio.
                         </p>
                         <Button
                             size="sm"
@@ -788,7 +769,7 @@
                             placeholder="Bed setup, room readiness"
                         />
                         <p class="text-muted-foreground text-xs">
-                            Prints on the housekeeping report.
+                            Prints on the housekeeping report, confirmation and check-in folio.
                         </p>
                         <Button
                             size="sm"
@@ -865,32 +846,11 @@
     </div>
 </div>
 
-<!-- Guest notes dialog -->
-<Dialog.Root bind:open={notesOpen}>
-    <Dialog.Content>
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2"
-                ><NotebookIcon class="size-4" /> Guest notes</Dialog.Title
-            >
-            <Dialog.Description class="flex items-center gap-1.5">
-                <EyeOffIcon class="size-3.5" /> Office only — never printed.
-            </Dialog.Description>
-        </Dialog.Header>
-        <Textarea
-            bind:value={guestNotesText}
-            rows={6}
-            placeholder="Preferences, history, anything the office should know…"
-        />
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (notesOpen = false)}
-                >Close</Button
-            >
-            <Button onclick={saveGuestNotes} disabled={savingGuestNotes}
-                >Save notes</Button
-            >
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
+<GuestNotesDialog
+    bind:open={notesOpen}
+    guestid={s.primary_guestid}
+    notes={data.guestNotes}
+/>
 
 <!-- Add guest dialog -->
 <Dialog.Root bind:open={addGuestOpen}>
@@ -1047,9 +1007,6 @@
                     options={rooms}
                     searchPlaceholder="Room name or number…"
                 />
-                <p class="text-muted-foreground text-xs">
-                    Bed layout shown beside each room.
-                </p>
             </div>
 
             {#if mMode === "move"}

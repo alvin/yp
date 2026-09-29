@@ -21,52 +21,36 @@
         recordPayment,
     } from "$lib/data/mutations.js";
     import { round2 } from "$lib/charges.js";
-    import {
-        INV_TYPE_TO_TRANSTYPE,
-        ROOMS,
-        inventoryById,
-        roomById,
-    } from "$lib/data/reference.js";
+    import { ROOMS, inventoryById, roomById } from "$lib/data/reference.js";
     import {
         itemOptions,
         paymentCategoryOptions,
         roomOptions,
         tenderTypeOptions,
     } from "$lib/options.js";
-    import type { LedgerRow, ReservationGuestSummary } from "$lib/data/types.js";
+    import type {
+        LedgerRow,
+        ReservationGuestSummary,
+        RoomRateType,
+    } from "$lib/data/types.js";
 
     let {
         reservationid,
         initialLines,
         reservationGuests,
         today,
-        readonly = false,
     }: {
         reservationid: number;
         initialLines: LedgerRow[];
         reservationGuests: ReservationGuestSummary[];
         today: string;
-        readonly?: boolean;
     } = $props();
 
+    // The database orders the lines and carries the running balance.
     let lines = $state<LedgerRow[]>(seedLines());
 
     function seedLines(): LedgerRow[] {
-        return rebalance([...initialLines]);
-    }
-
-    function rebalance(rows: LedgerRow[]): LedgerRow[] {
-        const sorted = [...rows].sort(
-            (a, b) =>
-                a.line_date.localeCompare(b.line_date) ||
-                a.line_source.localeCompare(b.line_source) ||
-                a.line_id - b.line_id,
-        );
-        let running = 0;
-        return sorted.map((l) => {
-            running = round2(running + l.balance_effect);
-            return { ...l, running_balance: running };
-        });
+        return initialLines;
     }
 
     const charges = $derived(
@@ -89,6 +73,7 @@
     let chargeOpen = $state(false);
     let chargeKind = $state<"room" | "item">("room");
     let cRoom = $state(String(ROOMS[0].roomid));
+    let cRateType = $state<RoomRateType>("Regular");
     let cItem = $state("");
     let cQty = $state(1);
     let cUnit = $state(0);
@@ -99,6 +84,7 @@
     function openCharge() {
         chargeKind = "room";
         cRoom = String(ROOMS[0].roomid);
+        cRateType = "Regular";
         cItem = "";
         cQty = 1;
         cUnit = 0;
@@ -112,18 +98,25 @@
         cUnit = inventoryById(Number(id))?.invamount ?? 0;
     }
 
-    // A room night is priced from the room's dated rate. Show that rate in
-    // Unit price rather than 0.00, so the clerk sees what will post and can
-    // still type over it. Picking another room or date looks it up again; a
+    // A room night is priced from the room's dated rate of the chosen type
+    // (Regular, Special or Split, as Access asked). Show that rate in Unit
+    // price rather than 0.00, so the clerk sees what will post and can still
+    // type over it. Picking another room, rate or date looks it up again; a
     // slower earlier lookup never overwrites a newer one.
+    const RATE_TYPES: { value: RoomRateType; label: string }[] = [
+        { value: "Regular", label: "Regular" },
+        { value: "Special", label: "Special" },
+        { value: "Split", label: "Split" },
+    ];
     let rateLookup = 0;
     $effect(() => {
         if (!chargeOpen || chargeKind !== "room") return;
         const roomid = Number(cRoom);
         const date = cDate;
+        const ratetype = cRateType;
         if (!roomid || !date) return;
         const lookup = ++rateLookup;
-        effectiveRoomRate(roomid, date)
+        effectiveRoomRate(roomid, date, ratetype)
             .then((rate) => {
                 if (lookup === rateLookup) cUnit = rate ?? 0;
             })
@@ -165,6 +158,7 @@
                     addDays(cDate, qty),
                     unit > 0 ? unit : null,
                     cDate,
+                    cRateType,
                     cNotes.trim() || null,
                 );
             } else {
@@ -176,7 +170,6 @@
                     qty,
                     cDate,
                     round2(unit * qty),
-                    INV_TYPE_TO_TRANSTYPE[inv.invtype] ?? "Misc.",
                     cNotes.trim() || null,
                 );
             }
@@ -227,7 +220,7 @@
             lines = await reservationLedger(reservationid);
             payOpen = false;
             toast.success(
-                `Recorded ${pCategory} — $${amount.toFixed(2)} ${pType}`,
+                `Recorded ${pCategory} — ${money(amount)} ${pType}`,
             );
         } catch (e) {
             toast.error(
@@ -277,16 +270,14 @@
         <h2 class="flex items-center gap-2 text-sm font-semibold">
             <ReceiptIcon class="size-4" /> Transactions
         </h2>
-        {#if !readonly}
-            <div class="flex gap-2">
-                <Button size="sm" variant="outline" onclick={openCharge}
-                    ><PlusIcon /> Charge</Button
-                >
-                <Button size="sm" variant="outline" onclick={openPayment}
-                    ><CreditCardIcon /> Payment</Button
-                >
-            </div>
-        {/if}
+        <div class="flex gap-2">
+            <Button size="sm" variant="outline" onclick={openCharge}
+                ><PlusIcon /> Charge</Button
+            >
+            <Button size="sm" variant="outline" onclick={openPayment}
+                ><CreditCardIcon /> Payment</Button
+            >
+        </div>
     </div>
 
     <div class="max-h-[420px] overflow-y-auto">
@@ -299,9 +290,9 @@
                     <th class="py-2 text-left font-medium">Description</th>
                     <th class="py-2 text-right font-medium">Qty</th>
                     <th class="px-4 py-2 text-right font-medium">Amount</th>
-                    {#if !readonly}<th class="w-9 py-2"
-                            ><span class="sr-only">Remove</span></th
-                        >{/if}
+                    <th class="w-9 py-2"
+                        ><span class="sr-only">Remove</span></th
+                    >
                 </tr>
             </thead>
             <tbody>
@@ -317,7 +308,7 @@
                                 {l.code
                                     ? l.code
                                     : l.line_type}{#if l.tax_total > 0}
-                                    · tax ${l.tax_total.toFixed(2)}{/if}
+                                    · tax {money(l.tax_total)}{/if}
                             </span>
                         </td>
                         <td class="py-2 text-right tabular-nums"
@@ -328,24 +319,22 @@
                         <td class="px-4 py-2 text-right"
                             ><Money value={l.balance_effect} /></td
                         >
-                        {#if !readonly}
-                            <td class="pr-2 text-right">
-                                <button
-                                    type="button"
-                                    aria-label="Remove {l.description}"
-                                    title="Remove this line"
-                                    onclick={() => askRemove(l)}
-                                    class="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                >
-                                    <TrashIcon class="size-3.5" />
-                                </button>
-                            </td>
-                        {/if}
+                        <td class="pr-2 text-right">
+                            <button
+                                type="button"
+                                aria-label="Remove {l.description}"
+                                title="Remove this line"
+                                onclick={() => askRemove(l)}
+                                class="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                            >
+                                <TrashIcon class="size-3.5" />
+                            </button>
+                        </td>
                     </tr>
                 {:else}
                     <tr
                         ><td
-                            colspan={readonly ? 4 : 5}
+                            colspan="5"
                             class="text-muted-foreground px-4 py-8 text-center"
                             >No transactions yet.</td
                         ></tr
@@ -409,6 +398,14 @@
                         bind:value={cRoom}
                         options={rooms}
                         searchPlaceholder="Room name or number…"
+                    />
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="c-rate">Rate</Label>
+                    <Combobox
+                        id="c-rate"
+                        bind:value={cRateType}
+                        options={RATE_TYPES}
                     />
                 </div>
             {:else}

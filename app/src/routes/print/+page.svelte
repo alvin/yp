@@ -28,6 +28,7 @@
         GuestSearchRow,
     } from "$lib/data/types.js";
     import { addDays, dateMed } from "$lib/format.js";
+    import { GUEST_DOCUMENTS } from "$lib/report-nav.js";
 
     let printDate = $state(TODAY);
     const tomorrow = addDays(TODAY, 1);
@@ -35,25 +36,6 @@
     // Optional range end for reports that support one (kitchen filtered).
     let endDate = $state("");
 
-    // Guest document types → report route segment.
-    const DOCS: { key: GuestDocument; label: string; route: string }[] = [
-        { key: "confirmation", label: "Confirmation", route: "confirmation" },
-        {
-            key: "check_in_folio",
-            label: "Check-in folio",
-            route: "check-in-folio",
-        },
-        {
-            key: "checkout_bill",
-            label: "Check-out bill",
-            route: "checkout-bill",
-        },
-        {
-            key: "cancellation_notice",
-            label: "Cancellation",
-            route: "cancellation",
-        },
-    ];
 
     let queues = $state<Record<GuestDocument, GuestDocumentQueueRow[]>>({
         confirmation: [],
@@ -65,11 +47,11 @@
         const date = printDate;
         let alive = true;
         Promise.all(
-            DOCS.map((d) => reportGuestDocumentQueue(d.key, date)),
+            GUEST_DOCUMENTS.map((d) => reportGuestDocumentQueue(d.key, date)),
         ).then((results) => {
             if (!alive) return;
             queues = Object.fromEntries(
-                DOCS.map((d, idx) => [d.key, results[idx]]),
+                GUEST_DOCUMENTS.map((d, idx) => [d.key, results[idx]]),
             ) as Record<GuestDocument, GuestDocumentQueueRow[]>;
         });
         return () => {
@@ -211,11 +193,6 @@
                 />
             </div>
         </div>
-        {#if endDate}
-            <p class="text-muted-foreground text-xs">
-                Used by reports that accept a range.
-            </p>
-        {/if}
     </div>
 </div>
 
@@ -254,7 +231,7 @@
         <Card.Content class="pt-4">
             <Tabs.Root value="confirmation">
                 <Tabs.List class="grid w-full grid-cols-4">
-                    {#each DOCS as d (d.key)}
+                    {#each GUEST_DOCUMENTS as d (d.key)}
                         <Tabs.Trigger value={d.key} class="text-xs">
                             {d.label}
                             {#if queues[d.key].length}
@@ -267,13 +244,13 @@
                     {/each}
                 </Tabs.List>
 
-                {#each DOCS as d (d.key)}
+                {#each GUEST_DOCUMENTS as d (d.key)}
                     <Tabs.Content value={d.key} class="mt-4 space-y-3">
                         {#if queues[d.key].length}
                             <div class="overflow-hidden rounded-lg border">
                                 {#each queues[d.key] as row (row.reservationid)}
                                     <a
-                                        href="/reports/{d.route}/{row.resnumber}"
+                                        href="/reports/{d.slug}/{row.resnumber}"
                                         class="hover:bg-accent/60 flex items-center gap-3 border-b px-4 py-2.5 transition-colors last:border-0"
                                     >
                                         <div class="min-w-0 flex-1">
@@ -320,7 +297,7 @@
                                     bind:value={individualRes}
                                     onkeydown={(e) =>
                                         e.key === "Enter" &&
-                                        openIndividual(d.route)}
+                                        openIndividual(d.slug)}
                                     inputmode="numeric"
                                     placeholder="e.g. 108231"
                                     class="h-9"
@@ -329,7 +306,7 @@
                             <Button
                                 class="h-9"
                                 variant="outline"
-                                onclick={() => openIndividual(d.route)}
+                                onclick={() => openIndividual(d.slug)}
                             >
                                 Open <ArrowRightIcon class="size-3.5" />
                             </Button>
@@ -358,7 +335,7 @@
                                             onclick={() =>
                                                 openStayDocument(
                                                     s.resnumber,
-                                                    d.route,
+                                                    d.slug,
                                                 )}
                                         >
                                             <span class="tabular-nums"

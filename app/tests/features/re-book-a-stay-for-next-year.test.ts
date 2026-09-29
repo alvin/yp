@@ -117,8 +117,8 @@ describe('re-book a stay for next year', () => {
 		) as { resarrivaldate: string; resdeparturedate: string; resnotes: string | null }[];
 		expect(saved.resarrivaldate.slice(0, 10)).toBe(addDays(fx.arrival, SEASON + 7));
 		expect(saved.resdeparturedate.slice(0, 10)).toBe(addDays(fx.departure, SEASON + 7));
-		// Saving records which reservation the stay was re-booked from.
-		expect(saved.resnotes).toContain(String(fx.resnumber));
+		// The notes print on the guest's confirmation, so nothing internal is put there.
+		expect(saved.resnotes).toBeNull();
 	});
 
 	it('leaves the reservation it was re-booked from exactly as it stands', async () => {

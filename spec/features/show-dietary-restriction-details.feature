@@ -7,7 +7,7 @@ Feature: show dietary restriction details
   So that staff can see dietary restriction details needed for meal planning
 
   Background:
-    Given when the kitchen report is viewed
+    Given the kitchen report is viewed
 
   Scenario: Acceptance criteria
     Then Dietary restriction details appear on the kitchen report for each relevant guest.

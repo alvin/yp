@@ -7,10 +7,10 @@ Feature: print confirmation slips for reservations booked today
   So that the team can quickly produce confirmations for new bookings while details are still fresh
 
   Background:
-    Given reservations were created today and confirmation slips need to be issued
+    Given reservations were booked or confirmed on a chosen day and their confirmation slips need to be issued
 
   Scenario: Acceptance criteria
-    Then The user can request confirmation slips for reservations booked today.
-    And Only reservations created on the current day are included.
-    And The user can send the matching slips to print in one action.
+    Then The user can list confirmation slips for any chosen day, today by default.
+    And Only reservations booked or confirmed on that day are included; cancelled reservations are left out.
+    And The day's slips print together in the batch run's folio group.
     And Each printed slip follows the lodge’s usual confirmation format.

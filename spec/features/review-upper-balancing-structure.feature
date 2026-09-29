@@ -7,7 +7,7 @@ Feature: review upper balancing structure
   So that they can confirm the upper balancing section is laid out for manual review
 
   Background:
-    Given when a daily cash reviewer is checking the daily cash activity report
+    Given a daily cash reviewer is checking the daily cash activity report
 
   Scenario: Acceptance criteria
     Then The upper balancing section is visible in the report.
