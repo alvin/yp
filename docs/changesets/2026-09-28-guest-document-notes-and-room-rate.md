@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-28
 **Trigger:** two items of written feedback from the lodge after using round 3.
-**State:** 123 stories, 122 feature test files (one story still `@status:backlog`), 448 tests passing. `npm run check` clean, `business_logic_smoke.sql` passing. `0011` applied to the local stack; **not yet applied to the hosted project.**
+**State:** 123 stories, 122 feature test files (one story still `@status:backlog`), 448 tests passing. `npm run check` clean, `business_logic_smoke.sql` passing. `0011` applied to the local stack and, on 2026-09-28, to the hosted project.
 
 ## What this document is for
 
@@ -30,10 +30,16 @@ ypl.stay_diet_notes(int)           ypl.report_reservation_confirmation(int)  [re
 ypl.stay_housekeeping_notes(int)   ypl.report_check_in_folio(int)            [replaced, 1 column appended]
 ```
 
-**Deploy:** add `migrations/0011_guest_document_notes.sql` to the
-`run_remote_sql.py` command in `supabase/README.md` (already listed there) and run
-it against the hosted project. Until then the hosted app prints the
-confirmation and folio as before; the new columns are simply absent.
+**Deploy:** applied to the hosted project on 2026-09-28 with the
+`run_remote_sql.py` command in `supabase/README.md`, wrapped in `begin … commit`
+because the file drops and recreates both report functions. See
+[Environments](../../supabase/README.md#environments). Verified afterwards:
+every column both documents already returned hashes identically across all
+30,987 hosted reservations before and after; the four function bodies match
+local exactly; `authenticated` can execute them; 8,305 confirmations now carry a
+diet and 7,020 a housekeeping note. The app side ships with this commit's
+branch — until it is deployed the hosted app ignores the new columns and prints
+as before.
 
 ---
 
