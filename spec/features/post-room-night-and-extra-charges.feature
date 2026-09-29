@@ -14,3 +14,4 @@ Feature: post room-night and extra charges
     And Extra charges can be added for the reservation.
     And Each charge line can be entered with a date and a quantity.
     And The reservation total updates to include the posted charge lines.
+    And A room-night charge shows the room's rate for the charge date before it is posted, and the clerk can type over it.

@@ -19,6 +19,9 @@
 		[r.vehicle_description, r.vehicle_license_plate].filter(Boolean).join(' ')
 	);
 
+	// The diet and housekeeping notes sit in the space above Vehicle.
+	const notes = $derived(Boolean(r.diet_notes || r.housekeeping_notes));
+
 	// A stay that never moves rooms prints the one row it always did; a stay
 	// that moves prints a row per room, in the order it occupies them.
 	const stayRooms = $derived(
@@ -80,10 +83,17 @@
 		</tbody>
 	</table>
 {/if}
-{#if r.diet_notes}
-	<p><b>Diet:</b>&nbsp;<span class="note">{r.diet_notes}</span></p>
+{#if notes}
+	<div class="notes-room" style="--standoff: 120px">
+		{#if r.diet_notes}
+			<p><b>Diet:</b>&nbsp;<span class="note">{r.diet_notes}</span></p>
+		{/if}
+		{#if r.housekeeping_notes}
+			<p><b>Housekeeping:</b>&nbsp;<span class="note">{r.housekeeping_notes}</span></p>
+		{/if}
+	</div>
 {/if}
-<p class="standoff" style="--standoff: 120px"><b>Vehicle:</b>{#if vehicle}&nbsp;{vehicle}{/if}</p>
+<p class="standoff" style="--standoff: {notes ? 0 : 120}px"><b>Vehicle:</b>{#if vehicle}&nbsp;{vehicle}{/if}</p>
 <p class="standoff" style="--standoff: 330px">
 	Signature:<span class="blank" style="min-width: 720px"></span>
 </p>

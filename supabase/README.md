@@ -31,6 +31,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0008_input_refinements.sql` | Front-desk input refinements from live use: forgiving search terms, multi-keyword and second-name search, stay dates that carry their rooms, loud removal of lines entered in error |
 | `migrations/0009_rebooking.sql` | Re-booking is next season's stay rather than a change to this one: `rebook_reservation` dropped, booking horizon narrowed to the arrival date with a week of grace |
 | `migrations/0010_output_refinements.sql` | Printed-output and lookup refinements from live use: every receipt and the diet on the check-in folio, the rooms of a stay on the folio and confirmation, room-named charges on the check-out bill, the In House report ordered for section headings, rooms two reservations hold at once, phone numbers matched however punctuated, guest number searchable, company no longer searched |
+| `migrations/0011_guest_document_notes.sql` | The diet and the housekeeping note print on both the confirmation and the check-in folio, read the way the kitchen and housekeeping reports read them |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -53,6 +54,7 @@ Apply migrations in filename order:
 8. `0008_input_refinements.sql`
 9. `0009_rebooking.sql`
 10. `0010_output_refinements.sql`
+11. `0011_guest_document_notes.sql`
 
 Then load `seed.sql` for repeatable reference/configuration data.
 
@@ -99,7 +101,7 @@ is already gone rather than silently doing nothing.
 Notes: `add_housekeeping_note`, `archive_housekeeping_note`,
 `save_kitchen_meal`, `archive_kitchen_meal`.
 
-### Read helpers worth knowing (0010)
+### Read helpers worth knowing (0010–0011)
 
 `report_stay_rooms(p_reservationid)` — every room a stay occupies with its own
 dates and party size, in stay order. The check-in folio and the confirmation
@@ -109,6 +111,11 @@ that never moves returns the single row those documents always showed.
 `report_folio_receipts(p_reservationid)` — deposits, prepayments and gift
 certificates received against a stay, oldest first. The check-in folio prints
 all of them, not the deposit alone.
+
+`stay_diet_notes(p_reservationid)` / `stay_housekeeping_notes(p_reservationid)`
+(0011) — the diet and housekeeping note a stay carries, worded as the kitchen
+and housekeeping reports print them (the latest housekeeping note per guest).
+The confirmation and the check-in folio both print them.
 
 `shared_room_occupancies(p_reservationid)` — room windows on this stay that
 another live reservation also holds for at least one night, with the party
@@ -286,7 +293,8 @@ python3 tools/run_remote_sql.py evapfimnlxwckgbllzys \
   migrations/0003_views_and_reports.sql migrations/0004_security.sql \
   migrations/0005_business_logic.sql migrations/0006_ux_refinements.sql \
   migrations/0007_note_text.sql migrations/0008_input_refinements.sql \
-  migrations/0009_rebooking.sql migrations/0010_output_refinements.sql seed.sql
+  migrations/0009_rebooking.sql migrations/0010_output_refinements.sql \
+  migrations/0011_guest_document_notes.sql seed.sql
 ```
 
 Two things the Management API cannot do, because they need a *direct* session:

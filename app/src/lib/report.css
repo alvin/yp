@@ -145,6 +145,12 @@
 .report-page .standoff {
 	margin-top: calc(var(--standoff, 0px) * var(--gap));
 }
+/* Notes printed where a standoff would be take their room out of it rather
+   than adding to it, so a slip carrying a long diet still lands on one sheet.
+   The line after the notes drops its own standoff. */
+.report-page .notes-room {
+	min-height: calc(var(--standoff, 0px) * var(--gap));
+}
 .report-page .blank {
 	border-bottom: 1px solid #222;
 	display: inline-block;

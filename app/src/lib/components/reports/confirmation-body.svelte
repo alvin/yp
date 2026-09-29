@@ -11,6 +11,9 @@
 			.join(' ')
 	);
 
+	// The diet and housekeeping notes sit in the space above the office hours.
+	const notes = $derived(Boolean(r.diet_notes || r.housekeeping_notes));
+
 	// A stay that never moves rooms prints the one row it always did; a stay
 	// that moves prints a row per room, in the order it occupies them.
 	const stayRooms = $derived(
@@ -79,7 +82,17 @@
 		</tbody>
 	</table>
 {/if}
-<p class="center standoff" style="--standoff: 190px">
+{#if notes}
+	<div class="notes-room" style="--standoff: 190px">
+		{#if r.diet_notes}
+			<p><b>Diet:</b>&nbsp;<span class="note">{r.diet_notes}</span></p>
+		{/if}
+		{#if r.housekeeping_notes}
+			<p><b>Housekeeping:</b>&nbsp;<span class="note">{r.housekeeping_notes}</span></p>
+		{/if}
+	</div>
+{/if}
+<p class="center standoff" style="--standoff: {notes ? 0 : 190}px">
 	Our office is open from 8:00 AM to 10:30 PM every day for your calls.<br />Please check out
 	the information on the back of this confirmation.<br />We look forward to your visit.
 </p>

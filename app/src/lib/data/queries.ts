@@ -231,6 +231,14 @@ export async function reservationLedger(reservationid: number): Promise<LedgerRo
 	}));
 }
 
+/** The nightly rate a room charges on a date — the rate post_room_nights uses when none is given. */
+export async function effectiveRoomRate(roomid: number, date: string): Promise<number | null> {
+	const rate = unwrap(
+		await supabase.rpc('effective_room_rate', { p_roomid: roomid, p_date: date })
+	) as number | string | null;
+	return rate == null ? null : Number(rate);
+}
+
 export interface ReservationNotes {
 	housekeeping: HousekeepingNote[];
 	kitchen: KitchenMeal[];

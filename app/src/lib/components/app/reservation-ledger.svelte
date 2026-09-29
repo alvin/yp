@@ -12,7 +12,7 @@
     import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
     import { addDays, dateShort, money } from "$lib/format.js";
-    import { reservationLedger } from "$lib/data/queries.js";
+    import { effectiveRoomRate, reservationLedger } from "$lib/data/queries.js";
     import {
         archivePayment,
         archiveTransaction,
@@ -111,6 +111,26 @@
     function onItemChange(id: string) {
         cUnit = inventoryById(Number(id))?.invamount ?? 0;
     }
+
+    // A room night is priced from the room's dated rate. Show that rate in
+    // Unit price rather than 0.00, so the clerk sees what will post and can
+    // still type over it. Picking another room or date looks it up again; a
+    // slower earlier lookup never overwrites a newer one.
+    let rateLookup = 0;
+    $effect(() => {
+        if (!chargeOpen || chargeKind !== "room") return;
+        const roomid = Number(cRoom);
+        const date = cDate;
+        if (!roomid || !date) return;
+        const lookup = ++rateLookup;
+        effectiveRoomRate(roomid, date)
+            .then((rate) => {
+                if (lookup === rateLookup) cUnit = rate ?? 0;
+            })
+            .catch(() => {
+                // No rate shown; posting still prices from the room's rate.
+            });
+    });
 
     const rooms = roomOptions();
     const items = itemOptions();
@@ -374,7 +394,10 @@
                     'item'
                         ? 'bg-field shadow-sm'
                         : 'text-muted-foreground'}"
-                    onclick={() => (chargeKind = "item")}>Item / extra</button
+                    onclick={() => {
+                        chargeKind = "item";
+                        cUnit = inventoryById(Number(cItem))?.invamount ?? 0;
+                    }}>Item / extra</button
                 >
             </div>
 

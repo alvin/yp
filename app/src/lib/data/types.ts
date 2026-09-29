@@ -375,6 +375,8 @@ export interface ConfirmationReport {
 	reservation_notes: string | null;
 	deposit_amount: number | null;
 	deposit_date: string | null;
+	diet_notes: string | null;
+	housekeeping_notes: string | null;
 }
 
 export interface FolioReport {
@@ -397,6 +399,7 @@ export interface FolioReport {
 	diet_notes: string | null;
 	vehicle_description: string | null;
 	vehicle_license_plate: string | null;
+	housekeeping_notes: string | null;
 }
 
 /** One room of a stay, with the dates and party size it was held for. */
