@@ -141,6 +141,17 @@ describe('post room-night and extra charges — the room rate in the charge dial
 		}
 	});
 
+	it('asks for no notes on a charge line', async () => {
+		expect(await page.locator('#c-notes').count()).toBe(0);
+		await expect(
+			rpc('post_charge', {
+				p_reservationguestid: stay.reservationguestid,
+				p_inventoryid: 1,
+				p_notes: 'x'
+			})
+		).rejects.toThrow(/function|post_charge/i);
+	});
+
 	it('starts on the Regular rate and follows the rate chosen', async () => {
 		const { room } = rooms[0];
 		await pickRoom(room);

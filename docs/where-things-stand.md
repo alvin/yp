@@ -1,14 +1,12 @@
 # Where things stand
 
-The one document to read. It sums up the work done from the lodge's last two
-rounds of feedback, the decisions made along the way, and what is still open.
+The one document to read. It sums up the work done from the lodge's feedback,
+the decisions made along the way, and what is still open.
 Everything below is live on the hosted system as of 29 September 2026.
 
 ---
 
 ## What the lodge asked for
-
-### First round
 
 **Diet and housekeeping notes on the confirmation and check-in folio.**
 Both documents now print the guest's diet (with its notes) and the
@@ -23,8 +21,6 @@ room has a Regular, Special and Split rate, and Access asked the clerk which to
 use. Our system ignored the choice and usually charged the Split rate — half the
 Regular rate for most rooms. The dialog now has a **Rate** choice, starting on
 Regular, and posts that rate.
-
-### Second round
 
 **Back out to the guest's list of stays.** Opening a reservation from a guest's
 history, a date search or an all-fields search, the button at the top left now
@@ -79,6 +75,12 @@ short).
 
 **Printed reports** number their pages ("Page 2 of 4") as the originals did.
 
+**Charge lines carry no notes.** The Add charge dialog had a Notes box only
+because the Access charges table had a notes column. Nobody asked for it,
+Access never printed it, and staff used it once in 55,760 charges — yet here it
+printed on the bill for room charges. It's gone: a charge line shows its item,
+or "Room" and the room's name.
+
 **Screen wording** that explained or narrated things was cut back to the fact.
 The app footer reads "Copyright © 2026 Yellow Point Lodge".
 
@@ -110,22 +112,20 @@ app does.
 ## Open items
 
 **For you to decide**
-1. **The Notes box on the Add charge dialog.** It came with the original
-   scaffold because the Access charges table had a notes column. Access never
-   printed it and staff used it once in 55,760 charges. Our app prints it on the
-   bill for room charges, which Access never did. Recommendation: remove it.
-2. **Weak tests** — see `docs/test-review-2026-09-29.md`, sorted into obvious
+1. **Weak tests** — see `docs/test-review-2026-09-29.md`, sorted into obvious
    fixes, obvious removals and questions.
-3. **Date-range search** sorts by arrival rather than name, and never shows the
+2. **Date-range search** sorts by arrival rather than name, and never shows the
    Cancelled or Shared badges.
+3. **Gift certificates.** The system can record a sale, but there's no button
+   for it. You want to understand this before it goes to the lodge.
+4. **Split bills.** How a bill is split between guests beyond percent-of-bill —
+   likewise yours to understand first.
 
 **For the lodge**
-4. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
+5. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
    room charges entered through the new system went in at the Split rate:
    reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
    and 107033. Worth checking any that were real rather than testing.
-5. **Gift certificates.** The system can record a sale, but there's no button
-   for it. Do they want one?
 6. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
 7. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
@@ -133,8 +133,8 @@ app does.
 8. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes; how
    a stay with several named guests should show; printing or reprinting a
-   single document; how exact the printed layouts need to be; split bills;
-   moving a deposit when a stay is cancelled or re-booked.
+   single document; how exact the printed layouts need to be; moving a deposit
+   when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
 9. A room's own dates and guest count can't be edited separately, as they

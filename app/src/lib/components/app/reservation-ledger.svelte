@@ -78,7 +78,6 @@
     let cQty = $state(1);
     let cUnit = $state(0);
     let cDate = $state("");
-    let cNotes = $state("");
     let cGuest = $state("");
 
     function openCharge() {
@@ -89,7 +88,6 @@
         cQty = 1;
         cUnit = 0;
         cDate = today;
-        cNotes = "";
         cGuest = String(defaultGuest);
         chargeOpen = true;
     }
@@ -159,7 +157,6 @@
                     unit > 0 ? unit : null,
                     cDate,
                     cRateType,
-                    cNotes.trim() || null,
                 );
             } else {
                 const inv = inventoryById(Number(cItem))!;
@@ -170,7 +167,6 @@
                     qty,
                     cDate,
                     round2(unit * qty),
-                    cNotes.trim() || null,
                 );
             }
             lines = await reservationLedger(reservationid);
@@ -455,15 +451,6 @@
                     />
                 </div>
             {/if}
-
-            <div class="space-y-1.5">
-                <Label for="c-notes">Notes (optional)</Label>
-                <Input
-                    id="c-notes"
-                    bind:value={cNotes}
-                    placeholder="Overrides the line description"
-                />
-            </div>
         </div>
         <Dialog.Footer>
             <Button variant="ghost" onclick={() => (chargeOpen = false)}

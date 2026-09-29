@@ -292,8 +292,7 @@ export async function postRoomNights(
 	occupancyout: string,
 	rate: number | null,
 	transdate: string,
-	ratetype: RoomRateType,
-	notes?: string | null
+	ratetype: RoomRateType
 ): Promise<number> {
 	return unwrap(
 		await supabase.rpc('post_room_nights', {
@@ -303,7 +302,6 @@ export async function postRoomNights(
 			p_occupancyout: occupancyout,
 			p_rate: rate,
 			p_transdate: transdate,
-			p_notes: notes ?? null,
 			p_ratetype: ratetype
 		})
 	);
@@ -314,8 +312,7 @@ export async function postCharge(
 	inventoryid: number,
 	quantity: number,
 	transdate: string,
-	amount: number | null,
-	notes?: string | null
+	amount: number | null
 ): Promise<number> {
 	return unwrap(
 		await supabase.rpc('post_charge', {
@@ -323,8 +320,7 @@ export async function postCharge(
 			p_inventoryid: inventoryid,
 			p_quantity: quantity,
 			p_transdate: transdate,
-			p_amount: amount,
-			p_notes: notes ?? null
+			p_amount: amount
 		})
 	);
 }

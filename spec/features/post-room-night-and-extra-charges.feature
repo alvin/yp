@@ -16,3 +16,4 @@ Feature: post room-night and extra charges
     And A room-night charge shows the room's rate for the charge date before it is posted, and the clerk can type over it.
     And A room night is priced at the rate the desk chooses — Regular, Special or Split — starting on Regular.
     And An extra charge posts to its daily cash category (a wine to Liquor), whether it is added on screen or straight in the database.
+    And A charge line carries no notes, as in Access: it shows its item, or Room and the room's name.

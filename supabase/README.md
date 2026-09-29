@@ -37,6 +37,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0014_one_rule_each.sql` | Each reporting rule written once: rooms held on a day, guests in house, deposit held, the current housekeeping note and the diets that count, daily cash lines that add up to their totals, a charge's daily cash category; removal of an already-removed line fails |
 | `migrations/0015_room_rate_type.sql` | A room night is priced at the rate type chosen — Regular, Special or Split — as Access asked |
 | `migrations/0016_guest_details_and_notes.sql` | A guest's details can be corrected and cleared; the housekeeping note in force can be cleared; a stay's room can be changed outright without leaving its room charges behind |
+| `migrations/0017_no_charge_notes.sql` | Charge lines carry no notes: the posting functions take none and every line description comes from the item or room |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
