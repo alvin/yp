@@ -1,16 +1,20 @@
 // Story: spec/features/sell-gift-certificate.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
+let saleDay: string;
 
 beforeAll(async () => {
+	// Sold at the desk on a daily sales account — a stay already checked out —
+	// so the sale is counted the day it is rung up.
 	fx = await makeReservation();
+	saleDay = addDays(fx.departure, 1);
 	await rpc('sell_gift_certificate', {
 		p_reservationguestid: fx.reservationguestid,
 		p_amount: 300,
 		p_paymenttype: 'Visa',
-		p_date: fx.arrival
+		p_date: saleDay
 	});
 });
 
@@ -31,16 +35,16 @@ describe('sell gift certificate', () => {
 	it('treats the sale as charge-side activity', async () => {
 		const upper = await rpc<{ group_name: string; item: string; amount: number }[]>(
 			'report_dcar_upper',
-			{ p_date: fx.arrival }
+			{ p_date: saleDay }
 		);
 		const row = upper.find((r) => r.group_name === 'Revenue' && r.item === 'Gift Certificate');
 		expect(Number(row?.amount)).toBe(300);
 	});
 
 	it('contributes to daily cash reporting on both sides', async () => {
-		const receipts = await rpc<number>('report_dcar_receipts_total', { p_date: fx.arrival });
+		const receipts = await rpc<number>('report_dcar_receipts_total', { p_date: saleDay });
 		expect(Number(receipts)).toBe(300);
-		const total = await rpc<number>('report_dcar_total', { p_date: fx.arrival });
+		const total = await rpc<number>('report_dcar_total', { p_date: saleDay });
 		expect(Number(total)).toBe(300);
 	});
 

@@ -6,6 +6,7 @@
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
+    import { depositOutcomeOptions } from "$lib/options.js";
 
     let {
         open = $bindable(false),
@@ -31,15 +32,21 @@
         return today;
     }
 
-    const OUTCOMES = [
-        { value: "none", label: "No deposit on file" },
-        { value: "Deposit (Refund)", label: "Refund the deposit" },
-        { value: "Deposit (Kept)", label: "Keep the deposit" },
-    ];
-    let outcome = $state(initialOutcome());
-    function initialOutcome() {
-        return depositAmount ? "Deposit (Refund)" : "none";
-    }
+    // A deposit on file is refunded, kept, or left held on the cancelled stay
+    // until the desk knows whether the room re-rents; nothing reaches the cash
+    // sheet until it is refunded or kept.
+    const OUTCOMES = $derived(
+        depositAmount
+            ? [
+                  ...depositOutcomeOptions(),
+                  { value: "none", label: "Decide later" },
+              ]
+            : [{ value: "none", label: "No deposit on file" }],
+    );
+    let outcome = $state("none");
+    $effect(() => {
+        if (open) outcome = depositAmount ? "Deposit (Refund)" : "none";
+    });
     function confirm() {
         onconfirm({ date, outcome, notes });
         open = false;

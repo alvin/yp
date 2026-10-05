@@ -13,3 +13,4 @@ Feature: render and print cancellation notice
     And The notice clearly states that the reservation has been cancelled.
     And The notice includes the cancellation date or time.
     And The notice can be printed for filing or sharing with the guest.
+    And The notice is offered, and prints, only for a cancelled reservation.

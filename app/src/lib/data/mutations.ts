@@ -228,6 +228,26 @@ export async function cancelReservation(
 	);
 }
 
+/** Refunds or keeps the deposit a stay still holds — for a cancellation whose
+ * deposit was left to decide later. */
+export async function settleDeposit(
+	reservationid: number,
+	date: string,
+	depositHandling: 'refund' | 'keep'
+): Promise<void> {
+	unwrap(
+		await supabase.rpc('settle_deposit', {
+			p_reservationid: reservationid,
+			p_date: date,
+			p_deposit_handling: depositHandling
+		})
+	);
+}
+
+export async function uncancelReservation(reservationid: number): Promise<void> {
+	unwrap(await supabase.rpc('uncancel_reservation', { p_reservationid: reservationid }));
+}
+
 // --- Rooms -------------------------------------------------------------------
 
 export async function assignRoom(
@@ -331,6 +351,16 @@ export async function postCharge(
  * correction stays auditable — it leaves the ledger and every report. */
 export async function archiveTransaction(transactionid: number): Promise<void> {
 	unwrap(await supabase.rpc('archive_transaction', { p_transactionid: transactionid }));
+}
+
+/** A charge line's new quantity, at the price per unit it was posted at. */
+export async function changeChargeQuantity(transactionid: number, quantity: number): Promise<void> {
+	unwrap(
+		await supabase.rpc('change_charge_quantity', {
+			p_transactionid: transactionid,
+			p_quantity: quantity
+		})
+	);
 }
 
 /** Records a receipt in Canadian funds — the only funds the desk takes. The

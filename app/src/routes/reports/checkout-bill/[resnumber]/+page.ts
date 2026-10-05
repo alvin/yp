@@ -13,6 +13,7 @@ export const load: PageLoad = async ({ params }) => {
 	if (!header) error(404, 'Bill is not available for this reservation');
 	return {
 		header,
-		lines: await reportCheckoutBillLines(summary.reservationid)
+		lines: await reportCheckoutBillLines(summary.reservationid),
+		cancelled: summary.rescancelled
 	};
 };

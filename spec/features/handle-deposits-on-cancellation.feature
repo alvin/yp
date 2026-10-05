@@ -9,9 +9,11 @@ Feature: handle deposits on cancellation
     Given a reservation holding a deposit is cancelled
 
   Scenario: Acceptance criteria
-    Then Staff choose whether the deposit is refunded or kept when cancelling.
+    Then Staff choose whether the deposit is refunded, kept, or decided later when cancelling.
     And The cancel dialog shows the deposit still held: received, less any already refunded, applied to the bill or kept.
     And A refund writes a negative deposit-refund line dated on the cancellation day.
-    And A kept deposit writes a deposit-kept line so the money is recognized.
-    And After either choice the reservation no longer holds a deposit.
+    And A kept deposit writes a deposit-kept line that counts like a charge, so the cancelled stay's balance comes to zero.
+    And After a refund or a keep the reservation no longer holds a deposit.
+    And A deposit decided later stays held on the cancelled stay, and nothing reaches the daily cash report.
+    And A cancelled stay still holding a deposit has Settle deposit, which refunds or keeps it, dated the day it is settled.
     And The daily cash report stays balanced after the deposit handling.

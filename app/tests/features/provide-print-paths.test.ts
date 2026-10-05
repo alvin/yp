@@ -30,8 +30,10 @@ describe('provide print paths', () => {
 
 	it('prints guest documents from the reservation itself', async () => {
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
-		for (const slug of ['confirmation', 'check-in-folio', 'checkout-bill', 'cancellation']) {
+		for (const slug of ['confirmation', 'check-in-folio', 'checkout-bill']) {
 			expect(await page.locator(`a[href="/reports/${slug}/${fx.resnumber}"]`).count()).toBe(1);
 		}
+		// The cancellation notice is for a cancelled stay only.
+		expect(await page.locator(`a[href="/reports/cancellation/${fx.resnumber}"]`).count()).toBe(0);
 	});
 });

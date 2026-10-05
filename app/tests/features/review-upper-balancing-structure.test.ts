@@ -29,7 +29,7 @@ beforeAll(async () => {
 		p_amount: 60,
 		p_paymentdate: fx.arrival
 	});
-	upper = await rpc<UpperRow[]>('report_dcar_upper', { p_date: fx.arrival });
+	upper = await rpc<UpperRow[]>('report_dcar_upper', { p_date: fx.departure });
 });
 
 describe('review upper balancing structure', () => {
@@ -51,7 +51,7 @@ describe('review upper balancing structure', () => {
 		const adjustments = upper
 			.filter((r) => r.group_name === 'Adjustments')
 			.reduce((s, r) => s + Number(r.amount), 0);
-		const total = await rpc<number>('report_dcar_total', { p_date: fx.arrival });
+		const total = await rpc<number>('report_dcar_total', { p_date: fx.departure });
 		expect(Number(total)).toBeCloseTo(Number(sales) + Number(taxes) + adjustments, 2);
 	});
 });

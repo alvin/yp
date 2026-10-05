@@ -12,7 +12,7 @@
 <ReportShell
 	stock="a5"
 	title="Checkout Bill #{h.resnumber}"
-	tabs={guestDocTabs(h.resnumber, 'checkout-bill')}
+	tabs={guestDocTabs(h.resnumber, 'checkout-bill', data.cancelled)}
 	backHref="/reservations/{h.resnumber}"
 	backLabel="Reservation"
 >

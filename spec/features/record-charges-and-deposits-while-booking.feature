@@ -14,4 +14,4 @@ Feature: record charges and deposits while booking
     And The same charges and deposit can be recorded while re-booking an existing reservation.
     And Lines entered can be reviewed and removed before the reservation is saved.
     And Saving posts the lines to the new reservation, so its balance and deposit are right without a further step.
-    And The posted lines are dated the day the money moved, so they land on that day's cash report.
+    And The posted lines are dated the day they were taken: a deposit lands on that day's cash report, and a charge on the stay's check-out day, like any charge.

@@ -14,8 +14,6 @@ const TENDERS = [
 	'U.S. Cheque',
 	"U.S. Traveller's Cheque",
 	'U.S. Exchange',
-	'Gift Certificate',
-	'None (Sent to A/R)',
 	'Paid Out'
 ];
 
@@ -46,6 +44,34 @@ describe('show tender types', () => {
 
 	it('lands each payment on its tender line', () => {
 		expect(Number(rows.find((r) => r.paymenttype === 'Amex')?.calc_amount)).toBe(42);
+	});
+
+	it('prints a gift certificate or a bill sent to accounts only when a receipt was filed under it', async () => {
+		const day = await makeReservation();
+		const tenders = () =>
+			rpc<{ paymenttype: string; calc_amount: number }[]>('report_dcar_payments', {
+				p_date: day.arrival
+			});
+		await rpc('record_payment', {
+			p_reservationguestid: day.reservationguestid,
+			p_paymentcategory: 'Gift Certificate Received',
+			p_paymenttype: 'Gift Certificate',
+			p_amount: 40,
+			p_paymentdate: day.arrival
+		});
+		expect((await tenders()).some((t) => t.paymenttype === 'Gift Certificate')).toBe(false);
+		expect((await tenders()).some((t) => t.paymenttype === 'None (Sent to A/R)')).toBe(false);
+
+		await rpc('record_payment', {
+			p_reservationguestid: day.reservationguestid,
+			p_paymentcategory: 'Payment (Regular)',
+			p_paymenttype: 'Gift Certificate',
+			p_amount: 25,
+			p_paymentdate: day.arrival
+		});
+		expect(
+			Number((await tenders()).find((t) => t.paymenttype === 'Gift Certificate')?.calc_amount)
+		).toBe(25);
 	});
 
 	it('supports reconciling receipts by type against the day total', async () => {

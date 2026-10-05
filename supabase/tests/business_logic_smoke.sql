@@ -2,7 +2,7 @@
 -- business_logic_smoke.sql
 -- End-to-end smoke test of the ypl business-logic layer (migration 0005 and
 -- the refinements layered over it).
--- Run against a database with migrations 0001–0010 and seed.sql applied:
+-- Run against a database with every migration and seed.sql applied:
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/business_logic_smoke.sql
 -- Everything runs in one transaction and rolls back — no data is left behind.
 -- =============================================================================
@@ -223,6 +223,110 @@ begin
   assert v_count = 1, 'deposit refund row missing';
   assert ypl.reservationguest_deposit_held(v_res2.reservationguestid) = 0, 'deposit still held after refund';
   assert (select count(*) from ypl.report_cancellation_list(current_date)) >= 1, 'cancellation list empty';
+
+  ------------------------------------------------------------------
+  -- Kept, decided later, settled, un-cancelled
+  ------------------------------------------------------------------
+  declare
+    v_keep record;
+    v_later record;
+  begin
+    -- A kept deposit nets the cancelled stay to zero.
+    select * into v_keep from ypl.create_reservation(v_guestid, current_date + 20, current_date + 22, 'ST');
+    perform ypl.record_payment(v_keep.reservationguestid, 'Deposit (Received)', 'Visa', 35);
+    perform ypl.cancel_reservation(v_keep.reservationid, current_date, 'keep');
+    assert ypl.reservation_balance(v_keep.reservationid) = 0, 'a kept deposit does not net the stay to zero';
+    assert ypl.reservationguest_deposit_held(v_keep.reservationguestid) = 0, 'deposit still held after keeping it';
+
+    -- Decided later: the deposit stays held on the cancelled stay until settled.
+    select * into v_later from ypl.create_reservation(v_guestid, current_date + 30, current_date + 32, 'ST');
+    perform ypl.record_payment(v_later.reservationguestid, 'Deposit (Received)', 'Visa', 70);
+    perform ypl.cancel_reservation(v_later.reservationid, current_date, 'none');
+    assert ypl.reservationguest_deposit_held(v_later.reservationguestid) = 70,
+      'deposit not held after cancelling to decide later';
+    perform ypl.settle_deposit(v_later.reservationid, current_date, 'refund');
+    assert ypl.reservationguest_deposit_held(v_later.reservationguestid) = 0, 'settling did not refund the deposit';
+    begin
+      perform ypl.settle_deposit(v_later.reservationid, current_date, 'keep');
+      raise exception 'settling with no deposit held failed to raise';
+    exception when others then
+      if sqlerrm = 'settling with no deposit held failed to raise' then raise; end if;
+    end;
+
+    -- Un-cancelling brings the booking back; the notice is for cancelled stays.
+    assert (select count(*) from ypl.report_cancellation_notice(v_later.reservationid)) = 1,
+      'no cancellation notice for a cancelled stay';
+    perform ypl.uncancel_reservation(v_later.reservationid);
+    select * into v_r from ypl.reservations where reservationid = v_later.reservationid;
+    assert not v_r.rescancelled and v_r.resdatecancelled is null, 'un-cancel did not restore the booking';
+    assert (select count(*) from ypl.report_cancellation_notice(v_later.reservationid)) = 0,
+      'a cancellation notice prints for an active stay';
+    begin
+      perform ypl.uncancel_reservation(v_later.reservationid);
+      raise exception 'un-cancelling an active stay failed to raise';
+    exception when others then
+      if sqlerrm = 'un-cancelling an active stay failed to raise' then raise; end if;
+    end;
+  end;
+
+  ------------------------------------------------------------------
+  -- The cash sheet counts a stay on its check-out day
+  --
+  -- On dates long before any lodge or test data, so each day's figures are
+  -- this block's alone.
+  ------------------------------------------------------------------
+  declare
+    v_stay record;
+    v_in date := date '1150-03-01';
+    v_out date := date '1150-03-04';
+    v_kept_day date := date '1150-04-10';
+  begin
+    select * into v_stay from ypl.create_reservation(v_guestid, v_in, v_out, 'ST');
+    perform ypl.record_payment(v_stay.reservationguestid, 'Deposit (Received)', 'Visa', 100,
+      p_paymentdate => v_in);
+    perform ypl.post_charge(v_stay.reservationguestid, v_invid, p_quantity => 2,
+      p_transdate => v_in + 1, p_amount => 140);
+    perform ypl.record_payment(v_stay.reservationguestid, 'Payment (Regular)', 'Visa',
+      ypl.reservation_balance(v_stay.reservationid), p_paymentdate => v_out);
+    assert ypl.report_dcar_total(v_in) = 100 and ypl.report_dcar_receipts_total(v_in) = 100,
+      'the deposit''s day does not balance';
+    assert ypl.report_dcar_total(v_in + 1) = 0, 'a charge counted before its stay checked out';
+    assert (select u.amount from ypl.report_dcar_upper(v_out) u where u.item = 'Deposit (Applied)') = -100,
+      'the deposit was not applied on the check-out day';
+    assert ypl.report_dcar_total(v_out) = 40 and ypl.report_dcar_receipts_total(v_out) = 40,
+      'the check-out day does not balance';
+    assert (select count(*) from ypl.report_deposits_applied(v_out)) = 1, 'deposits applied appendix missing the stay';
+    assert (select count(*) from ypl.report_items_cashed_out(v_out)) = 1, 'items cashed out missing the charge';
+
+    -- A deposit kept is the day's revenue and comes off as Deposit (Kept).
+    select * into v_stay from ypl.create_reservation(v_guestid, date '1150-05-01', date '1150-05-03', 'ST');
+    perform ypl.record_payment(v_stay.reservationguestid, 'Deposit (Received)', 'Visa', 35,
+      p_paymentdate => date '1150-04-01');
+    perform ypl.cancel_reservation(v_stay.reservationid, v_kept_day, 'keep');
+    assert (select u.amount from ypl.report_dcar_upper(v_kept_day) u where u.item = 'Cancellation') = 35,
+      'a kept deposit is not the day''s revenue';
+    assert (select u.amount from ypl.report_dcar_upper(v_kept_day) u where u.item = 'Deposit (Kept)') = -35,
+      'a kept deposit is not taken off';
+    assert ypl.report_dcar_total(v_kept_day) = 0 and ypl.report_dcar_receipts_total(v_kept_day) = 0,
+      'a kept deposit moved money';
+  end;
+
+  ------------------------------------------------------------------
+  -- A charge's quantity changes at the price it was posted at
+  ------------------------------------------------------------------
+  v_txid := ypl.post_charge(v_res.reservationguestid, v_invid, p_quantity => 1,
+              p_transdate => current_date, p_amount => 10);
+  perform ypl.change_charge_quantity(v_txid, 3);
+  select * into v_tx from ypl.transactions where transactionid = v_txid;
+  assert v_tx.transquantity = 3 and v_tx.transamount = 30.00, 'quantity change did not reprice the line';
+  assert v_tx.transgstamount = round(30 * ypl.effective_tax_rate('GST', current_date), 2),
+    'quantity change did not recompute taxes';
+  begin
+    perform ypl.change_charge_quantity(v_txid, 0);
+    raise exception 'a quantity under one was accepted';
+  exception when others then
+    if sqlerrm = 'a quantity under one was accepted' then raise; end if;
+  end;
 
   ------------------------------------------------------------------
   -- Gift certificate: charge side + receipt side

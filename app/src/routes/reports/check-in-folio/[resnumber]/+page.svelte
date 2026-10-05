@@ -12,7 +12,7 @@
 <ReportShell
 	stock="a5"
 	title="Check-in Folio #{r.resnumber}"
-	tabs={guestDocTabs(r.resnumber, 'check-in-folio')}
+	tabs={guestDocTabs(r.resnumber, 'check-in-folio', data.cancelled)}
 	backHref="/reservations/{r.resnumber}"
 	backLabel="Reservation"
 >

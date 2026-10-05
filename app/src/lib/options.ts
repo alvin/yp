@@ -43,9 +43,24 @@ export function itemOptions(): ComboboxOption[] {
 	}));
 }
 
-/** What a receipt is filed as — a deposit, a regular payment, a refund. */
+/** What a receipt is filed as — a deposit, a regular payment, a refund. A
+ * deposit or prepayment is applied by the database on the stay's check-out
+ * day, so the desk never files one as applied. */
+const APPLIED_AT_CHECK_OUT = ['Deposit (Applied)', 'Prepayment (Applied)'];
 export function paymentCategoryOptions(): ComboboxOption[] {
-	return textOptions(PAYMENT_CATEGORIES.map((c) => c.paymentcategory));
+	return textOptions(
+		PAYMENT_CATEGORIES.map((c) => c.paymentcategory).filter(
+			(c) => !APPLIED_AT_CHECK_OUT.includes(c)
+		)
+	);
+}
+
+/** What becomes of a deposit on file when its stay is cancelled. */
+export function depositOutcomeOptions(): ComboboxOption[] {
+	return [
+		{ value: 'Deposit (Refund)', label: 'Refund the deposit' },
+		{ value: 'Deposit (Kept)', label: 'Keep the deposit' }
+	];
 }
 
 /** How the money was tendered. */

@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, type Fixture } from '../helpers/db';
+import { makeReservation, rpc, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
 let page: Page;
@@ -44,10 +44,24 @@ describe('reprint guest document by guest', () => {
 		expect(await page.textContent('.report-page')).toContain(`Res. No. ${fx.resnumber}`);
 	});
 
-	it('reprints any of the document types for the reservation', async () => {
+	it('reprints any of the document types the reservation has', async () => {
 		const tabs = await page.textContent('nav[aria-label="Reports in this workflow"]');
-		for (const t of ['Confirmation', 'Check-in folio', 'Check-out bill', 'Cancellation']) {
+		for (const t of ['Confirmation', 'Check-in folio', 'Check-out bill']) {
 			expect(tabs).toContain(t);
 		}
+		// Only a cancelled reservation has a cancellation notice to reprint.
+		expect(tabs).not.toContain('Cancellation');
+		const cancelled = await makeReservation();
+		await rpc('cancel_reservation', {
+			p_reservationid: cancelled.reservationid,
+			p_date: cancelled.arrival,
+			p_deposit_handling: 'none'
+		});
+		await page.goto(`${APP_URL}/reports/confirmation/${cancelled.resnumber}`, {
+			waitUntil: 'networkidle'
+		});
+		expect(await page.textContent('nav[aria-label="Reports in this workflow"]')).toContain(
+			'Cancellation'
+		);
 	});
 });

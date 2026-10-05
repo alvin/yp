@@ -15,6 +15,8 @@
     import CalendarIcon from "@lucide/svelte/icons/calendar";
     import TrashIcon from "@lucide/svelte/icons/trash-2";
     import PencilIcon from "@lucide/svelte/icons/pencil";
+    import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
+    import BanknoteIcon from "@lucide/svelte/icons/banknote";
 
     import { Button } from "$lib/components/ui/button/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
@@ -31,11 +33,12 @@
     import ReservationLedger from "$lib/components/app/reservation-ledger.svelte";
     import SharedRoomBadge from "$lib/components/app/shared-room-badge.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
+    import SettleDepositDialog from "$lib/components/app/settle-deposit-dialog.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
     import GuestNotesDialog from "$lib/components/app/guest-notes-dialog.svelte";
     import { guestDocTabs } from "$lib/report-nav.js";
     import { afterNavigate, invalidateAll } from "$app/navigation";
-    import { addDays, bookingHorizon, dateMed, dateShort, nightsBetween } from "$lib/format.js";
+    import { addDays, bookingHorizon, dateMed, dateShort, money, nightsBetween } from "$lib/format.js";
     import { GUEST_DIETS, ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
     import { optionalOptions, roomOptions, textOptions } from "$lib/options.js";
     import {
@@ -50,6 +53,8 @@
         assignRoom,
         cancelReservation,
         confirmReservation,
+        settleDeposit,
+        uncancelReservation,
         createGuest,
         recordRoomMove,
         undoRoomMove,
@@ -555,7 +560,45 @@
         }
     }
 
-    const docs = $derived(guestDocTabs(s.resnumber, ""));
+    // Un-cancel: the booking stands again as it was — same number, dates and
+    // rooms. A deposit refunded or kept on cancelling stays as recorded.
+    let uncancelling = $state(false);
+    async function doUncancel() {
+        uncancelling = true;
+        try {
+            await uncancelReservation(s.reservationid);
+            cancelled = false;
+            toast.success(`Reservation #${s.resnumber} un-cancelled`);
+            await invalidateAll();
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Could not un-cancel the reservation.",
+            );
+        } finally {
+            uncancelling = false;
+        }
+    }
+
+    // A deposit left to decide later on cancelling is refunded or kept here.
+    let settleOpen = $state(false);
+    async function onSettled(r: { date: string; outcome: string }) {
+        const amount = deposit ?? 0;
+        try {
+            await settleDeposit(
+                s.reservationid,
+                r.date,
+                r.outcome.includes("Refund") ? "refund" : "keep",
+            );
+            toast.success(`Recorded ${r.outcome} — ${money(amount)}`);
+            await invalidateAll();
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Could not settle the deposit.",
+            );
+        }
+    }
+
+    const docs = $derived(guestDocTabs(s.resnumber, "", cancelled));
 </script>
 
 <svelte:head
@@ -611,6 +654,24 @@
                 onclick={() => (cancelOpen = true)}
             >
                 <XCircleIcon /> Cancel
+            </Button>
+        {:else}
+            {#if deposit}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => (settleOpen = true)}
+                >
+                    <BanknoteIcon /> Settle deposit
+                </Button>
+            {/if}
+            <Button
+                variant="outline"
+                size="sm"
+                disabled={uncancelling}
+                onclick={doUncancel}
+            >
+                <RotateCcwIcon /> Un-cancel
             </Button>
         {/if}
     </div>
@@ -1257,3 +1318,13 @@
     {today}
     onconfirm={onCancelled}
 />
+
+{#if deposit}
+    <SettleDepositDialog
+        bind:open={settleOpen}
+        resnumber={s.resnumber}
+        depositAmount={deposit}
+        {today}
+        onconfirm={onSettled}
+    />
+{/if}

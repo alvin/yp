@@ -154,19 +154,28 @@ describe('print diet and housekeeping notes on guest documents — office notes 
 	});
 
 	it('never prints them on the confirmation, folio, bill or cancellation notice', async () => {
-		for (const fn of [
+		const documents = async (fns: string[]) => {
+			for (const fn of fns) {
+				const rows = await rpc<Record<string, unknown>[]>(fn, { p_reservationid: stay.reservationid });
+				const text = JSON.stringify(rows);
+				// The stay itself is on the document; only the office notes are not.
+				if (!fn.endsWith('_lines')) expect(text).toContain(String(stay.resnumber));
+				expect(text).not.toContain(marker);
+			}
+		};
+		await documents([
 			'report_reservation_confirmation',
 			'report_check_in_folio',
 			'report_checkout_bill_header',
-			'report_checkout_bill_lines',
-			'report_cancellation_notice'
-		]) {
-			const rows = await rpc<Record<string, unknown>[]>(fn, { p_reservationid: stay.reservationid });
-			const text = JSON.stringify(rows);
-			// The stay itself is on the document; only the office notes are not.
-			if (!fn.endsWith('_lines')) expect(text).toContain(String(stay.resnumber));
-			expect(text).not.toContain(marker);
-		}
+			'report_checkout_bill_lines'
+		]);
+		// A cancellation notice is printed once the stay is cancelled.
+		await rpc('cancel_reservation', {
+			p_reservationid: stay.reservationid,
+			p_date: stay.arrival,
+			p_deposit_handling: 'none'
+		});
+		await documents(['report_cancellation_notice']);
 	});
 });
 

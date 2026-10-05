@@ -12,4 +12,5 @@ Feature: show quantity per item in items-cashed-out appendix
     Then Each item shows a quantity in the appendix.
     And The quantity is visible alongside the item entry.
     And The appendix can be used to confirm what was cashed out.
+    And An item is listed on the day it is cashed out, its stay's check-out day, as on the Daily Cash Activity Report.
     And The quantity is part of the standard report output.

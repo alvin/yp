@@ -16,5 +16,5 @@ export const load: PageLoad = async ({ params }) => {
 		reportFolioReceipts(summary.reservationid)
 	]);
 	if (!report) error(404, 'Folio is not available for this reservation');
-	return { report, rooms, receipts };
+	return { report, rooms, receipts, cancelled: summary.rescancelled };
 };

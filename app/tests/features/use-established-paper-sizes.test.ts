@@ -2,9 +2,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, type Fixture } from '../helpers/db';
+import { addDays, makeReservation, rpc, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
+let cancelled: Fixture;
 let page: Page;
 
 async function pageRule(p: Page): Promise<string> {
@@ -18,6 +19,13 @@ async function pageRule(p: Page): Promise<string> {
 
 beforeAll(async () => {
 	fx = await makeReservation();
+	// A cancellation notice is printed for a cancelled stay.
+	cancelled = await makeReservation();
+	await rpc('cancel_reservation', {
+		p_reservationid: cancelled.reservationid,
+		p_date: cancelled.arrival,
+		p_deposit_handling: 'none'
+	});
 	page = await openAppPage();
 });
 
@@ -28,7 +36,8 @@ afterAll(async () => {
 describe('use established paper sizes', () => {
 	it('prints guest slips and folios on the smaller folio page', async () => {
 		for (const doc of ['confirmation', 'check-in-folio', 'checkout-bill', 'cancellation']) {
-			await page.goto(`${APP_URL}/reports/${doc}/${fx.resnumber}`, {
+			const resnumber = doc === 'cancellation' ? cancelled.resnumber : fx.resnumber;
+			await page.goto(`${APP_URL}/reports/${doc}/${resnumber}`, {
 				waitUntil: 'networkidle'
 			});
 			expect(await pageRule(page), doc).toContain('size: A5 portrait');

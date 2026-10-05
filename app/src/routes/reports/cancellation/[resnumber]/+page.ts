@@ -7,5 +7,5 @@ export const load: PageLoad = async ({ params }) => {
 	if (!summary) error(404, `Reservation #${params.resnumber} not found`);
 	const report = await reportCancellationNotice(summary.reservationid);
 	if (!report) error(404, 'Cancellation notice is not available for this reservation');
-	return { report };
+	return { report, cancelled: summary.rescancelled };
 };

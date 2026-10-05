@@ -37,7 +37,7 @@ beforeAll(async () => {
 		p_transdate: fx.arrival,
 		p_amount: 45
 	});
-	upper = await rpc<UpperRow[]>('report_dcar_upper', { p_date: fx.arrival });
+	upper = await rpc<UpperRow[]>('report_dcar_upper', { p_date: fx.departure });
 });
 
 describe('show sales and charges total', () => {

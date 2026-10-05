@@ -28,7 +28,7 @@ describe('show quantity per item in items cashed out appendix', () => {
 	it('carries the quantity on each cashed-out line', async () => {
 		const rows = await rpc<{ resnumber: number; quantity: number; total: number }[]>(
 			'report_items_cashed_out',
-			{ p_date: fx.arrival }
+			{ p_date: fx.departure }
 		);
 		const mine = rows.find((r) => r.resnumber === fx.resnumber);
 		expect(mine?.quantity).toBe(3);
@@ -38,10 +38,17 @@ describe('show quantity per item in items cashed out appendix', () => {
 	it('identifies the line by inventory code, reservation, and guest', async () => {
 		const rows = await rpc<
 			{ resnumber: number; inv_code: string; guestlastname: string; item: string }[]
-		>('report_items_cashed_out', { p_date: fx.arrival });
+		>('report_items_cashed_out', { p_date: fx.departure });
 		const mine = rows.find((r) => r.resnumber === fx.resnumber)!;
 		expect(mine.inv_code).toBeTruthy();
 		expect(mine.guestlastname).toBe(fx.lastname);
 		expect(mine.item).toBeTruthy();
+	});
+
+	it('lists the item on its stay’s check-out day, not the day it was posted', async () => {
+		const posted = await rpc<{ resnumber: number }[]>('report_items_cashed_out', {
+			p_date: fx.arrival
+		});
+		expect(posted.some((r) => r.resnumber === fx.resnumber)).toBe(false);
 	});
 });

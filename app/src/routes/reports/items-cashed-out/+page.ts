@@ -5,9 +5,11 @@ export const load: PageLoad = async ({ url }) => {
 	const date = url.searchParams.get('date') ?? TODAY;
 	const [rows, upper] = await Promise.all([reportItemsCashedOut(date), reportDcarUpper(date)]);
 	const line = (item: string) => upper.find((r) => r.item === item)?.amount ?? 0;
+	// A deposit kept is revenue on its own Cancellation line, not an item sold.
 	return {
 		date,
 		rows,
-		dcar_sales_and_taxes: line('Total Sales and Charges') + line('Total Taxes')
+		dcar_sales_and_taxes:
+			line('Total Sales and Charges') - line('Cancellation') + line('Total Taxes')
 	};
 };

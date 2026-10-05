@@ -10,5 +10,5 @@ export const load: PageLoad = async ({ params }) => {
 		reportStayRooms(summary.reservationid)
 	]);
 	if (!report) error(404, 'Confirmation is not available for this reservation');
-	return { report, rooms };
+	return { report, rooms, cancelled: summary.rescancelled };
 };

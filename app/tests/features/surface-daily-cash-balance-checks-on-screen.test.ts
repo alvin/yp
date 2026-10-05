@@ -20,7 +20,7 @@ beforeAll(async () => {
 		p_amount: 250,
 		p_paymentdate: balancedDay.arrival
 	});
-	// Unbalanced day: a charge with no matching receipt.
+	// Unbalanced day: a charge with no matching receipt, on its stay's check-out day.
 	unbalancedDay = await makeReservation();
 	await rpc('post_room_nights', {
 		p_reservationguestid: unbalancedDay.reservationguestid,
@@ -46,7 +46,7 @@ describe('surface daily cash balance checks on screen', () => {
 	});
 
 	it('shows the difference when the sections do not agree', async () => {
-		await page.goto(`${APP_URL}/reports/dcar?date=${unbalancedDay.arrival}`, {
+		await page.goto(`${APP_URL}/reports/dcar?date=${unbalancedDay.departure}`, {
 			waitUntil: 'networkidle'
 		});
 		const toolbar = await page.textContent('.no-print');
@@ -54,11 +54,16 @@ describe('surface daily cash balance checks on screen', () => {
 	});
 
 	it('states on each appendix whether it agrees with the daily cash line', async () => {
-		await page.goto(`${APP_URL}/reports/deposits-received?date=${balancedDay.arrival}`, {
-			waitUntil: 'networkidle'
-		});
-		const toolbar = await page.textContent('.no-print');
-		expect(toolbar).toMatch(/Agrees with Daily Cash/);
+		for (const [appendix, date] of [
+			['deposits-received', balancedDay.arrival],
+			['cashier-detail', balancedDay.arrival],
+			// The deposit is applied, and the charge cashed out, at check-out.
+			['deposits-applied', balancedDay.departure],
+			['items-cashed-out', unbalancedDay.departure]
+		]) {
+			await page.goto(`${APP_URL}/reports/${appendix}?date=${date}`, { waitUntil: 'networkidle' });
+			expect(await page.textContent('.no-print'), appendix).toMatch(/Agrees with Daily Cash/);
+		}
 	});
 
 	it('keeps the balance indicators out of the printed sheet', async () => {

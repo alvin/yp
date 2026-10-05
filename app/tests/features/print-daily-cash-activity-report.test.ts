@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
 let page: Page;
@@ -117,9 +117,10 @@ describe('print daily cash activity report — every line the totals count', () 
 		const lines = payments.reduce((sum, l) => sum + Number(l.calc_amount), 0);
 		expect(lines).toBeCloseTo(Number(receipts), 2);
 
+		// The charge reaches the sheet with its stay's check-out.
 		const upper = await rpc<{ group_name: string; item: string; amount: number }[]>(
 			'report_dcar_upper',
-			{ p_date: date }
+			{ p_date: day.departure }
 		);
 		const revenue = upper.filter((l) => l.group_name === 'Revenue');
 		expect(Number(revenue.find((l) => l.item === 'Unlisted category')?.amount)).toBe(10);
@@ -127,5 +128,85 @@ describe('print daily cash activity report — every line the totals count', () 
 		const items = revenue.filter((l) => l !== total).reduce((sum, l) => sum + Number(l.amount), 0);
 		expect(items).toBeCloseTo(Number(total.amount), 2);
 		expect(Number(total.amount)).toBe(10);
+	});
+});
+
+describe('print daily cash activity report — a stay counts on its check-out day', () => {
+	let stay: Fixture;
+	let late: string;
+
+	async function line(date: string, item: string): Promise<number> {
+		const upper = await rpc<{ item: string; amount: number }[]>('report_dcar_upper', { p_date: date });
+		return Number(upper.find((l) => l.item === item)?.amount ?? 0);
+	}
+
+	beforeAll(async () => {
+		stay = await makeReservation();
+		const db = await staffClient();
+		const [item] = unwrap(
+			await db.from('inventory_items').select('inventoryid').eq('invarchive', false).limit(1)
+		) as { inventoryid: number }[];
+		await rpc('record_payment', {
+			p_reservationguestid: stay.reservationguestid,
+			p_paymentcategory: 'Deposit (Received)',
+			p_paymenttype: 'Visa',
+			p_amount: 100,
+			p_paymentdate: stay.arrival
+		});
+		await rpc('post_room_nights', {
+			p_reservationguestid: stay.reservationguestid,
+			p_roomid: (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid,
+			p_occupancyin: stay.arrival,
+			p_occupancyout: stay.departure,
+			p_rate: 100,
+			p_transdate: stay.arrival
+		});
+		await rpc('post_charge', {
+			p_reservationguestid: stay.reservationguestid,
+			p_inventoryid: item.inventoryid,
+			p_quantity: 1,
+			p_transdate: addDays(stay.arrival, 1),
+			p_amount: 20
+		});
+		// The guest settles at check-out: the charges, less the deposit.
+		await rpc('record_payment', {
+			p_reservationguestid: stay.reservationguestid,
+			p_paymentcategory: 'Payment (Regular)',
+			p_paymenttype: 'Visa',
+			p_amount: 220,
+			p_paymentdate: stay.departure
+		});
+		late = addDays(stay.departure, 1);
+		await rpc('post_charge', {
+			p_reservationguestid: stay.reservationguestid,
+			p_inventoryid: item.inventoryid,
+			p_quantity: 1,
+			p_transdate: late,
+			p_amount: 15
+		});
+	});
+
+	it('counts none of the stay’s charges before the guest checks out', async () => {
+		expect(await line(stay.arrival, 'Total Sales and Charges')).toBe(0);
+		expect(await line(addDays(stay.arrival, 1), 'Total Sales and Charges')).toBe(0);
+	});
+
+	it('counts them on the check-out day, where the day balances', async () => {
+		expect(await line(stay.departure, 'Total Sales and Charges')).toBe(320);
+		const summary = await rpc<{ upper_total: number; receipts_total: number; balance_owed: number }[]>(
+			'report_dcar_summary',
+			{ p_date: stay.departure }
+		);
+		expect(Number(summary[0].upper_total)).toBe(220);
+		expect(Number(summary[0].balance_owed)).toBe(0);
+	});
+
+	it('takes as receipts only the money taken that day', async () => {
+		expect(Number(await rpc('report_dcar_receipts_total', { p_date: stay.arrival }))).toBe(100);
+		expect(Number(await rpc('report_dcar_receipts_total', { p_date: stay.departure }))).toBe(220);
+	});
+
+	it('counts a charge posted after check-out on the day it is posted', async () => {
+		expect(await line(late, 'Total Sales and Charges')).toBe(15);
 	});
 });

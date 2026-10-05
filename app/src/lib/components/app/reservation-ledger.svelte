@@ -3,6 +3,7 @@
     import ReceiptIcon from "@lucide/svelte/icons/receipt";
     import CreditCardIcon from "@lucide/svelte/icons/credit-card";
     import TrashIcon from "@lucide/svelte/icons/trash-2";
+    import PencilIcon from "@lucide/svelte/icons/pencil";
     import { toast } from "svelte-sonner";
 
     import { Button } from "$lib/components/ui/button/index.js";
@@ -16,6 +17,7 @@
     import {
         archivePayment,
         archiveTransaction,
+        changeChargeQuantity,
         postCharge,
         postRoomNights,
         recordPayment,
@@ -46,12 +48,9 @@
         today: string;
     } = $props();
 
-    // The database orders the lines and carries the running balance.
-    let lines = $state<LedgerRow[]>(seedLines());
-
-    function seedLines(): LedgerRow[] {
-        return initialLines;
-    }
+    // The database orders the lines and carries the running balance. The
+    // page's data seeds them, and they follow it when the page reloads it.
+    let lines = $derived<LedgerRow[]>(initialLines);
 
     const charges = $derived(
         lines.filter((l) => l.line_source === "transaction"),
@@ -259,6 +258,44 @@
             removing = false;
         }
     }
+
+    // ---- Change a charge's quantity ----
+    // A guest's drinks over a stay kept on one line: the line keeps its price
+    // per unit and the database reprices it and its taxes. On a room line the
+    // quantity is nights.
+    let qtyOpen = $state(false);
+    let qtySaving = $state(false);
+    let qtyTarget = $state<LedgerRow | null>(null);
+    let newQty = $state(1);
+    const qtyValid = $derived(
+        Number.isInteger(Number(newQty)) && Number(newQty) >= 1,
+    );
+
+    function askQuantity(line: LedgerRow) {
+        qtyTarget = line;
+        newQty = line.quantity;
+        qtyOpen = true;
+    }
+
+    async function confirmQuantity() {
+        const line = qtyTarget;
+        if (!line || !qtyValid) return;
+        const qty = Number(newQty);
+        qtySaving = true;
+        try {
+            await changeChargeQuantity(line.line_id, qty);
+            lines = await reservationLedger(reservationid);
+            qtyOpen = false;
+            qtyTarget = null;
+            toast.success(`Changed ${line.description} to ${qty}`);
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Could not change the quantity.",
+            );
+        } finally {
+            qtySaving = false;
+        }
+    }
 </script>
 
 <div class="rounded-xl border bg-card shadow-sm">
@@ -286,7 +323,7 @@
                     <th class="py-2 text-left font-medium">Description</th>
                     <th class="py-2 text-right font-medium">Qty</th>
                     <th class="px-4 py-2 text-right font-medium">Amount</th>
-                    <th class="w-9 py-2"
+                    <th class="w-16 py-2"
                         ><span class="sr-only">Remove</span></th
                     >
                 </tr>
@@ -315,7 +352,18 @@
                         <td class="px-4 py-2 text-right"
                             ><Money value={l.balance_effect} /></td
                         >
-                        <td class="pr-2 text-right">
+                        <td class="pr-2 text-right whitespace-nowrap">
+                            {#if l.line_source === "transaction"}
+                                <button
+                                    type="button"
+                                    aria-label="Change quantity of {l.description}"
+                                    title="Change quantity"
+                                    onclick={() => askQuantity(l)}
+                                    class="text-muted-foreground hover:text-foreground rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                >
+                                    <PencilIcon class="size-3.5" />
+                                </button>
+                            {/if}
                             <button
                                 type="button"
                                 aria-label="Remove {l.description}"
@@ -524,6 +572,44 @@
                 >Cancel</Button
             >
             <Button onclick={savePayment}>Record</Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Change a charge's quantity -->
+<Dialog.Root bind:open={qtyOpen}>
+    <Dialog.Content class="sm:max-w-sm">
+        <Dialog.Header>
+            <Dialog.Title>Change quantity</Dialog.Title>
+            {#if qtyTarget}
+                <Dialog.Description>
+                    {qtyTarget.description} · {dateShort(qtyTarget.line_date)}
+                </Dialog.Description>
+            {/if}
+        </Dialog.Header>
+        <div class="space-y-1.5">
+            <Label for="q-qty"
+                >{qtyTarget?.line_type === "Room" ? "Nights" : "Qty"}</Label
+            >
+            <Input
+                id="q-qty"
+                type="number"
+                min="1"
+                step="1"
+                bind:value={newQty}
+                aria-invalid={!qtyValid}
+            />
+        </div>
+        <Dialog.Footer>
+            <Button variant="ghost" onclick={() => (qtyOpen = false)}
+                >Cancel</Button
+            >
+            <Button
+                disabled={qtySaving ||
+                    !qtyValid ||
+                    Number(newQty) === qtyTarget?.quantity}
+                onclick={confirmQuantity}>Change quantity</Button
+            >
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

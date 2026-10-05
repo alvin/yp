@@ -8,6 +8,44 @@ Everything below is live on the hosted system as of 5 October 2026.
 
 ## What the lodge asked for
 
+**The cash sheet applies the deposit, and balances.** Richard found a $1,000
+deposit received on the sheet with no "deposit applied". The cause was bigger:
+the sheet counted each charge on the day it was posted and never applied a
+deposit, so its two halves only met when a stay was booked, charged and paid on
+one day — across 2025 it balanced on 10 days of 365. Access counted a stay's
+charges on the day the guest checks out (when they pay) and took the deposit off
+that day as "Deposit (Applied)". The sheet now does the same, with no step at the
+desk: whatever deposit or prepayment a stay still holds is applied on its
+check-out day. Gift certificates and bills sent to accounts are taken off the
+same way, and none of these count as card or cash receipts. Run against 2025,
+216 days balance to the cent, 88 are out by cents of tax rounding, and 56 by
+exactly what departing guests still owed that day. 15 Dec 2025 — the sheet the
+lodge gave us — now reproduces its room, tax, refund and deposit-applied lines.
+
+**A kept deposit comes to $0.00.** It showed −$70 on a cancelled $35 booking. A
+kept deposit now counts like a charge, so the stay nets to zero. On the cash sheet
+it is that day's revenue on a "Cancellation" line, and comes off as Deposit
+(Kept) because the money came in earlier as a deposit; no card or cash line
+moves. (Before, the $35 was also added to the Visa line, which only looked
+balanced.)
+
+**Un-cancel.** A cancelled reservation has an Un-cancel button where Cancel was.
+The booking stands again — same number, dates, rooms and deposit — as Access
+staff did by clearing the Cancelled box. Re-book is unchanged.
+
+**A deposit to decide later.** Cancelling a booking with a deposit now offers
+"Decide later" beside refund and keep. The deposit stays on the cancelled stay
+and nothing reaches the cash sheet; "Settle deposit" on that reservation refunds
+or keeps it when they know, dated that day.
+
+**The cancellation slip** is offered, and prints, only for a cancelled booking.
+
+**The pen.** Each charge line has a pen beside its garbage can to change its
+quantity — eight beers on one line. The line keeps its price per unit and its
+taxes follow; on a room line the nights change. Because charges now reach the
+cash sheet at check-out, tidying a tab before then changes no sheet already
+printed.
+
 **Diet and housekeeping notes on the confirmation and check-in folio.**
 Both documents now print the guest's diet (with its notes) and the
 housekeeping note, so guests can catch mistakes when the confirmation arrives
@@ -117,6 +155,19 @@ app does.
 
 ## Decisions made
 
+- **A kept deposit is revenue on its own "Cancellation" line** of the cash sheet,
+  and the new screen words are Un-cancel, Decide later, Settle deposit and Change
+  quantity (you, 5 October).
+- **Deposits are applied by the system on the check-out day,** never by a clerk,
+  so "Deposit (Applied)" is no longer on the payment list. Access's clerk step
+  also reset each deposit line to $0.00; ours keeps it.
+- **Deductions on the cash sheet print with a minus sign** (Deposit (Applied)
+  −$70.00), as refunds always did, so the column adds up. The old Access sheet
+  printed them unsigned; the sign is one line to change if the lodge's bookkeeper
+  prefers it.
+- **A charge posted after its stay's check-out counts on the day it is posted.**
+  That covers walk-in sales on the daily sales accounts, which Access re-dated
+  every night.
 - **Reservation notes stay on the confirmation.** The old Access confirmation
   printed them, and the lodge uses them for messages to the guest. What was
   internal was the "Re-booked from #…" reference the app added; it no longer
@@ -144,34 +195,41 @@ app does.
 2. **Date-range search** sorts by arrival rather than name, and never shows the
    Cancelled or Shared badges.
 3. **Gift certificates.** The system can record a sale, but there's no button
-   for it. You want to understand this before it goes to the lodge.
+   for it. You want to understand this before it goes to the lodge. A sale rung
+   up on a daily sales account counts on the cash sheet the day it is sold; one
+   added to a guest's stay waits for their check-out, like any charge.
 4. **Split bills.** How a bill is split between guests beyond percent-of-bill —
    likewise yours to understand first.
 
 **For the lodge**
-5. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
+5. **Testing the cash sheet before switchover.** The system's bookings are the
+   Access copy from 28 March 2026. Stays that have checked out since were settled
+   in Access, so their deposits (2,852 stays, $164,325) show as applied on their
+   check-out days with nothing to match. A fresh Access import at switchover
+   clears this.
+6. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
    room charges entered through the new system went in at the Split rate:
    reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
    and 107033. Worth checking any that were real rather than testing.
-6. **A record of changes to a reservation.** The system keeps when a booking
+7. **A record of changes to a reservation.** The system keeps when a booking
    was made, confirmed and cancelled, but not when its details were later
    changed. Offered to Richard as a "last changed" date or a full history.
-7. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-8. **Older charges.** 387 room charges from the Access years bill a room the guest
+8. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+9. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-9. **Questions still open from their original feature pack:** the weekly
+10. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes; how
    a stay with several named guests should show; printing or reprinting a
    single document; how exact the printed layouts need to be; moving a deposit
    when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-10. A room's own dates and guest count can't be edited separately, as they
+11. A room's own dates and guest count can't be edited separately, as they
    could in Access; stay dates change through *Change dates*.
-11. On a stay with several guest names, the notes tabs edit the primary guest's
+12. On a stay with several guest names, the notes tabs edit the primary guest's
    notes only.
-12. All-fields search takes a few hundred milliseconds whatever is typed.
+13. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 

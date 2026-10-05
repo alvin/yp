@@ -50,9 +50,10 @@ export const GUEST_DOCUMENTS: { key: GuestDocument; label: string; slug: string 
 	{ key: 'cancellation_notice', label: 'Cancellation', slug: 'cancellation' }
 ];
 
-/** Guest documents for one reservation. */
-export function guestDocTabs(resnumber: number, current: string): ReportTab[] {
-	return GUEST_DOCUMENTS.map((t) => ({
+/** Guest documents for one reservation. A cancellation notice exists only for a
+ * cancelled one. */
+export function guestDocTabs(resnumber: number, current: string, cancelled: boolean): ReportTab[] {
+	return GUEST_DOCUMENTS.filter((t) => cancelled || t.key !== 'cancellation_notice').map((t) => ({
 		label: t.label,
 		href: `/reports/${t.slug}/${resnumber}`,
 		current: t.slug === current
