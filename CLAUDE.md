@@ -33,6 +33,11 @@ thing that lets them act, and it stays that way as the system grows.
 
 - Business rules live in the database (`supabase/migrations/`), never only in
   the app, so direct Supabase edits stay consistent. See `supabase/README.md`.
+- Data comes only from the Access import (`supabase/tools/`: the seed and the
+  full import). The lodge supplies a current Access file at go-live, so
+  migrations change structure and rules, never data; which Access data is kept
+  is decided in the import code. Leftovers from testing are deleted outright —
+  never archived or kept to restore.
 - Printed reports clone the originals in `original_spec/reports/` exactly.
 - One story in `spec/features/` ↔ one test in `app/tests/features/`;
   `app/tests/coverage-map.test.ts` fails the build otherwise.

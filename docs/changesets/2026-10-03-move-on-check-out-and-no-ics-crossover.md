@@ -3,8 +3,8 @@
 **Date:** 2026-10-03
 **Trigger:** two items of written feedback from the lodge.
 **State:** `npm run check` clean, every feature test and `business_logic_smoke.sql`
-passing. `0019` and `0020` applied to the local stack and, on 2026-10-05, to the
-hosted project.
+passing. `0019` applied to the local stack and, on 2026-10-05, to the hosted
+project.
 
 The two items are independent.
 
@@ -76,12 +76,18 @@ already extended stay extended.
 
 > *"'ICS Crossover' on the payment type list came from MS Access but it doesn't appear to be used much, so shall I just remove it? Yes, please turf that."*
 
-**Shipped.** `0020_no_ics_crossover.sql` deletes it from
-`lookup_payment_types`, so the payment pickers no longer offer it and the Daily
-Cash report no longer prints an ICS Crossover line every day. Removed from
-`seed.sql` too, so a rebuilt database matches. Story `show-tender-types.feature`
-no longer names it; its test now checks the report lists exactly the lodge's
-tender set.
+**Shipped.** The Access import leaves it off `lookup_payment_types`
+(`RETIRED_LOOKUP_VALUES` in `tools/access_table_map.py`, used by both
+`export_access_data.py` and `generate_seed.py`; `seed.sql` regenerated). The
+payment pickers no longer offer it and the Daily Cash report no longer prints
+an ICS Crossover line every day. Story `show-tender-types.feature` no longer
+names it; its test now checks the report lists exactly the lodge's tender set.
+
+**Judgement call — in the import, not a migration.** The lodge supplies a
+current Access file at go-live and the import reloads every lookup table from
+it, so a migration deleting the row would be undone then. The first version of
+this change was such a migration (`0020_no_ics_crossover.sql`); it was replaced
+by the import step the same day.
 
 **Judgement call — the one payment keeps its type.** It was used once: a $35
 deposit refund on #100084, 17 Sep 2024 (checked on the hosted project
@@ -92,20 +98,19 @@ still adds up (`print-daily-cash-activity-report.feature` covers this). No
 foreign key ties payments to the list. The original printed reports in
 `original_spec/` never named it.
 
-**To back out:** `insert into ypl.lookup_payment_types values ('ICS Crossover', 29);`
-and restore it in `seed.sql`.
+**To back out:** remove the entry from `RETIRED_LOOKUP_VALUES`, regenerate
+`seed.sql`, and re-run the import.
 
 ---
 
 ## Deploy
 
-Apply `0019` and `0020` to the hosted project **before** pushing the app. The
+Apply `0019` to the hosted project **before** pushing the app. The
 reservation screen now always sends `p_out`, and PostgREST won't find the old
 four-argument `record_room_move`, so every move would fail until `0019` is in.
-Afterwards check: `record_room_move` has the five-argument signature only, and
-`lookup_payment_types` has no ICS Crossover.
+Afterwards check: `record_room_move` has the five-argument signature only.
 
-**Done 2026-10-05:** both applied in one `begin … commit`, before the app was
+**Done 2026-10-05:** applied in one `begin … commit`, before the app was
 pushed. Verified afterwards: `record_room_move` has only the five-argument
 signature, its body matches local exactly, and `authenticated` can execute it;
 ICS Crossover is off the list, the one payment still carries it, and the Daily

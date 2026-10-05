@@ -5,10 +5,10 @@
 found the original room running to the extended departure; looking into it
 turned up rooms on file with no nights.
 **State:** `npm run check` clean, every feature test and `business_logic_smoke.sql`
-passing. `0021` applied to the local stack and, on 2026-10-05, to the hosted project
+passing. `0020` applied to the local stack and, on 2026-10-05, to the hosted project
 (in one `begin … commit`, before the app was pushed). Verified afterwards: no
-live room without a night; the five archived; both function bodies match
-local exactly; #113181 is Victoria 02 then Madrona, #114203 is Lodge 01.
+room anywhere without a night; both function bodies match local exactly;
+#113181 is Victoria 02 then Madrona, #114203 is Lodge 01.
 
 ---
 
@@ -40,9 +40,12 @@ None carried a charge. Rooms held on a day (`rooms_held`, 0014) counts the day a
 room is left, so each appeared on its day's reports as a room arriving and
 leaving.
 
-**Shipped.** `0021_a_room_holds_a_night.sql`:
-- the five are archived, as undoing a move archives a room;
-- changing the stay dates takes off (archives) any room the new dates leave with
+**Cleaned.** The five were test leftovers, so they were deleted from the
+hosted project directly. The fix carries no data step: the go-live import
+reloads every table from the lodge's Access file.
+
+**Shipped.** `0020_a_room_holds_a_night.sql`:
+- changing the stay dates deletes any room the new dates leave with
   no nights — the room moved into when the stay now ends on the move day, or the
   room being left when it now arrives on the move day
   (`reservations_sync_room_dates`);
@@ -67,4 +70,3 @@ way through.
 **To back out:** drop the `room_assignments_hold_a_night` trigger and function;
 restore `reservations_sync_room_dates` from `0008`; set the Add another room Out
 box back to `min={mIn}` and its button to `disabled={mMode === "move" && !moveDateOk}`.
-The five rooms can be un-archived by `occupancyid` (138055 and 134031–134034).

@@ -207,6 +207,20 @@ def rewrite_export_sql(sql: str) -> str:
     return rewritten
 
 
+# Lookup values the lodge has retired. Access still carries them, so every
+# load from Access leaves them off the list; records that used one keep it.
+RETIRED_LOOKUP_VALUES: tuple[tuple[str, str, str], ...] = (
+    ("lookup_payment_types", "paymenttype", "ICS Crossover"),
+)
+
+
+def retired_lookup_sql() -> str:
+    return "\n".join(
+        f"delete from {TARGET_SCHEMA}.{table} where {column} = '{value}';"
+        for table, column, value in RETIRED_LOOKUP_VALUES
+    )
+
+
 def sequence_reset_sql(table: str, column: str) -> str:
     return "\n".join(
         [

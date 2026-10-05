@@ -1,34 +1,18 @@
 -- =============================================================================
--- 0021_a_room_holds_a_night.sql
+-- 0020_a_room_holds_a_night.sql
 -- A room on a stay is held for at least one night.
 --
--- Nothing enforced it, and five live rooms opened and closed on the same day,
--- all written by this app (Access has none). Rooms held on a day
--- (rooms_held, 0014) counts the day a room is left, so each showed up on that
--- day's reports as a room arriving and leaving. Two ways in:
+-- Rooms held on a day (rooms_held, 0014) counts the day a room is left, so a
+-- room opening and closing on the same day shows on that day's reports as
+-- arriving and leaving. Changing the stay dates could leave one (the room moved
+-- into on the last morning, when the stay now ends that day), and nothing
+-- stopped one being written directly.
 --
---  * Change dates shortening a stay that moves rooms on the last morning: the
---    room moved into ended with the stay and was cut back to the day it opened
---    (reservations_sync_room_dates, 0008). Arriving later onto the day of a
---    move did the same to the room being left.
---  * Rooms written with no nights directly — by Add another room, which let
---    Out equal In, or by update_room_assignment.
---
--- Now: changing the stay dates takes off (archives, as undoing a move does) any
--- room the new dates leave with no nights, and no live room can be written
--- with none. The five already on file are archived.
+-- Changing the stay dates now deletes a room it leaves with no nights, and no
+-- live room can be written with none.
 -- =============================================================================
 
 set search_path = ypl, public;
-
--- -----------------------------------------------------------------------------
--- The rooms already on file with no nights
--- -----------------------------------------------------------------------------
-
-update ypl.room_assignments
-   set occupancyarchive = true
- where not occupancyarchive
-   and occupancyout::date = occupancyin::date;
 
 -- -----------------------------------------------------------------------------
 -- Changing the stay dates
@@ -42,9 +26,8 @@ begin
   -- A room the new dates would leave with no nights comes off the stay: the
   -- room moved into on the last morning when the stay now ends that day, or
   -- the room being left when the stay now arrives on the day of the move.
-  update ypl.room_assignments ra
-     set occupancyarchive = true
-    from ypl.reservation_guests rg
+  delete from ypl.room_assignments ra
+   using ypl.reservation_guests rg
    where rg.reservationguestid = ra.reservationguestid
      and rg.reservationid = new.reservationid
      and not rg.rgarchive
@@ -77,7 +60,7 @@ end;
 $$;
 
 comment on function ypl.reservations_sync_room_dates is
-  'Keeps room assignments aligned when a stay is extended or shortened. Only occupancy windows that ran to the reservation''s own dates move; mid-stay room-move windows are left alone. A window the new dates would leave with no nights is archived.';
+  'Keeps room assignments aligned when a stay is extended or shortened. Only occupancy windows that ran to the reservation''s own dates move; mid-stay room-move windows are left alone. A window the new dates would leave with no nights is deleted.';
 
 -- -----------------------------------------------------------------------------
 -- Every live room holds a night

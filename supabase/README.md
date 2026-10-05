@@ -40,8 +40,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0017_no_charge_notes.sql` | Charge lines carry no notes: the posting functions take none and every line description comes from the item or room |
 | `migrations/0018_next_years_deposits.sql` | Year-end report: deposits taken during a year for stays after it, by month, with what is still held at Dec 31 |
 | `migrations/0019_move_on_the_check_out_date.sql` | A room move can fall on the check-out date, running the stay on to a new departure in the new room |
-| `migrations/0020_no_ics_crossover.sql` | "ICS Crossover" comes off the payment-type list; the one payment that used it keeps its type |
-| `migrations/0021_a_room_holds_a_night.sql` | Every live room holds at least one night: changing the stay dates takes off a room left with none, and none can be written |
+| `migrations/0020_a_room_holds_a_night.sql` | Every live room holds at least one night: changing the stay dates deletes a room left with none, and none can be written |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -54,6 +53,11 @@ This README is the central Supabase documentation. Import-output directories do 
 
 Apply every file in `migrations/` in filename order (`migrations/*.sql` expands in that order).
 Then load `seed.sql` for repeatable reference/configuration data.
+
+Migrations change structure and rules, never data. All data comes from the
+Access import (`seed.sql` and the full import below), which the lodge's current
+Access file replaces at go-live; a change to which Access data is kept belongs
+in `tools/`, not in a migration.
 
 ## Business logic lives in the database
 
@@ -284,6 +288,8 @@ The full import script:
   requires superuser, which the controlled migration environment provides),
 - nulls Access "zero dates" (day 00, e.g. `1900-01-00`) that PostgreSQL rejects,
 - converts the rich-text memo fields to plain text (`ypl.normalize_stored_notes()`),
+- leaves off lookup values the lodge has retired (`RETIRED_LOOKUP_VALUES` in
+  `tools/access_table_map.py`; `generate_seed.py` does the same),
 - resets serial sequences and the in-house reservation-number sequence after import.
 
 The path is verified end-to-end against the real `.accdb`: all tables load with

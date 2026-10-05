@@ -86,25 +86,25 @@ INSERT INTO "ypl"."application_versions" ("versionid", "versionnumber", "datecha
 10.  Confirmation Slip revised to show Rooms in order they were occupied (requires Occupancy In and Occupancy Out to be completed in Occupancy tab of Reservation Form)
 11. Check In Folio revised to show Rooms in order they are about to be occupied'), (3,'3.8','2020-02-12 00:00:00',NULL,NULL,NULL,NULL,'1.  Revised Queries tab to add password-protected Queries buttons for Kris and Jess.'), (4,'3.9','2020-06-30 00:00:00','Richard','Richard','1899-12-30 01:00:00',NULL,'1.  Add COVID section to Check In Folio.'), (5,'3.9.1','2021-06-11 00:00:00',NULL,NULL,NULL,NULL,'1.  Credit Card fields removed from Payment tab in Reservation and Guest forms.
 2.   Clear Credit Card data from Main and Archive databases - queries added to Query tab.'), (6,'C4','2023-10-05 00:00:00',NULL,NULL,NULL,NULL,'This is the CURRENT database.
-
+ 
 The ARCHIVE database is a separate database.
-
+  
 All reservations prior to July 2022 have been archived.
 
 A number of changes have been made to the database to accommodate 6-digit Reservation Numbers.'), (7,'C5','2024-02-24 00:00:00',NULL,NULL,NULL,NULL,'This is the CURRENT database.
-
+ 
 The ARCHIVE database is a separate database.
-
+  
 On Feb 23, 2024, the existing data in the CURRENT database was merged with data from a BACKUP database in an attempt to build a complete data set.  We won''t know for several months how successful this effort has been, therefore please CEASE transferring data between the CURRENT database and the ARCHIVE database until further notice.  Prior to the next time we do a full archiving of data, we''ll have to do some forensic work to ensure the archiving process is working properly.'), (8,'C6','2024-05-15 00:00:00',NULL,NULL,NULL,NULL,'This is the CURRENT database.
-
+ 
 The ARCHIVE database is a separate database.
-
+  
 On May 16, 2024, the "Clear Daily Sales/Rate Quoter accounts" query was repaired.  Also, the COVID statement and checkbox was removed from the Check In Folio.'), (9,'C7','2024-11-29 00:00:00',NULL,NULL,NULL,NULL,'This is the CURRENT database.
-
+ 
 The ARCHIVE database is a separate database.
-
+  
 On Nov 29, 2024, the db was updated to handle the tax holiday from Dec 14, 2024 to Feb 15, 2025.  The "Clear Daily Sales" query was also updated.'), (10,'C8','2025-05-14 00:00:00',NULL,NULL,NULL,NULL,'This is the CURRENT database.
-
+ 
 The ARCHIVE database is a separate database.
 
 On the Main Menu > Queries tab - there is a new query to check if any reservations have been auto-updating their dates without your knowledge.
@@ -139,7 +139,7 @@ INSERT INTO "ypl"."lookup_payment_categories" ("paymentcategory", "paymentcode",
 INSERT INTO "ypl"."lookup_payment_codes" ("paymentcode", "paymentcodedescription") VALUES ('AR1','A/R (Sent To Accts)'), ('AR2','A/R (Payment Rec''d)'), ('D01','Deposit (Rec''d)'), ('D02','Deposit (Applied)'), ('D03','Deposit (Refund)'), ('D04','Deposit (Kept)'), ('DN1','Donation'), ('G01','Gratuity'), ('P01','Payment (Regular)'), ('P02','Payment (Gift Cert)'), ('PC1','Petty Cash Payout'), ('PR1','Prepayment (Rec''d)'), ('PR2','Prepayment (Applied)'), ('PR3','Prepayment (Refund)'), ('RS1','Reimbursed by Staff');
 
 -- ---- tblLookupPaymentType -> ypl.lookup_payment_types ----
-INSERT INTO "ypl"."lookup_payment_types" ("paymenttype", "paymenttypeorder") VALUES ('Amex',5), ('Cash',9), ('Cheque',11), ('Debit Card',7), ('Gift Certificate',23), ('Mastercard',1), ('None (Sent to A/R)',25), ('Paid Out',27), ('Traveller''s Cheque',13), ('U.S. Cash',15), ('U.S. Cheque',17), ('U.S. Exchange',21), ('U.S. Traveller''s Cheque',19), ('Visa',3);
+INSERT INTO "ypl"."lookup_payment_types" ("paymenttype", "paymenttypeorder") VALUES ('Amex',5), ('Cash',9), ('Cheque',11), ('Debit Card',7), ('Gift Certificate',23), ('ICS Crossover',29), ('Mastercard',1), ('None (Sent to A/R)',25), ('Paid Out',27), ('Traveller''s Cheque',13), ('U.S. Cash',15), ('U.S. Cheque',17), ('U.S. Exchange',21), ('U.S. Traveller''s Cheque',19), ('Visa',3);
 
 -- ---- tblLookupPhoneFaxType -> ypl.lookup_phone_fax_types ----
 INSERT INTO "ypl"."lookup_phone_fax_types" ("phonefaxtype") VALUES ('cell'), ('Fax - Business'), ('Phone - Business'), ('Phone - Business Cell'), ('Phone - Company'), ('Phone - Emergency'), ('Phone - Home'), ('Phone - Mobile'), ('Phone - Other'), ('Phone - Personal Cell');
@@ -535,6 +535,9 @@ INSERT INTO "ypl"."inventory_taxes" ("inventoryid", "invitemdescription", "invam
 
 -- ---- tblInventoryTax2 -> ypl.inventory_taxes_2 ----
 INSERT INTO "ypl"."inventory_taxes_2" ("transactionid", "inventoryid", "firstofinvamount", "gst", "pst", "hst", "liquor", "room", "hotel", "dmt") VALUES (300195,107,3.5700,'$0.18','$0.25','$0.00','$0.00','$0.00','$0.00','$0.00');
+
+-- Lookup values the lodge has retired.
+delete from ypl.lookup_payment_types where paymenttype = 'ICS Crossover';
 
 -- Keep serial sequences ahead of seeded Access IDs.
 select setval(

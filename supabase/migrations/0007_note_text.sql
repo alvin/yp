@@ -9,9 +9,9 @@
 -- boxes.
 --
 -- The notes themselves are line-based — a dated history staff append to — so
--- the faithful representation is plain text with newlines. This migration
--- converts what is stored, and keeps anything written later clean regardless
--- of how it is written.
+-- the faithful representation is plain text with newlines. The Access import
+-- converts what it loads (normalize_stored_notes), and anything written later
+-- is kept clean regardless of how it is written.
 -- =============================================================================
 
 set search_path = ypl, public;
@@ -196,10 +196,10 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- Convert what is already stored
+-- Converting imported notes
 -- -----------------------------------------------------------------------------
--- Idempotent: only rows still carrying markup are touched, so this is safe to
--- re-run after a legacy import (which loads with triggers disabled).
+-- The Access import loads with triggers disabled, then runs this. Only rows
+-- still carrying markup are touched.
 
 create or replace function ypl.normalize_stored_notes()
 returns integer
@@ -262,8 +262,6 @@ end;
 $$;
 
 comment on function ypl.normalize_stored_notes is
-  'Converts every stored note still carrying Access rich-text markup to plain text and returns the row count. Idempotent — run again after any legacy import.';
-
-select ypl.normalize_stored_notes();
+  'Converts every stored note still carrying Access rich-text markup to plain text and returns the row count. Run by the Access import.';
 
 grant execute on all functions in schema ypl to authenticated, service_role;

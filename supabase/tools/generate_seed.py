@@ -21,6 +21,7 @@ from supabase.tools.access_table_map import (  # noqa: E402
     SERIAL_COLUMNS,
     TARGET_SCHEMA,
     postgres_table_for_access,
+    retired_lookup_sql,
     rewrite_export_sql,
     sequence_reset_sql,
 )
@@ -91,6 +92,7 @@ def main() -> None:
         exported = export_insert_sql(access_table).strip()
         parts.append((exported if exported else "-- no rows") + "\n\n")
 
+    parts.append("-- Lookup values the lodge has retired.\n" + retired_lookup_sql() + "\n\n")
     parts.append("-- Keep serial sequences ahead of seeded Access IDs.\n")
     for table, column in SERIAL_COLUMNS:
         if table in seed_table_set:

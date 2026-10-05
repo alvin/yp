@@ -27,6 +27,7 @@ from supabase.tools.access_table_map import (  # noqa: E402
     SERIAL_COLUMNS,
     TABLES,
     TARGET_SCHEMA,
+    retired_lookup_sql,
     rewrite_export_sql,
     sequence_reset_sql,
 )
@@ -118,6 +119,7 @@ def build_import_sql(access_db: Path, include_counts: bool) -> str:
         exported = export_insert_sql(access_db, table.access_name).strip()
         parts.append((exported if exported else "-- no rows") + "\n\n")
 
+    parts.append("-- Lookup values the lodge has retired.\n" + retired_lookup_sql() + "\n\n")
     parts.append("set session_replication_role = default;\n\n")
     parts.append("-- Keep serial sequences ahead of imported Access IDs.\n")
     for table, column in SERIAL_COLUMNS:
