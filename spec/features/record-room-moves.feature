@@ -15,3 +15,4 @@ Feature: record room moves
     And The party size carries over to the new room.
     And The move date offers only the dates a move can fall on — through the check-out date for the room the stay ends in — starting on today when today is one of them and otherwise on the first.
     And A move on the check-out date extends the stay to the departure chosen, one night on unless changed; the new room alone covers the added nights.
+    And Every room on a stay is held for at least one night; a room with none is refused, however it is entered.

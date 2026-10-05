@@ -143,6 +143,34 @@ describe('change the dates of an existing reservation', () => {
 		expect(after[1]).toEqual(expect.objectContaining({ occupancyin: moveDate, occupancyout: extended }));
 	});
 
+	it('takes off a room the new dates leave with no nights', async () => {
+		const rooms = await rpc<{ roomid: number }[]>('room_directory');
+		const shortened = await makeReservation({ nights: 4, roomid: rooms[0].roomid });
+		const late = await makeReservation({ nights: 4, roomid: rooms[0].roomid });
+		const moveDate = addDays(shortened.arrival, 2);
+		for (const fx of [shortened, late]) {
+			const [first] = await occupancies(fx.reservationid);
+			await rpc('record_room_move', {
+				p_occupancyid: first.occupancyid,
+				p_new_roomid: rooms[1].roomid,
+				p_move_date: addDays(fx.arrival, 2)
+			});
+		}
+
+		// The stay now ends on the morning of the move: the room moved into goes.
+		await rpc('update_reservation', { p_reservationid: shortened.reservationid, p_departure: moveDate });
+		expect(await occupancies(shortened.reservationid)).toEqual([
+			expect.objectContaining({ occupancyin: shortened.arrival, occupancyout: moveDate })
+		]);
+
+		// The stay now arrives on the day of the move: the room being left goes.
+		const lateMove = addDays(late.arrival, 2);
+		await rpc('update_reservation', { p_reservationid: late.reservationid, p_arrival: lateMove });
+		expect(await occupancies(late.reservationid)).toEqual([
+			expect.objectContaining({ occupancyin: lateMove, occupancyout: late.departure })
+		]);
+	});
+
 	it('refuses a departure on or before the arrival', async () => {
 		const fx = await makeReservation({ nights: 3 });
 		await expect(

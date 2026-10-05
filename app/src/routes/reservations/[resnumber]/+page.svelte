@@ -1130,7 +1130,7 @@
                             id="m-out"
                             type="date"
                             bind:value={mOut}
-                            min={mIn}
+                            min={addDays(mIn, 1)}
                         />
                     </div>
                     <div class="space-y-1.5">
@@ -1157,7 +1157,7 @@
             >
             <Button
                 onclick={addMove}
-                disabled={mMode === "move" && !moveDateOk}
+                disabled={mMode === "move" ? !moveDateOk : mOut <= mIn}
             >
                 {mMode === "move" ? "Record move" : "Add room"}
             </Button>

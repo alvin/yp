@@ -41,6 +41,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0018_next_years_deposits.sql` | Year-end report: deposits taken during a year for stays after it, by month, with what is still held at Dec 31 |
 | `migrations/0019_move_on_the_check_out_date.sql` | A room move can fall on the check-out date, running the stay on to a new departure in the new room |
 | `migrations/0020_no_ics_crossover.sql` | "ICS Crossover" comes off the payment-type list; the one payment that used it keeps its type |
+| `migrations/0021_a_room_holds_a_night.sql` | Every live room holds at least one night: changing the stay dates takes off a room left with none, and none can be written |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |

@@ -57,6 +57,13 @@ the In House and Kitchen reports alike.
 happen on. It used to start on today's date, which was always refused for a stay
 that hadn't begun.
 
+**Every room holds at least one night.** Five rooms had crept onto two
+reservations (#113181 and #114203) that opened and closed on the same day, so
+the reports showed them arriving and leaving that day. They came from adding a
+room with the same in and out date, and from shortening a stay that moved rooms
+on its last morning. They've been taken off, neither can happen again, and
+shortening a stay now takes off any room it leaves with no nights.
+
 **Changing a stay's room.** A pencil beside each room changes it outright, as
 staff did in Access. Unlike Access, it won't change the room while a room
 charge for the old room is posted — Access left 387 charges billing a room the
@@ -114,6 +121,10 @@ app does.
   printed them, and the lodge uses them for messages to the guest. What was
   internal was the "Re-booked from #…" reference the app added; it no longer
   does.
+- **Undoing a move made on the check-out date keeps the longer stay,** in the
+  room the guest was leaving. That suits the lodge's reason for undo — a room
+  frees up and the guest needn't move. If the guest isn't staying on after all,
+  *Change dates* shortens the stay.
 - **Room rates follow Access:** one rate for the whole stay, read on the date
   the charge is posted, of the type the clerk chooses.
 - **US funds stay off the screens.** The Daily Cash report keeps its US lines

@@ -14,4 +14,5 @@ Feature: change the dates of an existing reservation
     And The night count is recalculated from the new dates.
     And The guests on the stay and the rooms they occupy move with the dates, so occupancy and the daily reports stay correct.
     And A room booked for part of the stay only, such as after a room move, keeps its own dates.
+    And A room the new dates leave with no nights comes off the stay.
     And The booking rules still apply — a departure on or before the arrival is refused.

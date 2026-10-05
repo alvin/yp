@@ -206,6 +206,31 @@ describe('record room moves — on the check-out date', () => {
 	});
 });
 
+describe('record room moves — every room holds a night', () => {
+	it('refuses a room with no nights', async () => {
+		const fx = await makeReservation({ nights: 2, roomid: rooms[0].roomid });
+		await expect(
+			rpc('assign_room', {
+				p_reservationguestid: fx.reservationguestid,
+				p_roomid: rooms[1].roomid,
+				p_occupancyin: fx.arrival,
+				p_occupancyout: fx.arrival,
+				p_numguests: 2
+			})
+		).rejects.toThrow(/at least one night/i);
+		const client = await staffClient();
+		const [held] = unwrap(
+			await client
+				.from('v_occupancy_summary')
+				.select('occupancyid')
+				.eq('reservationid', fx.reservationid)
+		) as { occupancyid: number }[];
+		await expect(
+			rpc('update_room_assignment', { p_occupancyid: held.occupancyid, p_occupancyout: fx.arrival })
+		).rejects.toThrow(/at least one night/i);
+	});
+});
+
 describe('record room moves — the move date', () => {
 	let page: Page;
 	let stay: Fixture; // three nights in one room, no move yet
