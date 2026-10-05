@@ -11,6 +11,6 @@ Feature: show tender types
   Scenario: Acceptance criteria
     Then The report shows Mastercard, Visa, Amex, Debit Card, Cash, Cheque, and Traveller’s Cheque when present.
     And The report shows US variants where they are used.
-    And The report shows special categories including Gift Certificate, None (Sent to A/R), Paid Out, and ICS Crossover when present.
+    And The report shows special categories including Gift Certificate, None (Sent to A/R), and Paid Out when present.
     And Every tender type prints, including zero-activity lines, matching the lodge's established cash sheet.
     And Tender lines support the lodge’s manual reconciliation workflow.

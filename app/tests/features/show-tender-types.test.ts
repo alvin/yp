@@ -16,8 +16,7 @@ const TENDERS = [
 	'U.S. Exchange',
 	'Gift Certificate',
 	'None (Sent to A/R)',
-	'Paid Out',
-	'ICS Crossover'
+	'Paid Out'
 ];
 
 let fx: Fixture;
@@ -37,7 +36,7 @@ beforeAll(async () => {
 
 describe('show tender types', () => {
 	it('lists the lodge’s full tender set, including the US variants', () => {
-		for (const t of TENDERS) expect(rows.some((r) => r.paymenttype === t)).toBe(true);
+		expect(rows.map((r) => r.paymenttype).sort()).toEqual([...TENDERS].sort());
 	});
 
 	it('keeps the tenders in their established order', () => {

@@ -254,14 +254,16 @@ export async function recordRoomMove(
 	occupancyid: number,
 	newRoomid: number,
 	moveDate: string,
-	notes?: string | null
+	notes?: string | null,
+	out?: string | null
 ): Promise<number> {
 	return unwrap(
 		await supabase.rpc('record_room_move', {
 			p_occupancyid: occupancyid,
 			p_new_roomid: newRoomid,
 			p_move_date: moveDate,
-			p_notes: notes ?? null
+			p_notes: notes ?? null,
+			p_out: out ?? null
 		})
 	);
 }

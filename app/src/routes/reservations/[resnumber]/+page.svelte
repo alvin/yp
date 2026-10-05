@@ -234,6 +234,7 @@
     let mFrom = $state("");
     let mRoom = $state(String(ROOMS[0].roomid));
     let mMoveDate = $state(i.mIn);
+    let mMoveOut = $state("");
     let mIn = $state(i.mIn);
     let mOut = $state(i.mOut);
     let mGuests = $state(2);
@@ -248,16 +249,28 @@
 
     // A move happens inside the room being left — after its first night and
     // before its last morning — so the date box offers only those dates, and
-    // starts on today when today is one of them, otherwise the first.
+    // starts on today when today is one of them, otherwise the first. The room
+    // that runs to the end of the stay can also be left on the check-out date:
+    // a guest who stays on if another room is free. The stay then runs to a new
+    // departure, in the new room only.
     const moveDates = $derived.by(() => {
         const o = occupancy.find((x) => String(x.occupancyid) === mFrom);
         if (!o) return null;
         const min = addDays(o.occupancyin, 1);
-        const max = addDays(o.occupancyout, -1);
+        const max =
+            o.occupancyout === s.resdeparturedate
+                ? o.occupancyout
+                : addDays(o.occupancyout, -1);
         return min <= max ? { min, max } : null;
     });
+    const extending = $derived(
+        moveDates?.max === s.resdeparturedate && mMoveDate === moveDates.max,
+    );
     const moveDateOk = $derived(
-        !!moveDates && mMoveDate >= moveDates.min && mMoveDate <= moveDates.max,
+        !!moveDates &&
+            mMoveDate >= moveDates.min &&
+            mMoveDate <= moveDates.max &&
+            (!extending || mMoveOut > mMoveDate),
     );
     function firstMoveDate(): string {
         if (!moveDates) return "";
@@ -274,6 +287,7 @@
             ) ?? occupancy[occupancy.length - 1];
         mFrom = current ? String(current.occupancyid) : "";
         mMoveDate = firstMoveDate();
+        mMoveOut = addDays(s.resdeparturedate, 1);
         mIn = today;
         mOut = s.resdeparturedate;
         mGuests = current?.occupancynumguests ?? s.numadults;
@@ -294,7 +308,9 @@
                     room.roomid,
                     mMoveDate,
                     mNotes || null,
+                    extending ? mMoveOut : null,
                 );
+                if (extending) await invalidateAll();
             } else {
                 await assignRoom(
                     s.primary_reservationguestid,
@@ -1089,6 +1105,17 @@
                         The stay switches rooms on this date.
                     </p>
                 </div>
+                {#if extending}
+                    <div class="space-y-1.5">
+                        <Label for="m-dep">Departure</Label>
+                        <Input
+                            id="m-dep"
+                            type="date"
+                            bind:value={mMoveOut}
+                            min={addDays(mMoveDate, 1)}
+                        />
+                    </div>
+                {/if}
             {:else}
                 <div class="grid grid-cols-3 gap-3">
                     <div class="space-y-1.5">

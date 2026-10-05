@@ -139,7 +139,7 @@ INSERT INTO "ypl"."lookup_payment_categories" ("paymentcategory", "paymentcode",
 INSERT INTO "ypl"."lookup_payment_codes" ("paymentcode", "paymentcodedescription") VALUES ('AR1','A/R (Sent To Accts)'), ('AR2','A/R (Payment Rec''d)'), ('D01','Deposit (Rec''d)'), ('D02','Deposit (Applied)'), ('D03','Deposit (Refund)'), ('D04','Deposit (Kept)'), ('DN1','Donation'), ('G01','Gratuity'), ('P01','Payment (Regular)'), ('P02','Payment (Gift Cert)'), ('PC1','Petty Cash Payout'), ('PR1','Prepayment (Rec''d)'), ('PR2','Prepayment (Applied)'), ('PR3','Prepayment (Refund)'), ('RS1','Reimbursed by Staff');
 
 -- ---- tblLookupPaymentType -> ypl.lookup_payment_types ----
-INSERT INTO "ypl"."lookup_payment_types" ("paymenttype", "paymenttypeorder") VALUES ('Amex',5), ('Cash',9), ('Cheque',11), ('Debit Card',7), ('Gift Certificate',23), ('ICS Crossover',29), ('Mastercard',1), ('None (Sent to A/R)',25), ('Paid Out',27), ('Traveller''s Cheque',13), ('U.S. Cash',15), ('U.S. Cheque',17), ('U.S. Exchange',21), ('U.S. Traveller''s Cheque',19), ('Visa',3);
+INSERT INTO "ypl"."lookup_payment_types" ("paymenttype", "paymenttypeorder") VALUES ('Amex',5), ('Cash',9), ('Cheque',11), ('Debit Card',7), ('Gift Certificate',23), ('Mastercard',1), ('None (Sent to A/R)',25), ('Paid Out',27), ('Traveller''s Cheque',13), ('U.S. Cash',15), ('U.S. Cheque',17), ('U.S. Exchange',21), ('U.S. Traveller''s Cheque',19), ('Visa',3);
 
 -- ---- tblLookupPhoneFaxType -> ypl.lookup_phone_fax_types ----
 INSERT INTO "ypl"."lookup_phone_fax_types" ("phonefaxtype") VALUES ('cell'), ('Fax - Business'), ('Phone - Business'), ('Phone - Business Cell'), ('Phone - Company'), ('Phone - Emergency'), ('Phone - Home'), ('Phone - Mobile'), ('Phone - Other'), ('Phone - Personal Cell');

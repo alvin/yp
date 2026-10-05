@@ -2,7 +2,7 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 29 September 2026.
+Everything below is live on the hosted system as of 5 October 2026.
 
 ---
 
@@ -31,6 +31,16 @@ goes to the lookup screen.
 charge. Undoing it keeps the party in the room they were leaving for the whole
 stay. If two rooms moved on the same day, the screen asks which one the stay
 goes back to.
+
+**Moving on the check-out date.** The move date now runs to the guest's
+check-out date, for a guest who stays on if another room is free. Choosing that
+date asks for the new departure (one more night to start), and the stay runs on
+in the new room. Any other room the party holds still ends on the original
+date.
+
+**"ICS Crossover" is gone** from the payment-type list and the Daily Cash
+report. The one payment that used it (a $35 deposit refund on #100084,
+September 2024) keeps it, and that day's report still shows it.
 
 ---
 
@@ -135,25 +145,22 @@ app does.
 6. **A record of changes to a reservation.** The system keeps when a booking
    was made, confirmed and cancelled, but not when its details were later
    changed. Offered to Richard as a "last changed" date or a full history.
-7. **"ICS Crossover"** on the payment-type list came from Access and was used
-   once (a $35 deposit refund on #100084, Sept 2024). Asked Richard what it is;
-   it can be hidden if nobody needs it.
-8. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-9. **Older charges.** 387 room charges from the Access years bill a room the guest
+7. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+8. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-10. **Questions still open from their original feature pack:** the weekly
+9. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes; how
    a stay with several named guests should show; printing or reprinting a
    single document; how exact the printed layouts need to be; moving a deposit
    when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-11. A room's own dates and guest count can't be edited separately, as they
+10. A room's own dates and guest count can't be edited separately, as they
    could in Access; stay dates change through *Change dates*.
-12. On a stay with several guest names, the notes tabs edit the primary guest's
+11. On a stay with several guest names, the notes tabs edit the primary guest's
    notes only.
-13. All-fields search takes a few hundred milliseconds whatever is typed.
+12. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 

@@ -39,6 +39,8 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0016_guest_details_and_notes.sql` | A guest's details can be corrected and cleared; the housekeeping note in force can be cleared; a stay's room can be changed outright without leaving its room charges behind |
 | `migrations/0017_no_charge_notes.sql` | Charge lines carry no notes: the posting functions take none and every line description comes from the item or room |
 | `migrations/0018_next_years_deposits.sql` | Year-end report: deposits taken during a year for stays after it, by month, with what is still held at Dec 31 |
+| `migrations/0019_move_on_the_check_out_date.sql` | A room move can fall on the check-out date, running the stay on to a new departure in the new room |
+| `migrations/0020_no_ics_crossover.sql` | "ICS Crossover" comes off the payment-type list; the one payment that used it keeps its type |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -82,7 +84,8 @@ not an RPC: next season's stay is written by `create_reservation` like any
 other, and the screen carries the party, room and dates forward.
 Guests on a stay: `add_reservation_guest`, `update_reservation_guest`.
 Rooms: `assign_room`, `record_room_move` (splits the occupancy at the move
-date, preserving both rooms in history), `undo_room_move` (the room being left
+date, preserving both rooms in history; a move on the check-out date runs the
+stay on to `p_out`, one night by default, in the new room only), `undo_room_move` (the room being left
 runs on to the end of the move and the move is archived; a stay that moved out
 and back is left in one room; where two rooms moved on the same day the caller
 names the one to go back to), `update_room_assignment` (how a stay's room is
