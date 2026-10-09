@@ -44,7 +44,7 @@
 	<div class="blackbar">Yellow Point Lodge</div>
 	<h1>Kitchen Report</h1>
 	<h3>Arrival Date between {dateShort(data.from)} and {dateShort(data.to)}</h3>
-	<table>
+	<table class="ruled">
 		<thead>
 			<tr>
 				<th>Res #</th>

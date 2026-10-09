@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, todayISO, type Fixture } from '../helpers/db';
+import { addDays, makeReservation, rpc, todayISO, type Fixture } from '../helpers/db';
 
 let page: Page;
 
@@ -87,5 +87,68 @@ describe('print daily operations reports — the printed report', () => {
 			waitUntil: 'networkidle'
 		});
 		expect(await pageName()).not.toBe('numbered');
+	});
+});
+
+describe('print daily operations reports — each line ruled and shaded', () => {
+	let reportPage: Page;
+	let date: string;
+
+	beforeAll(async () => {
+		// Two rooms held the same night, so the reports have two lines.
+		const rooms = await rpc<{ roomid: number }[]>('room_directory');
+		const first = await makeReservation({ roomid: rooms[0].roomid });
+		await makeReservation({ arrival: first.arrival, roomid: rooms[1].roomid });
+		date = addDays(first.arrival, 1);
+		reportPage = await openAppPage();
+	});
+
+	afterAll(async () => {
+		await closeApp(reportPage);
+	});
+
+	it('rules off the lines of every daily report', async () => {
+		for (const report of [
+			`housekeeping?date=${date}`,
+			`in-house?date=${date}`,
+			`kitchen?date=${date}`,
+			`kitchen-filtered?from=${date}`,
+			`manual-sales?date=${date}`,
+			`cancellation-list?date=${date}`
+		]) {
+			await reportPage.goto(`${APP_URL}/reports/${report}`, { waitUntil: 'networkidle' });
+			expect(await reportPage.locator('.report-page table.ruled').count(), report).toBeGreaterThan(0);
+		}
+	});
+
+	it('shades every other line, on paper as on screen', async () => {
+		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${date}`, {
+			waitUntil: 'networkidle'
+		});
+		await reportPage.emulateMedia({ media: 'print' });
+		try {
+			const rows = reportPage.locator('.report-page table.ruled tbody tr');
+			expect(await rows.count()).toBeGreaterThanOrEqual(2);
+			const look = (i: number) =>
+				rows.nth(i).evaluate((el) => {
+					const s = getComputedStyle(el);
+					return {
+						background: s.backgroundColor,
+						rule: `${s.borderBottomWidth} ${s.borderBottomStyle}`,
+						// Without this a browser prints no background colour at all.
+						printed:
+							s.getPropertyValue('print-color-adjust') ||
+							s.getPropertyValue('-webkit-print-color-adjust')
+					};
+				});
+			const [one, two] = [await look(0), await look(1)];
+			expect(one.rule).toBe('1px solid');
+			expect(two.rule).toBe('1px solid');
+			expect(one.background).toBe('rgba(0, 0, 0, 0)');
+			expect(two.background).not.toBe('rgba(0, 0, 0, 0)');
+			expect(two.printed).toBe('exact');
+		} finally {
+			await reportPage.emulateMedia({ media: 'screen' });
+		}
 	});
 });

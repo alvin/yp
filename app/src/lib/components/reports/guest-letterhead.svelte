@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The letterhead every guest document opens with: the party and their
+	// The letterhead every guest document opens with: the guest and their
 	// mailing address on the left, the document's own dates and numbers on the
 	// right.
 	import type { Snippet } from 'svelte';
@@ -12,8 +12,7 @@
 		guestpczip: string | null;
 	}
 
-	let { names, to, children }: { names: string; to: MailingAddress; children: Snippet } =
-		$props();
+	let { name, to, children }: { name: string; to: MailingAddress; children: Snippet } = $props();
 
 	// "PORT MOODY, BC CAN" — city, region then country, as on the originals.
 	const cityLine = $derived(
@@ -25,7 +24,7 @@
 
 <div class="letterhead">
 	<div style="text-transform: uppercase">
-		{#each names.split('\n') as line (line)}{line}<br />{/each}
+		{name}<br />
 		{#if to.guestaddress}{to.guestaddress}<br />{/if}
 		{#if cityLine}{cityLine}<br />{/if}
 		{#if to.guestpczip}{to.guestpczip}{/if}

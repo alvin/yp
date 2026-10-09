@@ -24,6 +24,8 @@ let cousin: string; // shares the stem, differs after it
 let guestid: number;
 let firmName: string; // filed against a guest, but not part of their name
 let firmGuestId: number;
+let doubleLast: string; // partners booked as one double surname
+let doubleId: number;
 
 beforeAll(async () => {
 	u = uid();
@@ -42,6 +44,11 @@ beforeAll(async () => {
 		p_firstname: 'Dana',
 		p_company: firmName
 	});
+	// Guest last names are varchar(25), so the unique tail is trimmed to keep
+	// both halves inside it.
+	const t = u.slice(-4);
+	doubleLast = `ZZDoe${t} ZZRoe${t}`;
+	doubleId = await rpc<number>('create_guest', { p_lastname: doubleLast, p_firstname: 'Sam' });
 	page = await openAppPage();
 });
 
@@ -76,6 +83,12 @@ describe('search guests by partial name', () => {
 		expect(both.map((r) => r.guestid)).toContain(guestid);
 		// 'Ray' belongs to the other guest, so the pair matches nobody.
 		expect(await search(`${surname} Ray`)).toEqual([]);
+	});
+
+	it('finds a double surname from either half of it', async () => {
+		const [first, second] = doubleLast.split(' ');
+		expect((await search(first)).map((r) => r.guestid)).toContain(doubleId);
+		expect((await search(second)).map((r) => r.guestid)).toContain(doubleId);
 	});
 
 	it('reads the names on the guest record and nothing else', async () => {

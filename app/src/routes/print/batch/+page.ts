@@ -1,10 +1,12 @@
 // Batch print loader. Gathers everything queued for one business date — the
 // four daily operational reports plus every guest document the queue RPC says
-// is due — so the whole set prints from one screen, one paper stock at a time.
+// is due — so the whole set prints from one screen: the reports together, and
+// each kind of guest document on its own.
 
 import {
 	TODAY,
 	guestsInHouse,
+	reportCancellationNotice,
 	reportCheckInFolio,
 	reportCheckoutBillHeader,
 	reportCheckoutBillLines,
@@ -18,6 +20,7 @@ import {
 	reportStayRooms
 } from '$lib/data/queries.js';
 import type {
+	CancellationReport,
 	CheckoutBillHeader,
 	CheckoutBillLine,
 	ConfirmationReport,
@@ -124,16 +127,25 @@ async function loadBills(date: string): Promise<BatchBill[]> {
 	return docs.filter((b): b is BatchBill => b != null);
 }
 
+async function loadCancellations(date: string): Promise<CancellationReport[]> {
+	const queue = await reportGuestDocumentQueue('cancellation_notice', date);
+	const docs = await Promise.all(
+		queue.map((q) => orNull(reportCancellationNotice(q.reservationid)))
+	);
+	return docs.filter((c): c is CancellationReport => c != null);
+}
+
 export const load: PageLoad = async ({ url }) => {
 	// Tomorrow is the default batch: the client preps the next day's set each evening.
 	const date = url.searchParams.get('date') ?? addDays(TODAY, 1);
 
-	const [reports, confirmations, folios, bills] = await Promise.all([
+	const [reports, confirmations, folios, bills, cancellations] = await Promise.all([
 		loadReports(date),
 		loadConfirmations(date),
 		loadFolios(date),
-		loadBills(date)
+		loadBills(date),
+		loadCancellations(date)
 	]);
 
-	return { date, reports, confirmations, folios, bills };
+	return { date, reports, confirmations, folios, bills, cancellations };
 };

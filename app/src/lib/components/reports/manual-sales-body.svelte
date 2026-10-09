@@ -13,7 +13,7 @@
 	Checkbox beside Res # is visual check for Cancelled Reservations. If check appears, res is
 	cancelled. Report should filter out cancelled reservations.
 </p>
-<table>
+<table class="ruled">
 	<thead>
 		<tr>
 			<th>Room</th>

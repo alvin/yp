@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
+import { makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 let page: Page;
 let balancedDay: Fixture;
@@ -20,7 +20,8 @@ beforeAll(async () => {
 		p_amount: 250,
 		p_paymentdate: balancedDay.arrival
 	});
-	// Unbalanced day: a charge with no matching receipt, on its stay's check-out day.
+	// Unbalanced day: charges with no matching receipt, on their stay's
+	// check-out day — a room, which Items Cashed Out leaves off, and an item.
 	unbalancedDay = await makeReservation();
 	await rpc('post_room_nights', {
 		p_reservationguestid: unbalancedDay.reservationguestid,
@@ -29,6 +30,22 @@ beforeAll(async () => {
 		p_occupancyout: unbalancedDay.departure,
 		p_rate: 100,
 		p_transdate: unbalancedDay.arrival
+	});
+	const client = await staffClient();
+	const [item] = unwrap(
+		await client
+			.from('inventory_items')
+			.select('inventoryid')
+			.eq('invarchive', false)
+			.gt('invamount', 0)
+			.limit(1)
+	) as { inventoryid: number }[];
+	await rpc('post_charge', {
+		p_reservationguestid: unbalancedDay.reservationguestid,
+		p_inventoryid: item.inventoryid,
+		p_quantity: 2,
+		p_transdate: unbalancedDay.arrival,
+		p_amount: 24
 	});
 });
 

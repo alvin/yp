@@ -70,6 +70,7 @@
             n(queues.confirmation.length, "confirmation"),
             n(queues.check_in_folio.length, "folio"),
             n(queues.checkout_bill.length, "bill"),
+            n(queues.cancellation_notice.length, "cancellation"),
         ]
             .filter(Boolean)
             .join(" · "),

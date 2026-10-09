@@ -27,7 +27,7 @@
 </script>
 
 <div class="logo">Yellow Point Lodge</div>
-<GuestLetterhead names={r.guest_names ?? r.guest} to={r}>
+<GuestLetterhead name={r.guest} to={r}>
 	Date Printed:&nbsp; {dateShort(r.date_printed)}<br />
 	Date Confirmed:&nbsp; {dateShort(r.date_confirmed)}<br />
 	{#if r.phone}{r.phone}<br />{/if}

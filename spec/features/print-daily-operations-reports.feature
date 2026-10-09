@@ -13,4 +13,5 @@ Feature: print daily operations reports
     And The printed report is for the chosen date, and can be re-dated from the report screen.
     And An optional end date feeds only the report that takes a range, the 7-day kitchen report; without one, that report runs seven days from the report date.
     And Printed reports number their pages, as the lodge's originals did.
+    And Each room or guest on a daily report is ruled off from the next and every other one is shaded, so a line reads straight across the sheet; the shading prints.
     And The print output matches the lodge’s standard report formatting and naming.

@@ -9,7 +9,7 @@
 <div class="blackbar">Yellow Point Lodge</div>
 <h1>Housekeeping Report</h1>
 <h3>for {dateShort(date)}</h3>
-<table>
+<table class="ruled">
 	<thead>
 		<tr>
 			<th>Status:</th>

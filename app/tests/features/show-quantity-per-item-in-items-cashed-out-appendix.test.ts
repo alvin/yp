@@ -1,6 +1,6 @@
 // Story: spec/features/show-quantity-per-item-in-items-cashed-out-appendix.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { firstRoomId, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
 
@@ -21,6 +21,14 @@ beforeAll(async () => {
 		p_quantity: 3,
 		p_transdate: fx.arrival,
 		p_amount: 30
+	});
+	await rpc('post_room_nights', {
+		p_reservationguestid: fx.reservationguestid,
+		p_roomid: await firstRoomId(),
+		p_occupancyin: fx.arrival,
+		p_occupancyout: fx.departure,
+		p_rate: 100,
+		p_transdate: fx.arrival
 	});
 });
 
@@ -43,6 +51,25 @@ describe('show quantity per item in items cashed out appendix', () => {
 		expect(mine.inv_code).toBeTruthy();
 		expect(mine.guestlastname).toBe(fx.lastname);
 		expect(mine.item).toBeTruthy();
+	});
+
+	it('lists the items sold and not the room nights', async () => {
+		const rows = await rpc<{ resnumber: number; total: number }[]>('report_items_cashed_out', {
+			p_date: fx.departure
+		});
+		const mine = rows.filter((r) => r.resnumber === fx.resnumber);
+		expect(mine.map((r) => Number(r.total))).toEqual([30]);
+	});
+
+	it('agrees with the daily cash report’s sales lines other than Room', async () => {
+		const [rows, upper] = await Promise.all([
+			rpc<{ total: number }[]>('report_items_cashed_out', { p_date: fx.departure }),
+			rpc<{ item: string; amount: number }[]>('report_dcar_upper', { p_date: fx.departure })
+		]);
+		const line = (item: string) => Number(upper.find((u) => u.item === item)?.amount ?? 0);
+		expect(line('Room')).toBe(300);
+		const items = rows.reduce((sum, r) => sum + Number(r.total), 0);
+		expect(items).toBeCloseTo(line('Total Sales and Charges') - line('Room') - line('Cancellation'), 2);
 	});
 
 	it('lists the item on its stay’s check-out day, not the day it was posted', async () => {

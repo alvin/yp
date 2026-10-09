@@ -2,11 +2,52 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 5 October 2026.
+Everything below is live on the hosted system as of 9 October 2026.
 
 ---
 
 ## What the lodge asked for
+
+**A print run for each kind of folio.** The folio paper is printed on the back
+differently for each document (the waiver behind the check-in folio, arrival
+instructions behind the confirmation), so they can't go through the printer
+together. After *Review & print*, the batch now has a button each for
+Confirmations, Check-in folios, Check-out bills and Cancellations, beside
+Reports, and each prints only its own documents. Cancellation notices weren't
+in the batch before; they are now.
+
+**Ruled, shaded report lines.** The daily reports (Housekeeping, In House,
+Kitchen, the 7-day kitchen report, Manual Sales, Cancellations) rule off each
+room or guest and shade every other line. Browsers normally leave shading off a
+printout unless a box in the print dialog is ticked; these reports ask for it,
+so it prints either way. The cash reports are unchanged.
+
+**Items Cashed Out without the rooms.** The appendix lists the liquor, sundries
+and the rest, and no room nights, as the Access report did. Its "Agrees with
+Daily Cash" check now ties it to the cash sheet's sales lines other than Room;
+across 2024 to March 2026 they agree on every day.
+
+**The extra guest is gone.** The reservation screen no longer adds a second
+name, shows a "% of bill", or asks who a charge or payment belongs to; the card
+reads *Guest*. A shared room is two reservations with the red Shared mark, as
+the lodge described. Access never had a second name on a booking either:
+partners are one guest record ("WILKINSON, DON & GLENNIS"), and name search
+still finds either half of a double surname. The system now refuses a second
+name on a booking, so it can't creep back in.
+
+**The number of guests can be changed.** A pen beside *Guests* in Reservation
+details changes the adults and children. The reports count guests room by room,
+so the change goes to the room the party is in — that's what puts it on the
+kitchen and housekeeping reports and the folio. Where a party is spread across
+rooms held side by side (a family in two rooms, a group), the screen also asks
+how many are in each room.
+
+**Double, Single and Split.** The room-night Rate choice reads Double, Single,
+Split, as Richard listed them; it used to read Regular, Special, Split, the
+names on Access's pick list. Access's own rate codes describe the three the
+lodge's way — "Night for Two", "Night for One", "Split Rate" — so the new words
+mean exactly what Access meant. Which rate is charged, and its price, are
+unchanged.
 
 **The cash sheet applies the deposit, and balances.** Richard found a $1,000
 deposit received on the sheet with no "deposit applied". The cause was bigger:
@@ -58,7 +99,8 @@ Checking this against the old Access system turned up a real pricing bug: every
 room has a Regular, Special and Split rate, and Access asked the clerk which to
 use. Our system ignored the choice and usually charged the Split rate — half the
 Regular rate for most rooms. The dialog now has a **Rate** choice, starting on
-Regular, and posts that rate.
+Regular, and posts that rate (since 9 October the choices read Double, Single
+and Split).
 
 **Back out to the guest's list of stays.** Opening a reservation from a guest's
 history, a date search or an all-fields search, the button at the top left now
@@ -155,6 +197,19 @@ app does.
 
 ## Decisions made
 
+- **Regular reads Double as well as Special reading Single,** to give the
+  lodge's "double, single and split". Access's rate codes call them "Night for
+  Two" and "Night for One", so nothing about the rates changes.
+- **Only the daily reports are ruled and shaded,** not the cash reports or
+  the guest documents. Any other report is a one-word change.
+- **One guest per booking is a rule the system enforces,** not just a missing
+  button, so the screens, reports and documents never have to account for a
+  second name.
+- **A changed number of guests goes to every room the whole party is in;
+  rooms held side by side keep their own numbers,** which the desk sets in the
+  same dialog. Access kept the booking's number and the room's apart, and about
+  one single-room stay in eleven disagrees; setting the number brings them
+  into line.
 - **A kept deposit is revenue on its own "Cancellation" line** of the cash sheet,
   and the new screen words are Un-cancel, Decide later, Settle deposit and Change
   quantity (you, 5 October).
@@ -198,38 +253,35 @@ app does.
    for it. You want to understand this before it goes to the lodge. A sale rung
    up on a daily sales account counts on the cash sheet the day it is sold; one
    added to a guest's stay waits for their check-out, like any charge.
-4. **Split bills.** How a bill is split between guests beyond percent-of-bill —
-   likewise yours to understand first.
 
 **For the lodge**
-5. **Testing the cash sheet before switchover.** The system's bookings are the
+4. **Testing the cash sheet before switchover.** The system's bookings are the
    Access copy from 28 March 2026. Stays that have checked out since were settled
    in Access, so their deposits (2,852 stays, $164,325) show as applied on their
    check-out days with nothing to match. A fresh Access import at switchover
    clears this.
-6. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
+5. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
    room charges entered through the new system went in at the Split rate:
    reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
    and 107033. Worth checking any that were real rather than testing.
-7. **A record of changes to a reservation.** The system keeps when a booking
+6. **A record of changes to a reservation.** The system keeps when a booking
    was made, confirmed and cancelled, but not when its details were later
    changed. Offered to Richard as a "last changed" date or a full history.
-8. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-9. **Older charges.** 387 room charges from the Access years bill a room the guest
+7. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+8. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-10. **Questions still open from their original feature pack:** the weekly
-   spreadsheet handoff; storing daily cash adjustments and staff-tip codes; how
-   a stay with several named guests should show; printing or reprinting a
-   single document; how exact the printed layouts need to be; moving a deposit
-   when a stay is cancelled or re-booked.
+9. **Questions still open from their original feature pack:** the weekly
+   spreadsheet handoff; storing daily cash adjustments and staff-tip codes;
+   printing or reprinting a single document; how exact the printed layouts need
+   to be; moving a deposit when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-11. A room's own dates and guest count can't be edited separately, as they
-   could in Access; stay dates change through *Change dates*.
-12. On a stay with several guest names, the notes tabs edit the primary guest's
-   notes only.
-13. All-fields search takes a few hundred milliseconds whatever is typed.
+10. A room's own dates can't be edited separately, as they could in Access;
+   stay dates change through *Change dates*. A room's own guest count can be set
+   only where the stay holds rooms side by side; otherwise the room follows the
+   booking's number.
+11. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 

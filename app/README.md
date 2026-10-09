@@ -108,11 +108,14 @@ npm run cf:preview   # build and serve locally through workerd
   `Double`/`Twin` is what is stored, and only the label changes.
 - `src/lib/report.css` + `src/routes/reports/**` — printed outputs cloned
   from the client's original designs in `original_spec/reports/`; the markup
-  and CSS classes match the originals so printed pages are identical.
+  and CSS classes match the originals so printed pages are identical. The one
+  departure the lodge asked for: the daily reports rule off and shade alternate
+  lines (`table.ruled`), with the shading set to print.
 - `src/lib/print-stock.ts` — the paper each output goes on: daily reports on
   letter, guest slips and folios on A5. A browser cannot choose a printer, so
-  `/print/batch` groups the run by stock and prints one group at a time, each
-  print action carrying its own page size.
+  `/print/batch` prints one group at a time, each print action carrying its own
+  page size: the daily reports together, and each kind of guest document on its
+  own, since the folio paper is printed on the back for each kind.
 - `src/lib/components/ui/combobox/` — the one dropdown. A plain select button
   whose list can be narrowed by typing any part of an entry; used for every
   choice on every screen, which is what makes rooms and the priced-item list
@@ -124,8 +127,9 @@ npm run cf:preview   # build and serve locally through workerd
   wherever staff find a guest, so partial-name search behaves the same
   everywhere.
 - `src/lib/components/app/shared-room-badge.svelte` — the red *Shared* mark for
-  a room two live reservations hold at once. "Shared" means a shared *room*;
-  the other names on a booking are introduced with "with …".
+  a room two live reservations hold at once. A reservation is booked under one
+  guest, so two parties sharing a room are two reservations, each marked
+  Shared.
 
 Screens are intentionally minimal and follow the client's original wireframes in
 `original_spec/wireframes/`, starting from the Lookup screen (home).

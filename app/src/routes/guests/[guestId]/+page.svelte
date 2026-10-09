@@ -6,8 +6,6 @@
     import PhoneIcon from "@lucide/svelte/icons/phone";
     import MailIcon from "@lucide/svelte/icons/mail";
     import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
-
-    import UsersIcon from "@lucide/svelte/icons/users";
     import { Button } from "$lib/components/ui/button/index.js";
     import * as Card from "$lib/components/ui/card/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
@@ -202,16 +200,6 @@
                                         )}
                                         {#if r.rooms}· {r.rooms}{/if}
                                     </div>
-                                    {#if r.party_size > 1}
-                                        <div
-                                            class="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-xs"
-                                        >
-                                            <UsersIcon
-                                                class="size-3 shrink-0"
-                                            />
-                                            with {r.co_guests}
-                                        </div>
-                                    {/if}
                                 </div>
                                 <div class="text-right">
                                     <div

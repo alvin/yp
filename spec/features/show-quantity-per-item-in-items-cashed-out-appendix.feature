@@ -13,4 +13,5 @@ Feature: show quantity per item in items-cashed-out appendix
     And The quantity is visible alongside the item entry.
     And The appendix can be used to confirm what was cashed out.
     And An item is listed on the day it is cashed out, its stay's check-out day, as on the Daily Cash Activity Report.
+    And Room nights are not listed: the appendix is the items sold, as in Access, and its total agrees with the report's sales lines other than Room.
     And The quantity is part of the standard report output.

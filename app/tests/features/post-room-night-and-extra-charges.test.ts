@@ -152,22 +152,36 @@ describe('post room-night and extra charges — the room rate in the charge dial
 		).rejects.toThrow(/function|post_charge/i);
 	});
 
-	it('starts on the Regular rate and follows the rate chosen', async () => {
+	it('starts on the Double rate and follows the rate chosen', async () => {
 		const { room } = rooms[0];
 		await pickRoom(room);
+		// The rate table keeps Access's names: Regular is Double, Special is Single.
 		const rate = (ratetype: string) =>
 			rpc<number>('effective_room_rate', {
 				p_roomid: room.roomid,
 				p_date: todayISO(),
 				p_ratetype: ratetype
 			}).then(Number);
-		const regular = await rate('Regular');
+		const double = await rate('Regular');
+		const single = await rate('Special');
 		const split = await rate('Split');
-		expect(split).not.toBe(regular);
-		await expect.poll(unitPrice, { timeout: 10_000 }).toBeCloseTo(regular, 2);
+		expect(new Set([double, single, split]).size).toBe(3);
+		await expect.poll(unitPrice, { timeout: 10_000 }).toBeCloseTo(double, 2);
+		expect((await page.textContent('#c-rate'))?.trim()).toBe('Double');
 
-		await page.click('#c-rate');
-		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: 'Split' }).click();
+		const choose = async (label: string) => {
+			await page.click('#c-rate');
+			const options = page.locator('[data-testid=combobox-list] [role=option]');
+			expect((await options.allTextContents()).map((o) => o.trim())).toEqual([
+				'Double',
+				'Single',
+				'Split'
+			]);
+			await options.filter({ hasText: label }).click();
+		};
+		await choose('Single');
+		await expect.poll(unitPrice, { timeout: 10_000 }).toBeCloseTo(single, 2);
+		await choose('Split');
 		await expect.poll(unitPrice, { timeout: 10_000 }).toBeCloseTo(split, 2);
 	});
 

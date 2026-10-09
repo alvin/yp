@@ -33,7 +33,7 @@
 </p>
 {#each sections as s (s.section)}
 	<h2 class="section">{s.section}</h2>
-	<table>
+	<table class="ruled">
 		<thead>
 			<tr>
 				<th>Res #:</th>

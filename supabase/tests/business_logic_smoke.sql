@@ -88,15 +88,68 @@ begin
   end;
 
   ------------------------------------------------------------------
-  -- Single primary guest + defaults from reservation
+  -- One guest per reservation, with the reservation's dates
   ------------------------------------------------------------------
   v_guestid2 := ypl.create_guest('SMOKE-TEST-TWO', 'Jordan');
-  v_rgid2 := ypl.add_reservation_guest(v_res.reservationid, v_guestid2, p_primaryguest => true);
-  assert (select count(*) from ypl.reservation_guests
-           where reservationid = v_res.reservationid and primaryguest and not rgarchive) = 1,
-    'more than one primary guest';
+  begin
+    insert into ypl.reservation_guests (reservationid, guestid)
+    values (v_res.reservationid, v_guestid2);
+    raise exception 'one-guest check failed to raise';
+  exception when others then
+    if sqlerrm = 'one-guest check failed to raise' then raise; end if;
+  end;
+
+  -- A guest put on a booking straight in the table takes its dates, and is
+  -- its primary guest.
+  insert into ypl.reservations (resbookedby, resarrivaldate, resdeparturedate)
+  values ('ST', current_date + 30, current_date + 32)
+  returning * into v_r;
+  insert into ypl.reservation_guests (reservationid, guestid)
+  values (v_r.reservationid, v_guestid2)
+  returning reservationguestid into v_rgid2;
   assert (select checkindate::date from ypl.reservation_guests where reservationguestid = v_rgid2)
-         = current_date, 'rg check-in default not taken from reservation';
+         = current_date + 30, 'rg check-in default not taken from reservation';
+  assert (select primaryguest from ypl.reservation_guests where reservationguestid = v_rgid2),
+    'a booking''s one guest is not its primary guest';
+
+  ------------------------------------------------------------------
+  -- The number of guests: rooms the whole party is in follow it
+  ------------------------------------------------------------------
+  declare
+    v_stay record;
+    v_alone integer;
+    v_side integer;
+  begin
+    select * into v_stay from ypl.create_reservation(v_guestid, date '1150-07-01', date '1150-07-05', 'ST',
+      p_numadults => 2, p_roomid => v_roomid);
+    select occupancyid into v_alone from ypl.room_assignments where reservationguestid = v_stay.reservationguestid;
+    perform ypl.update_reservation(v_stay.reservationid, p_numadults => 3, p_numchildren => 1);
+    assert (select occupancynumguests from ypl.room_assignments where occupancyid = v_alone) = 4,
+      'the party''s room did not take the new number';
+
+    -- A second room held side by side splits the party: both keep their own.
+    v_side := ypl.assign_room(v_stay.reservationguestid,
+      (select roomid from ypl.rooms where not roomarchive and roomid <> v_roomid order by roomorder limit 1),
+      date '1150-07-01', date '1150-07-05', 1);
+    perform ypl.update_room_assignment(v_alone, p_numguests => 3);
+    perform ypl.update_reservation(v_stay.reservationid, p_numadults => 5, p_numchildren => 0);
+    assert (select occupancynumguests from ypl.room_assignments where occupancyid = v_alone) = 3
+       and (select occupancynumguests from ypl.room_assignments where occupancyid = v_side) = 1,
+      'rooms held side by side lost their own numbers';
+
+    begin
+      perform ypl.update_reservation(v_stay.reservationid, p_numadults => 0, p_numchildren => 0);
+      raise exception 'party check failed to raise';
+    exception when others then
+      if sqlerrm = 'party check failed to raise' then raise; end if;
+    end;
+    begin
+      perform ypl.update_room_assignment(v_side, p_numguests => 0);
+      raise exception 'room count check failed to raise';
+    exception when others then
+      if sqlerrm = 'room count check failed to raise' then raise; end if;
+    end;
+  end;
 
   ------------------------------------------------------------------
   -- Room-night charge: amount + taxes computed by the database
@@ -297,6 +350,16 @@ begin
       'the check-out day does not balance';
     assert (select count(*) from ypl.report_deposits_applied(v_out)) = 1, 'deposits applied appendix missing the stay';
     assert (select count(*) from ypl.report_items_cashed_out(v_out)) = 1, 'items cashed out missing the charge';
+
+    -- Items Cashed Out lists the items sold, not the room nights.
+    select * into v_stay from ypl.create_reservation(v_guestid, date '1150-06-01', date '1150-06-03', 'ST');
+    perform ypl.post_room_nights(v_stay.reservationguestid, v_roomid, date '1150-06-01', date '1150-06-03',
+      p_rate => 100, p_transdate => date '1150-06-01');
+    perform ypl.post_charge(v_stay.reservationguestid, v_invid, p_quantity => 1,
+      p_transdate => date '1150-06-01', p_amount => 12);
+    assert (select count(*) from ypl.report_items_cashed_out(date '1150-06-03')) = 1
+       and (select sum(total) from ypl.report_items_cashed_out(date '1150-06-03')) = 12,
+      'items cashed out lists a room night';
 
     -- A deposit kept is the day's revenue and comes off as Deposit (Kept).
     select * into v_stay from ypl.create_reservation(v_guestid, date '1150-05-01', date '1150-05-03', 'ST');

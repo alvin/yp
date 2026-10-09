@@ -106,8 +106,6 @@ export interface GuestSearchRow {
 	guestregion: string | null;
 	guestprimaryphone: string | null;
 	guestemailaddress: string | null;
-	/** Other names recorded on this guest's stays — the second name a booking is held under. */
-	other_names: string | null;
 }
 
 export interface AllFieldsRow {
@@ -209,8 +207,6 @@ export interface GuestHistoryRow {
 	rooms: string | null;
 	rescancelled: boolean;
 	balance_owing: number;
-	party_size: number;
-	co_guests: string | null;
 }
 
 export interface ReservationGuestSummary {
@@ -224,14 +220,12 @@ export interface ReservationGuestSummary {
 	checkoutdate: string;
 	checkouttime: string | null;
 	guestinhouse: boolean;
-	percentageofbill: number;
 	vehicledescription: string | null;
 	vehiclelicenseplate: string | null;
 	rgnotes: string | null;
 	guest_name: string;
 	guestlastname: string;
 	guestfirstname: string | null;
-	balance_owing: number;
 }
 
 export interface OccupancySummary {
@@ -275,7 +269,6 @@ export interface LedgerRow {
 export interface ConfirmationReport {
 	resnumber: number;
 	guest: string;
-	guest_names: string | null;
 	guestaddress: string | null;
 	guestcity: string | null;
 	guestregion: string | null;
@@ -300,7 +293,6 @@ export interface ConfirmationReport {
 export interface FolioReport {
 	resnumber: number;
 	guest: string;
-	guest_names: string | null;
 	guestaddress: string | null;
 	guestcity: string | null;
 	guestregion: string | null;
@@ -353,7 +345,6 @@ export interface SharedRoom {
 export interface CheckoutBillHeader {
 	resnumber: number;
 	guest: string;
-	guest_names: string | null;
 	guestaddress: string | null;
 	guestcity: string | null;
 	guestregion: string | null;

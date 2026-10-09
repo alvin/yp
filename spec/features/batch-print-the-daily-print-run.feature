@@ -9,8 +9,9 @@ Feature: batch print the daily print run
     Given the print centre is open for a chosen business date
 
   Scenario: Acceptance criteria
-    Then A batch action gathers the day's operational reports and queued guest documents together.
+    Then A batch action gathers the day's operational reports and queued guest documents together: confirmations, check-in folios, check-out bills and cancellation notices.
     And The batch shows how many pages are ready, broken down by type.
-    And The set is grouped by the paper it prints on, daily reports on letter and guest documents on folio paper, each group showing how many pages it holds.
-    And Each group prints in one action on its own paper size, each item on its own page.
+    And The daily reports are one group, on letter paper.
+    And Each kind of guest document is a group of its own on folio paper, since the lodge's folio paper is printed on the back for each kind: the waiver behind the check-in folio, arrival instructions behind the confirmation, nothing behind the check-out bill.
+    And Each group shows how many pages it holds, and prints in one action on its own paper size with nothing from any other group, each item on its own page.
     And A document that fails to load is skipped without losing the rest of the batch.

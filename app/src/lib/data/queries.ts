@@ -95,10 +95,9 @@ function reservationSummaryRow(row: Record<string, unknown>): ReservationSummary
 // ---------------------------------------------------------------------------
 
 /**
- * Partial-name guest search. The database handles keyword splitting, the
+ * Partial-name guest search. The database handles keyword splitting and the
  * placeholder punctuation staff type for a half-remembered name ('-illington'),
- * and the other names a stay is booked under, so every screen that looks a
- * guest up behaves identically.
+ * so every screen that looks a guest up behaves identically.
  */
 export async function searchGuestsByName(query: string): Promise<GuestSearchRow[]> {
 	if (!query.trim()) return [];
@@ -174,26 +173,28 @@ export async function guestKitchenMeal(guestid: number): Promise<KitchenMeal | u
 	return rows[0];
 }
 
-async function reservationGuestSummaries(
+/** The guest a stay is booked under; a reservation holds one. A few Access
+ * bookings were left with none. */
+async function reservationGuestSummary(
 	reservationid: number
-): Promise<ReservationGuestSummary[]> {
+): Promise<ReservationGuestSummary | null> {
 	const rows = unwrap(
 		await supabase
 			.from('v_reservation_guest_summary')
 			.select('*')
 			.eq('reservationid', reservationid)
 			.eq('rgarchive', false)
-			.order('primaryguest', { ascending: false })
-			.order('reservationguestid')
+			.limit(1)
 	) as (ReservationGuestSummary & { rgarchive: boolean })[];
-	return rows.map((r) => ({
+	const r = rows[0];
+	if (!r) return null;
+	return {
 		...r,
 		checkindate: d(r.checkindate)!,
 		checkoutdate: d(r.checkoutdate)!,
 		checkintime: clock(r.checkintime),
-		checkouttime: clock(r.checkouttime),
-		balance_owing: num(r.balance_owing)
-	}));
+		checkouttime: clock(r.checkouttime)
+	};
 }
 
 /** Room windows on this stay that another live reservation also holds. */
@@ -271,28 +272,26 @@ export async function effectiveRoomRate(
 export interface ReservationNotes {
 	housekeeping: HousekeepingNote[];
 	kitchen: KitchenMeal[];
-	reservationGuests: ReservationGuestSummary[];
+	reservationGuest: ReservationGuestSummary | null;
 }
 
 export async function reservationNotes(reservationid: number): Promise<ReservationNotes> {
-	const rgs = await reservationGuestSummaries(reservationid);
-	const rgIds = rgs.map((rg) => rg.reservationguestid);
-	const guestIds = rgs.map((rg) => rg.guestid);
+	const rg = await reservationGuestSummary(reservationid);
 	const [housekeeping, kitchen] = await Promise.all([
-		rgIds.length
+		rg
 			? supabase
 					.from('housekeeping_notes')
 					.select('*')
-					.in('reservationguestid', rgIds)
+					.eq('reservationguestid', rg.reservationguestid)
 					.eq('hkarchive', false)
 					.order('hknotesdate', { ascending: false })
 					.then(unwrap)
 			: Promise.resolve([]),
-		guestIds.length
+		rg
 			? supabase
 					.from('kitchen_meals')
 					.select('*')
-					.in('guestid', guestIds)
+					.eq('guestid', rg.guestid)
 					.eq('kmarchive', false)
 					.order('kitchenmealid')
 					.then(unwrap)
@@ -304,7 +303,7 @@ export async function reservationNotes(reservationid: number): Promise<Reservati
 			hknotesdate: d(h.hknotesdate)
 		})),
 		kitchen: kitchen as KitchenMeal[],
-		reservationGuests: rgs
+		reservationGuest: rg
 	};
 }
 

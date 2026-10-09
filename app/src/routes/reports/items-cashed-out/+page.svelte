@@ -52,11 +52,8 @@
 		for (const row of data.rows) add(sums, row);
 		return sums;
 	});
-	// Sales plus every tax column; ties to DCAR 'Total Sales and Charges' + 'Total Taxes'.
-	const salesAndTaxes = $derived(
-		totals.total + totals.gst + totals.pst + totals.dmt + totals.liquor + totals.other
-	);
-	const agrees = $derived(Math.abs(salesAndTaxes - data.dcar_sales_and_taxes) < 0.005);
+	const difference = $derived(Math.abs(totals.total - data.dcar_item_sales));
+	const agrees = $derived(difference < 0.005);
 </script>
 
 <svelte:head><title>Items cashed out · {dateShort(data.date)}</title></svelte:head>
@@ -73,7 +70,7 @@
 		{#if agrees}
 			<Badge variant="success">Agrees with Daily Cash</Badge>
 		{:else}
-			<Badge variant="warning">Differs by {money(Math.abs(salesAndTaxes - data.dcar_sales_and_taxes))}</Badge>
+			<Badge variant="warning">Differs by {money(difference)}</Badge>
 		{/if}
 	{/snippet}
 	<div class="blackbar">Yellow Point Lodge</div>

@@ -143,8 +143,9 @@ export interface ReservationChanges {
 
 /**
  * Changes an existing reservation. Only the fields passed here move; the
- * database recomputes the night count, re-checks the booking rules, and carries
- * the reservation's guests and room assignments to the new stay dates.
+ * database recomputes the night count, re-checks the booking rules, carries
+ * the reservation's guest and room assignments to the new stay dates, and
+ * gives a new number of guests to every room the whole party is in.
  */
 export async function updateReservation(
 	reservationid: number,
@@ -162,20 +163,6 @@ export async function updateReservation(
 			p_arrivaltime: changes.arrivaltime ?? null,
 			p_groupname: changes.groupname ?? null,
 			p_bookedby: changes.bookedby ?? null
-		})
-	);
-}
-
-export async function addReservationGuest(
-	reservationid: number,
-	guestid: number,
-	primaryguest = false
-): Promise<number> {
-	return unwrap(
-		await supabase.rpc('add_reservation_guest', {
-			p_reservationid: reservationid,
-			p_guestid: guestid,
-			p_primaryguest: primaryguest
 		})
 	);
 }
@@ -292,6 +279,13 @@ export async function recordRoomMove(
 export async function changeRoom(occupancyid: number, roomid: number): Promise<void> {
 	unwrap(
 		await supabase.rpc('update_room_assignment', { p_occupancyid: occupancyid, p_roomid: roomid })
+	);
+}
+
+/** Sets how many of the party a room window holds. */
+export async function setRoomGuests(occupancyid: number, guests: number): Promise<void> {
+	unwrap(
+		await supabase.rpc('update_room_assignment', { p_occupancyid: occupancyid, p_numguests: guests })
 	);
 }
 

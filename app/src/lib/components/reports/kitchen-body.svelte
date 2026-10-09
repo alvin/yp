@@ -24,7 +24,7 @@
 <div class="blackbar">Yellow Point Lodge</div>
 <h1>Kitchen/Meal Report</h1>
 <h3>for {dateShort(date)}{allergyOnly ? ' — Allergy only' : ''}</h3>
-<table>
+<table class="ruled">
 	<thead>
 		<tr>
 			<th>Res #:</th>

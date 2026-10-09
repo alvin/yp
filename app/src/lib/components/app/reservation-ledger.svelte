@@ -30,21 +30,18 @@
         roomOptions,
         tenderTypeOptions,
     } from "$lib/options.js";
-    import type {
-        LedgerRow,
-        ReservationGuestSummary,
-        RoomRateType,
-    } from "$lib/data/types.js";
+    import type { LedgerRow, RoomRateType } from "$lib/data/types.js";
 
     let {
         reservationid,
+        reservationguestid,
         initialLines,
-        reservationGuests,
         today,
     }: {
         reservationid: number;
+        /** The stay's guest, whom every charge and payment is posted to. */
+        reservationguestid: number;
         initialLines: LedgerRow[];
-        reservationGuests: ReservationGuestSummary[];
         today: string;
     } = $props();
 
@@ -62,12 +59,6 @@
         lines.length ? lines[lines.length - 1].running_balance : 0,
     );
 
-    const defaultGuest = $derived(
-        reservationGuests.find((g) => g.primaryguest)?.reservationguestid ??
-            reservationGuests[0]?.reservationguestid ??
-            0,
-    );
-
     // ---- Add charge ----
     let chargeOpen = $state(false);
     let chargeKind = $state<"room" | "item">("room");
@@ -77,7 +68,6 @@
     let cQty = $state(1);
     let cUnit = $state(0);
     let cDate = $state("");
-    let cGuest = $state("");
 
     function openCharge() {
         chargeKind = "room";
@@ -87,7 +77,6 @@
         cQty = 1;
         cUnit = 0;
         cDate = today;
-        cGuest = String(defaultGuest);
         chargeOpen = true;
     }
 
@@ -95,14 +84,19 @@
         cUnit = inventoryById(Number(id))?.invamount ?? 0;
     }
 
-    // A room night is priced from the room's dated rate of the chosen type
-    // (Regular, Special or Split, as Access asked). Show that rate in Unit
-    // price rather than 0.00, so the clerk sees what will post and can still
-    // type over it. Picking another room, rate or date looks it up again; a
-    // slower earlier lookup never overwrites a newer one.
+    // A room night is priced from the room's dated rate of the chosen type, as
+    // Access asked. Show that rate in Unit price rather than 0.00, so the clerk
+    // sees what will post and can still type over it. Picking another room,
+    // rate or date looks it up again; a slower earlier lookup never overwrites
+    // a newer one.
+    //
+    // The rate table keeps Access's names for the three rates; the desk calls
+    // them by who is in the room, as Access's own rate codes describe them:
+    // Regular is "Night for Two", Special "Night for One", Split "Split Rate".
+    // Which one a stay is charged, if any, is the clerk's choice.
     const RATE_TYPES: { value: RoomRateType; label: string }[] = [
-        { value: "Regular", label: "Regular" },
-        { value: "Special", label: "Special" },
+        { value: "Regular", label: "Double" },
+        { value: "Special", label: "Single" },
         { value: "Split", label: "Split" },
     ];
     let rateLookup = 0;
@@ -126,17 +120,10 @@
     const items = itemOptions();
     const categories = paymentCategoryOptions();
     const tenders = tenderTypeOptions();
-    const guestPickerOptions = $derived(
-        reservationGuests.map((g) => ({
-            value: String(g.reservationguestid),
-            label: g.guest_name,
-        })),
-    );
 
     async function saveCharge() {
         const qty = Math.max(1, Number(cQty) || 1);
         const unit = round2(Number(cUnit) || 0);
-        const rgid = Number(cGuest) || defaultGuest;
         if (chargeKind === "item" && !cItem) {
             toast.error("Choose an item to charge.");
             return;
@@ -149,7 +136,7 @@
                     room.roomname +
                     (room.roomnumber ? ` ${room.roomnumber}` : "");
                 await postRoomNights(
-                    rgid,
+                    reservationguestid,
                     room.roomid,
                     cDate,
                     addDays(cDate, qty),
@@ -161,7 +148,7 @@
                 const inv = inventoryById(Number(cItem))!;
                 description = inv.invitemdescription ?? inv.invtype;
                 await postCharge(
-                    rgid,
+                    reservationguestid,
                     inv.inventoryid,
                     qty,
                     cDate,
@@ -185,7 +172,6 @@
     let pAmount = $state(0);
     let pDate = $state("");
     let pNotes = $state("");
-    let pGuest = $state("");
 
     function openPayment() {
         pCategory = "Payment (Regular)";
@@ -193,7 +179,6 @@
         pAmount = 0;
         pDate = today;
         pNotes = "";
-        pGuest = String(defaultGuest);
         payOpen = true;
     }
 
@@ -205,7 +190,7 @@
         }
         try {
             await recordPayment(
-                Number(pGuest) || defaultGuest,
+                reservationguestid,
                 pCategory,
                 pType,
                 amount,
@@ -488,17 +473,6 @@
                     <Input id="c-date" type="date" bind:value={cDate} />
                 </div>
             </div>
-
-            {#if reservationGuests.length > 1}
-                <div class="space-y-1.5">
-                    <Label for="c-guest">Charge to</Label>
-                    <Combobox
-                        id="c-guest"
-                        bind:value={cGuest}
-                        options={guestPickerOptions}
-                    />
-                </div>
-            {/if}
         </div>
         <Dialog.Footer>
             <Button variant="ghost" onclick={() => (chargeOpen = false)}
@@ -551,16 +525,6 @@
                     <Input id="p-date" type="date" bind:value={pDate} />
                 </div>
             </div>
-            {#if reservationGuests.length > 1}
-                <div class="space-y-1.5">
-                    <Label for="p-guest">Received from</Label>
-                    <Combobox
-                        id="p-guest"
-                        bind:value={pGuest}
-                        options={guestPickerOptions}
-                    />
-                </div>
-            {/if}
 
             <div class="space-y-1.5">
                 <Label for="p-notes">Notes (optional)</Label>

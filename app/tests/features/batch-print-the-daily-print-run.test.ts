@@ -3,60 +3,118 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, todayISO } from '../helpers/db';
+import { addDays, isolatedDate, makeReservation, rpc, type Fixture } from '../helpers/db';
+
+const DOCS = ['confirmation', 'check_in_folio', 'checkout_bill', 'cancellation_notice'] as const;
 
 let page: Page;
-const today = todayISO();
+let day: string;
+let arriving: Fixture;
+let leaving: Fixture;
+let cancelled: Fixture;
 
 beforeAll(async () => {
-	// Ensure today's queues have at least one arrival (folio) to batch.
-	await makeReservation({ arrival: today, departure: undefined, nights: 2 });
+	// One of each guest document on the batch's day: a stay arriving (its
+	// check-in folio, and its confirmation, confirmed that day), a stay leaving
+	// (its check-out bill), and a stay cancelled that day (its notice).
+	const start = isolatedDate();
+	day = addDays(start, 2);
+	arriving = await makeReservation({ arrival: day, nights: 2 });
+	await rpc('confirm_reservation', {
+		p_reservationid: arriving.reservationid,
+		p_confirmed: true,
+		p_date: day
+	});
+	leaving = await makeReservation({ arrival: start, departure: day });
+	cancelled = await makeReservation({ arrival: addDays(start, 5), nights: 1 });
+	await rpc('cancel_reservation', {
+		p_reservationid: cancelled.reservationid,
+		p_date: day,
+		p_deposit_handling: 'none',
+		p_notes: null
+	});
 	page = await openAppPage();
+	await page.goto(`${APP_URL}/print/batch?date=${day}`, { waitUntil: 'networkidle' });
+	await page.locator('[data-testid=group-cancellation_notice]').waitFor({ timeout: 15_000 });
 });
 
 afterAll(async () => {
 	await closeApp(page);
 });
 
-/** The @page rules the screen currently carries. */
-async function pageRule(p: Page): Promise<string> {
-	return p.evaluate(() =>
-		Array.from(document.querySelectorAll('style'))
-			.map((s) => s.textContent ?? '')
-			.filter((t) => t.includes('@page'))
-			.join('\n')
-	);
+/** The @page rules in force at the moment the print dialog would open. */
+async function rulesWhenPrinting(p: Page, testid: string): Promise<string> {
+	// window.print() blocks the page in a real browser; stand in for it so the
+	// test can read the rules in force at the moment printing starts.
+	await p.evaluate(() => {
+		const w = window as unknown as { __atPrint?: string };
+		w.__atPrint = undefined;
+		window.print = () => {
+			w.__atPrint = Array.from(document.querySelectorAll('style'))
+				.map((s) => s.textContent ?? '')
+				.filter((t) => t.includes('@page'))
+				.join('\n');
+		};
+	});
+	await p.click(`[data-testid=${testid}]`);
+	return p.evaluate(() => (window as unknown as { __atPrint?: string }).__atPrint ?? '');
 }
 
 describe('batch print the daily print run', () => {
-	it('gathers the day’s reports and queued documents together', async () => {
-		await page.goto(`${APP_URL}/print/batch?date=${today}`, { waitUntil: 'networkidle' });
-		const count = await page.locator('.report-page').count();
-		// 4 daily reports at minimum, plus the folio for today's arrival.
-		expect(count).toBeGreaterThanOrEqual(5);
+	it('gathers the day’s reports and every kind of queued guest document', async () => {
 		const body = await page.textContent('body');
 		expect(body).toContain('Housekeeping Report');
 		expect(body).toContain('In House Report');
+		expect(await page.locator('[data-testid=group-reports] .report-page').count()).toBe(4);
+		const holds = async (key: string) =>
+			page.textContent(`[data-testid=group-${key}] .report-page`);
+		expect(await holds('confirmation')).toContain(String(arriving.resnumber));
+		expect(await holds('check_in_folio')).toContain(String(arriving.resnumber));
+		expect(await holds('checkout_bill')).toContain(String(leaving.resnumber));
+		expect(await holds('cancellation_notice')).toContain(String(cancelled.resnumber));
+		expect(await holds('cancellation_notice')).toContain('CANCELLATION');
 	});
 
 	it('shows how many pages are ready, broken down by type', async () => {
-		await page.goto(`${APP_URL}/print/batch?date=${today}`, { waitUntil: 'networkidle' });
 		const toolbar = await page.textContent('.no-print');
-		expect(toolbar).toMatch(/\d+ pages ready/);
-		expect(toolbar).toMatch(/report/i);
-		expect(toolbar).toMatch(/folio/i);
+		expect(toolbar).toContain(
+			'8 pages ready: 4 reports · 1 confirmation · 1 folio · 1 bill · 1 cancellation'
+		);
 	});
 
-	it('groups the set by paper, each group printing in one action', async () => {
-		await page.goto(`${APP_URL}/print/batch?date=${today}`, { waitUntil: 'networkidle' });
-		// One print action per stock: reports on letter, guest documents on A5.
-		await page.locator('[data-testid=print-letter]').waitFor({ timeout: 15_000 });
-		await page.locator('[data-testid=print-a5]').waitFor({ timeout: 15_000 });
-		expect(await page.locator('[data-testid=group-letter] .report-page').count()).toBe(4);
-		expect(
-			await page.locator('[data-testid=group-a5] .report-page').count()
-		).toBeGreaterThanOrEqual(1);
-		// Page-break styling gives each document its own sheet.
+	it('prints the daily reports together on letter paper', async () => {
+		expect(await page.textContent('[data-testid=group-reports] .batch-heading')).toMatch(
+			/Reports · letter · 4 pages/
+		);
+		const rules = await rulesWhenPrinting(page, 'print-reports');
+		expect(rules).toContain('size: letter');
+		expect(rules).toContain('.batch-group:not([data-group="reports"]) { display: none');
+	});
+
+	it('prints each kind of guest document on its own, on folio paper', async () => {
+		for (const key of DOCS) {
+			const group = `[data-testid=group-${key}]`;
+			expect(await page.locator(`${group} .report-page`).count(), key).toBe(1);
+			const heading = (await page.textContent(`${group} .batch-heading`))?.trim();
+			expect(heading, key).toMatch(/· A5 · 1 page$/);
+			const rules = await rulesWhenPrinting(page, `print-${key}`);
+			expect(rules, key).toContain('size: A5');
+			// Only that group goes with it.
+			expect(rules, key).toContain(`.batch-group:not([data-group="${key}"]) { display: none`);
+		}
+		const labels = await page
+			.locator('[data-testid^=print-]')
+			.evaluateAll((els) => els.map((e) => e.textContent?.trim()));
+		expect(labels).toEqual([
+			'Reports',
+			'Confirmations',
+			'Check-in folios',
+			'Check-out bills',
+			'Cancellations'
+		]);
+	});
+
+	it('gives each document its own sheet', async () => {
 		const css = await page.evaluate(() =>
 			Array.from(document.querySelectorAll('style'))
 				.map((s) => s.textContent)
@@ -65,77 +123,26 @@ describe('batch print the daily print run', () => {
 		expect(css).toContain('page-break-after');
 	});
 
+	it('has nothing to print for a kind of document the day does not have', async () => {
+		// The day after, the arriving stay is in house and nothing else happens.
+		await page.goto(`${APP_URL}/print/batch?date=${addDays(day, 1)}`, {
+			waitUntil: 'networkidle'
+		});
+		await page.locator('[data-testid=print-reports]').waitFor({ timeout: 15_000 });
+		expect(await page.locator('[data-testid=print-reports]').isDisabled()).toBe(false);
+		for (const key of DOCS) {
+			expect(await page.locator(`[data-testid=print-${key}]`).isDisabled(), key).toBe(true);
+			expect(await page.locator(`[data-testid=group-${key}]`).count(), key).toBe(0);
+		}
+	});
+
 	it('is reachable from the Print Center with a live summary', async () => {
 		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
-		const body = await page.textContent('body');
-		expect(body).toMatch(/Batch print/i);
+		await page.fill('#print-date', day);
+		await expect
+			.poll(() => page.textContent('body'), { timeout: 10_000 })
+			.toContain('4 daily reports · 1 confirmation · 1 folio · 1 bill · 1 cancellation');
 		await page.click('a[href*="/print/batch"]');
-		await page.waitForURL(/\/print\/batch/, { timeout: 15_000 });
-	});
-});
-
-describe('batch print the daily print run — each group on its own paper', () => {
-	let stockPage: Page;
-
-	beforeAll(async () => {
-		// An arrival today puts at least one guest document in the batch.
-		await makeReservation({ arrival: today, nights: 2 });
-		stockPage = await openAppPage();
-		await stockPage.goto(`${APP_URL}/print/batch?date=${today}`, { waitUntil: 'networkidle' });
-	});
-
-	afterAll(async () => {
-		await closeApp(stockPage);
-	});
-
-	it('groups the batch by the paper each document prints on', async () => {
-		const body = await stockPage.textContent('body');
-		expect(body).toContain('Reports');
-		expect(body).toContain('Folios');
-		expect(await stockPage.locator('[data-testid=group-letter]').count()).toBe(1);
-		expect(await stockPage.locator('[data-testid=group-a5]').count()).toBe(1);
-	});
-
-	it('shows how many pages each group holds and prints it on its own', async () => {
-		const letter = await stockPage.textContent('[data-testid=group-letter] .batch-heading');
-		expect(letter).toMatch(/letter · 4 pages/);
-		const a5 = await stockPage.textContent('[data-testid=group-a5] .batch-heading');
-		expect(a5).toMatch(/A5 · \d+ pages/);
-		await stockPage.locator('[data-testid=print-letter]').waitFor({ timeout: 15_000 });
-		await stockPage.locator('[data-testid=print-a5]').waitFor({ timeout: 15_000 });
-	});
-
-	it('prints daily reports on letter and guest documents on folio paper', async () => {
-		// Nothing is being printed yet, so the sheet is laid out for letter.
-		expect(await pageRule(stockPage)).toContain('size: letter');
-
-		// window.print() blocks the page in a real browser; stand in for it so
-		// the test can read the rules in force at the moment printing starts.
-		await stockPage.evaluate(() => {
-			const w = window as unknown as { __atPrint?: string };
-			w.__atPrint = undefined;
-			window.print = () => {
-				w.__atPrint = Array.from(document.querySelectorAll('style'))
-					.map((s) => s.textContent ?? '')
-					.filter((t) => t.includes('@page'))
-					.join('\n');
-			};
-		});
-
-		const ruleAtPrint = async (testid: string): Promise<string> => {
-			await stockPage.click(`[data-testid=${testid}]`);
-			return stockPage.evaluate(
-				() => (window as unknown as { __atPrint?: string }).__atPrint ?? ''
-			);
-		};
-
-		const a5 = await ruleAtPrint('print-a5');
-		expect(a5).toContain('size: A5');
-		// Only the folios go with it.
-		expect(a5).toContain('.batch-group:not([data-stock="a5"]) { display: none');
-
-		const letter = await ruleAtPrint('print-letter');
-		expect(letter).toContain('size: letter');
-		expect(letter).toContain('.batch-group:not([data-stock="letter"]) { display: none');
+		await page.waitForURL(new RegExp(`/print/batch\\?date=${day}`), { timeout: 15_000 });
 	});
 });

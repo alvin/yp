@@ -117,6 +117,21 @@
 	border-top: 2px solid #444;
 	font-weight: 700;
 }
+/* The daily reports list a room or a guest a line, and the lodge asked for
+   each line ruled off from the next and every other one shaded, so a line
+   reads straight across the sheet. A departure from the originals, which
+   ran their rows together. Browsers leave background shading off a printout
+   unless a page asks for it, so these tables ask. */
+.report-page table.ruled {
+	print-color-adjust: exact;
+	-webkit-print-color-adjust: exact;
+}
+.report-page table.ruled tbody tr {
+	border-bottom: 1px solid #777;
+}
+.report-page table.ruled tbody tr:nth-child(even) {
+	background: #e4e4e4;
+}
 .report-page .footer {
 	position: absolute;
 	left: 56px;

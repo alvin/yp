@@ -1,12 +1,9 @@
 <script lang="ts">
     // One guest lookup, used everywhere a guest is searched for: the lookup
-    // home screen, the new-reservation guest panel, the add-a-name dialog and
-    // the Print Center. Partial strings match any part of a name, the list
-    // scrolls, and names sharing a stay with a match are shown too — a booking
-    // held under two partners is found from either name.
+    // home screen, the new-reservation guest panel and the Print Center.
+    // Partial strings match any part of a name, and the list scrolls.
     import type { Snippet } from "svelte";
     import SearchIcon from "@lucide/svelte/icons/search";
-    import UsersIcon from "@lucide/svelte/icons/users";
 
     import { Input } from "$lib/components/ui/input/index.js";
     import { searchGuestsByName } from "$lib/data/queries.js";
@@ -111,14 +108,6 @@
                                     ? " · "
                                     : ""}{g.guestprimaryphone}{/if}
                         </span>
-                        {#if g.other_names}
-                            <span
-                                class="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-xs"
-                            >
-                                <UsersIcon class="size-3 shrink-0" />
-                                with {g.other_names}
-                            </span>
-                        {/if}
                     </span>
                 </button>
             {:else}

@@ -2,13 +2,12 @@
     import { toast } from "svelte-sonner";
     import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
     import NotebookIcon from "@lucide/svelte/icons/notebook-pen";
-    import UsersIcon from "@lucide/svelte/icons/users";
+    import UserIcon from "@lucide/svelte/icons/user";
     import CarIcon from "@lucide/svelte/icons/car";
     import BedIcon from "@lucide/svelte/icons/bed-double";
     import PlusIcon from "@lucide/svelte/icons/plus";
     import RepeatIcon from "@lucide/svelte/icons/repeat-2";
     import CheckIcon from "@lucide/svelte/icons/check";
-    import UserPlusIcon from "@lucide/svelte/icons/user-plus";
     import XCircleIcon from "@lucide/svelte/icons/circle-x";
     import FileTextIcon from "@lucide/svelte/icons/file-text";
     import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
@@ -28,13 +27,11 @@
     import * as Tabs from "$lib/components/ui/tabs/index.js";
     import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Field from "$lib/components/app/field.svelte";
-    import Money from "$lib/components/app/money.svelte";
     import StatusBadge from "$lib/components/app/status-badge.svelte";
     import ReservationLedger from "$lib/components/app/reservation-ledger.svelte";
     import SharedRoomBadge from "$lib/components/app/shared-room-badge.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
     import SettleDepositDialog from "$lib/components/app/settle-deposit-dialog.svelte";
-    import GuestSearch from "$lib/components/app/guest-search.svelte";
     import GuestNotesDialog from "$lib/components/app/guest-notes-dialog.svelte";
     import { guestDocTabs } from "$lib/report-nav.js";
     import { afterNavigate, invalidateAll } from "$app/navigation";
@@ -49,26 +46,21 @@
     } from "$lib/data/queries.js";
     import {
         setHousekeepingNote,
-        addReservationGuest,
         assignRoom,
         cancelReservation,
         confirmReservation,
         settleDeposit,
         uncancelReservation,
-        createGuest,
         recordRoomMove,
         undoRoomMove,
         changeRoom,
+        setRoomGuests,
         saveKitchenMeal,
         setReservationNotes,
         updateReservation,
         updateReservationGuestNotes,
     } from "$lib/data/mutations.js";
-    import type {
-        GuestSearchRow,
-        OccupancySummary,
-        SharedRoom,
-    } from "$lib/data/types.js";
+    import type { OccupancySummary, SharedRoom } from "$lib/data/types.js";
 
     let { data } = $props();
     const s = $derived(data.summary);
@@ -92,40 +84,28 @@
             moves: d.moves,
             mIn: d.today,
             mOut: d.summary.resdeparturedate,
-            kitchenDiet: primaryMeal(d)?.guestdiet ?? "",
-            kitchenText: primaryMeal(d)?.kitchenmealnotes ?? "",
+            kitchenDiet: guestMeal(d)?.guestdiet ?? "",
+            kitchenText: guestMeal(d)?.kitchenmealnotes ?? "",
             housekeepingText: currentHousekeepingNote(d),
-            requestText:
-                d.reservationGuests.find(
-                    (g) =>
-                        g.reservationguestid ===
-                        d.summary.primary_reservationguestid,
-                )?.rgnotes ?? "",
+            requestText: d.reservationGuest?.rgnotes ?? "",
             reservationText: d.summary.resnotes ?? "",
         };
     }
     const i = seed();
 
-    // Each notes tab edits the primary guest's own text: the diet notes on
-    // their kitchen record, the housekeeping note in force (the one that
-    // prints), their requests. Showing every guest's text joined and saving
-    // it back would copy other guests' notes onto the primary.
-    function primaryMeal(d: typeof data) {
-        return d.kitchen.find((k) => k.guestid === d.summary.primary_guestid);
+    // Each notes tab edits the guest's own text: the diet notes on their
+    // kitchen record, the housekeeping note in force (the one that prints),
+    // their requests.
+    function guestMeal(d: typeof data) {
+        return d.kitchen[0];
     }
     function currentHousekeepingNote(d: typeof data): string {
-        const mine = d.housekeeping
-            .filter(
-                (h) =>
-                    h.reservationguestid ===
-                    d.summary.primary_reservationguestid,
-            )
-            .sort(
-                (a, b) =>
-                    (b.hknotesdate ?? "").localeCompare(a.hknotesdate ?? "") ||
-                    b.housekeepingnotesid - a.housekeepingnotesid,
-            );
-        return mine[0]?.housekeepingnotes ?? "";
+        const latest = [...d.housekeeping].sort(
+            (a, b) =>
+                (b.hknotesdate ?? "").localeCompare(a.hknotesdate ?? "") ||
+                b.housekeepingnotesid - a.housekeepingnotesid,
+        );
+        return latest[0]?.housekeepingnotes ?? "";
     }
 
     let cancelled = $state(i.cancelled);
@@ -436,49 +416,89 @@
         }
     }
 
-    // Additional guest names on the reservation
-    let addGuestOpen = $state(false);
-    let agQuery = $state("");
-    let agLastName = $state("");
-    let agFirstName = $state("");
-    let agSaving = $state(false);
-    async function attachGuest(guestid: number, label: string) {
-        agSaving = true;
+    // The number of guests, changed after booking. The database gives the new
+    // number to every room the whole party is in, so the daily reports count
+    // it. Rooms held side by side split the party in a way the reservation
+    // doesn't record, so each of those keeps a number of its own, set here.
+    let guestsOpen = $state(false);
+    let savingGuests = $state(false);
+    let gAdults = $state<number | null>(null);
+    let gChildren = $state<number | null>(null);
+    let gRooms = $state<Record<number, number | null>>({});
+
+    function party(adults: number, children: number): string {
+        const a = `${adults} adult${adults === 1 ? "" : "s"}`;
+        return children
+            ? `${a}, ${children} ${children === 1 ? "child" : "children"}`
+            : a;
+    }
+
+    // Rooms of the stay that share a night with another of its rooms
+    // (ypl.reservations_sync_room_guests leaves these alone).
+    const sideBySide = $derived(
+        occupancy.filter((o) =>
+            occupancy.some(
+                (x) =>
+                    x.occupancyid !== o.occupancyid &&
+                    x.occupancyin < o.occupancyout &&
+                    o.occupancyin < x.occupancyout,
+            ),
+        ),
+    );
+    const isCount = (v: number | null | undefined, min: number) =>
+        v != null && Number.isInteger(v) && v >= min;
+    // A room left blank keeps the number it has.
+    const roomsChanged = $derived(
+        sideBySide.filter((o) => {
+            const v = gRooms[o.occupancyid];
+            return v != null && v !== o.occupancynumguests;
+        }),
+    );
+    const partyChanged = $derived(
+        gAdults !== s.numadults || gChildren !== (s.numchildren ?? 0),
+    );
+    const guestsValid = $derived(
+        isCount(gAdults, 0) &&
+            isCount(gChildren, 0) &&
+            (gAdults ?? 0) + (gChildren ?? 0) >= 1 &&
+            roomsChanged.every((o) => isCount(gRooms[o.occupancyid], 1)),
+    );
+
+    function openGuests() {
+        gAdults = s.numadults;
+        gChildren = s.numchildren ?? 0;
+        gRooms = Object.fromEntries(
+            sideBySide.map((o) => [o.occupancyid, o.occupancynumguests]),
+        );
+        guestsOpen = true;
+    }
+
+    async function saveGuests() {
+        const adults = gAdults ?? 0;
+        const children = gChildren ?? 0;
+        savingGuests = true;
         try {
-            await addReservationGuest(s.reservationid, guestid);
-            addGuestOpen = false;
-            agQuery = agLastName = agFirstName = "";
-            toast.success(`${label} added to the reservation`);
+            if (partyChanged)
+                await updateReservation(s.reservationid, {
+                    numadults: adults,
+                    numchildren: children,
+                });
+            for (const o of roomsChanged)
+                await setRoomGuests(o.occupancyid, gRooms[o.occupancyid]!);
+            guestsOpen = false;
+            toast.success("Guests updated", {
+                description: party(adults, children),
+            });
             await invalidateAll();
+            await refreshRooms();
         } catch (e) {
             toast.error(
-                e instanceof Error ? e.message : "Could not add the guest.",
+                e instanceof Error
+                    ? e.message
+                    : "Could not change the number of guests.",
             );
         } finally {
-            agSaving = false;
-        }
-    }
-    async function addNewGuestToReservation() {
-        if (!agLastName.trim()) {
-            toast.error("Enter at least a last name.");
-            return;
-        }
-        agSaving = true;
-        try {
-            const guestid = await createGuest({
-                lastname: agLastName.trim(),
-                firstname: agFirstName.trim() || null,
-            });
-            agSaving = false;
-            await attachGuest(
-                guestid,
-                `${agLastName.trim()}${agFirstName.trim() ? ", " + agFirstName.trim() : ""}`,
-            );
-        } catch (e) {
-            agSaving = false;
-            toast.error(
-                e instanceof Error ? e.message : "Could not add the guest.",
-            );
+            savingGuests = false;
         }
     }
 
@@ -494,7 +514,7 @@
             if (which === "Kitchen") {
                 // A diet on file is saved even when emptied, which clears it;
                 // with none on file, an empty tab adds nothing.
-                const meal = primaryMeal(data);
+                const meal = guestMeal(data);
                 if (meal || kitchenDiet || kitchenText.trim())
                     await saveKitchenMeal(
                         s.primary_guestid,
@@ -680,72 +700,46 @@
 <div class="grid items-start gap-5 lg:grid-cols-[1.35fr_1fr]">
     <!-- Left: guest, reservation, rooms, notes -->
     <div class="space-y-5">
-        <!-- Guests -->
+        <!-- Guest -->
         <Card.Root>
             <Card.Header class="border-b pb-4">
                 <div class="flex items-center justify-between">
                     <Card.Title class="flex items-center gap-2 text-base"
-                        ><UsersIcon class="size-4" /> Guests</Card.Title
+                        ><UserIcon class="size-4" /> Guest</Card.Title
                     >
-                    <div class="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onclick={() => (addGuestOpen = true)}
-                        >
-                            <UserPlusIcon /> Add guest
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onclick={() => (notesOpen = true)}
-                        >
-                            <NotebookIcon /> Guest notes
-                            {#if data.guestNotes}<span
-                                    class="bg-primary ml-1 size-1.5 rounded-full"
-                                ></span>{/if}
-                        </Button>
-                    </div>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onclick={() => (notesOpen = true)}
+                    >
+                        <NotebookIcon /> Guest notes
+                        {#if data.guestNotes}<span
+                                class="bg-primary ml-1 size-1.5 rounded-full"
+                            ></span>{/if}
+                    </Button>
                 </div>
             </Card.Header>
-            <Card.Content class="divide-y p-0">
-                {#each data.reservationGuests as g (g.reservationguestid)}
-                    <div
-                        class="flex items-start justify-between gap-3 px-6 py-3"
-                    >
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2">
-                                <a
-                                    href="/guests/{g.guestid}"
-                                    class="font-medium hover:underline"
-                                    >{g.guest_name}</a
-                                >
-                                {#if g.primaryguest}<Badge
-                                        variant="secondary"
-                                        class="text-[10px]">Primary</Badge
-                                    >{/if}
-                            </div>
+            {#if data.reservationGuest}
+                {@const g = data.reservationGuest}
+                <Card.Content class="p-0">
+                    <div class="px-6 py-3">
+                        <a
+                            href="/guests/{g.guestid}"
+                            class="font-medium hover:underline"
+                            >{g.guest_name}</a
+                        >
+                        {#if g.vehicledescription}
                             <div
-                                class="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs"
+                                class="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs"
                             >
-                                <span>{g.percentageofbill}% of bill</span>
-                                {#if g.vehicledescription}
-                                    <span class="flex items-center gap-1"
-                                        ><CarIcon class="size-3" />
-                                        {g.vehicledescription}{#if g.vehiclelicenseplate}
-                                            · {g.vehiclelicenseplate}{/if}</span
-                                    >
-                                {/if}
+                                <CarIcon class="size-3" />
+                                {g.vehicledescription}{#if g.vehiclelicenseplate}
+                                    · {g.vehiclelicenseplate}{/if}
                             </div>
-                        </div>
-                        <Money
-                            value={g.balance_owing}
-                            muteZero
-                            class="shrink-0 text-sm font-medium"
-                        />
+                        {/if}
                     </div>
-                {/each}
-            </Card.Content>
+                </Card.Content>
+            {/if}
         </Card.Root>
 
         <!-- Reservation details -->
@@ -767,7 +761,8 @@
                     />
                     <Field
                         label="Guests"
-                        value={`${s.numadults} adult${s.numadults === 1 ? "" : "s"}${s.numchildren ? `, ${s.numchildren} child` : ""}`}
+                        value={party(s.numadults, s.numchildren ?? 0)}
+                        onedit={cancelled ? undefined : openGuests}
                     />
                     <Field label="Beds" value={bedTypeLabel(s.bedtype)} />
                     <Field label="Arrival time" value={s.resarrivaltime} />
@@ -960,8 +955,8 @@
     <div class="space-y-5 lg:sticky lg:top-20">
         <ReservationLedger
             reservationid={s.reservationid}
+            reservationguestid={s.primary_reservationguestid}
             initialLines={data.ledger}
-            reservationGuests={data.reservationGuests}
             {today}
         />
 
@@ -994,50 +989,74 @@
     notes={data.guestNotes}
 />
 
-<!-- Add guest dialog -->
-<Dialog.Root bind:open={addGuestOpen}>
+<!-- Change the number of guests -->
+<Dialog.Root bind:open={guestsOpen}>
     <Dialog.Content class="sm:max-w-md">
         <Dialog.Header>
-            <Dialog.Title>Add a guest name</Dialog.Title>
+            <Dialog.Title>Number of guests on #{s.resnumber}</Dialog.Title>
             <Dialog.Description>
-                Names on this stay.
+                Adults and children for this reservation.
             </Dialog.Description>
         </Dialog.Header>
         <div class="space-y-3">
-            <div class="space-y-1.5">
-                <Label for="ag-q">Find an existing guest</Label>
-                <GuestSearch
-                    id="ag-q"
-                    bind:query={agQuery}
-                    disabled={agSaving}
-                    placeholder="Type a name…"
-                    onselect={(g: GuestSearchRow) =>
-                        attachGuest(g.guestid, g.guest_name)}
-                />
-            </div>
-            <div class="text-muted-foreground text-center text-xs">
-                — or add a new name —
-            </div>
             <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                    <Label for="ag-ln">Last name</Label>
-                    <Input id="ag-ln" bind:value={agLastName} />
+                    <Label for="g-ad">Adults</Label>
+                    <Input
+                        id="g-ad"
+                        type="number"
+                        min="1"
+                        step="1"
+                        bind:value={gAdults}
+                    />
                 </div>
                 <div class="space-y-1.5">
-                    <Label for="ag-fn">First name</Label>
-                    <Input id="ag-fn" bind:value={agFirstName} />
+                    <Label for="g-ch">Children</Label>
+                    <Input
+                        id="g-ch"
+                        type="number"
+                        min="0"
+                        step="1"
+                        bind:value={gChildren}
+                    />
                 </div>
             </div>
+            {#if sideBySide.length}
+                <div class="space-y-1.5" data-testid="guests-per-room">
+                    <p class="text-sm font-medium">Guests per room</p>
+                    {#each sideBySide as o (o.occupancyid)}
+                        <div class="flex items-center justify-between gap-3">
+                            <Label
+                                for="g-room-{o.occupancyid}"
+                                class="text-muted-foreground font-normal"
+                                >{o.room_compact} · {dateShort(o.occupancyin)} → {dateShort(
+                                    o.occupancyout,
+                                )}</Label
+                            >
+                            <Input
+                                id="g-room-{o.occupancyid}"
+                                type="number"
+                                min="1"
+                                step="1"
+                                class="w-20 shrink-0"
+                                bind:value={gRooms[o.occupancyid]}
+                            />
+                        </div>
+                    {/each}
+                </div>
+            {/if}
         </div>
         <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (addGuestOpen = false)}
+            <Button variant="ghost" onclick={() => (guestsOpen = false)}
                 >Cancel</Button
             >
             <Button
-                onclick={addNewGuestToReservation}
-                disabled={agSaving || !agLastName.trim()}
+                onclick={saveGuests}
+                disabled={savingGuests ||
+                    !guestsValid ||
+                    (!partyChanged && !roomsChanged.length)}
             >
-                <UserPlusIcon /> Add guest
+                Save guests
             </Button>
         </Dialog.Footer>
     </Dialog.Content>

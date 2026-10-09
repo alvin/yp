@@ -43,6 +43,9 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | `migrations/0020_a_room_holds_a_night.sql` | Every live room holds at least one night: changing the stay dates deletes a room left with none, and none can be written |
 | `migrations/0021_cash_at_check_out.sql` | The Daily Cash Activity Report counts a stay on the guest's check-out day, as Access did: its charges and taxes, and the deposit or prepayment it still holds, applied; what settles a bill without money changing hands comes off the top and isn't a receipt; a deposit kept is the day's revenue and nets the cancelled stay to zero |
 | `migrations/0022_cancellations_and_quantities.sql` | A cancellation can be undone; a deposit left to decide later is refunded or kept when the desk knows; a cancellation notice exists only for a cancelled stay; a charge's quantity can be changed at the price it was posted at |
+| `migrations/0023_items_cashed_out_without_rooms.sql` | Items Cashed Out lists the items sold and not the room nights, as Access's did |
+| `migrations/0024_one_guest_per_stay.sql` | A reservation is booked under one guest: a second is refused, a shared room is two reservations, and the extra-name search, history and document fields are gone |
+| `migrations/0025_party_size.sql` | The number of guests on a reservation can be changed: every room the whole party is in takes it, rooms held side by side keep their own, and a reservation or room holds at least one guest |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
@@ -69,9 +72,9 @@ table editor, SQL editor, or import:
 
 | Table | Trigger behaviour |
 |---|---|
-| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out and to the room assignments that ran to the reservation's own dates (mid-stay move windows keep theirs) |
-| `reservation_guests` | Check-in/out default from the reservation; exactly one primary guest per reservation |
-| `room_assignments` | Date validation; guest count defaults from the reservation; a room can't be changed while a room charge for the old room is posted over its nights, nor to the room the stay is in on the nights either side |
+| `reservations` | Assigns `resnumber`, defaults booking date, recomputes `numnights`, enforces departure > arrival and the booking horizon when the dates change, stamps confirmation/cancellation dates as those flags are set; date changes cascade to reservation-guest check-in/out and to the room assignments that ran to the reservation's own dates (mid-stay move windows keep theirs); a change to the number of guests goes to every room the whole party is in (rooms held side by side keep theirs), and a reservation holds at least one guest |
+| `reservation_guests` | Check-in/out default from the reservation; one live guest per reservation, its primary guest (a unique index) |
+| `room_assignments` | Date validation; guest count defaults from the reservation, and a count written is at least one; a room can't be changed while a room charge for the old room is posted over its nights, nor to the room the stay is in on the nights either side |
 | `transactions` | Auto-completes the amount from the price list (manual overrides always win) and recomputes every tax column from room/inventory tax flags × the rate effective on the transaction date |
 | `payments` | Payment code derives from the category, payment date defaults, `paymentamountcdn` converts US funds at the effective exchange rate |
 
@@ -84,26 +87,30 @@ losslessly.
 Guests: `create_guest`, `update_guest` (a field given as text sets it, an
 empty string clears it, a field left null is kept), `set_guest_notes`
 (office-only notes).
-Reservations: `create_reservation` (header + primary guest + optional room in
-one call), `update_reservation`, `confirm_reservation`, `set_reservation_notes`,
+Reservations: `create_reservation` (header + its guest + optional room in
+one call), `update_reservation` (the number of guests among the rest),
+`confirm_reservation`, `set_reservation_notes`,
 `cancel_reservation(p_deposit_handling => none|refund|keep)` (with none the
 deposit stays held to decide later), `settle_deposit` (refunds or keeps the
 deposit a stay still holds, dated the day it is settled),
 `uncancel_reservation` (the booking stands again as it was; a deposit refunded
 or kept on cancelling stays as recorded). Re-booking is not an RPC: next season's stay is written by `create_reservation` like any
 other, and the screen carries the party, room and dates forward.
-Guests on a stay: `add_reservation_guest`, `update_reservation_guest`.
+The guest on a stay: `update_reservation_guest` (notes, vehicle, times). A
+reservation holds one guest; a room two parties share is two reservations.
 Rooms: `assign_room`, `record_room_move` (splits the occupancy at the move
 date, preserving both rooms in history; a move on the check-out date runs the
 stay on to `p_out`, one night by default, in the new room only), `undo_room_move` (the room being left
 runs on to the end of the move and the move is archived; a stay that moved out
 and back is left in one room; where two rooms moved on the same day the caller
 names the one to go back to), `update_room_assignment` (how a stay's room is
-changed outright, as Access did it), `room_directory(p_in,
+changed outright, as Access did it, and how a room held side by side with
+another gets its own number of guests), `room_directory(p_in,
 p_out)` for room selection — the booking screen marks a room another stay holds
 for any of the nights as Booked.
 Charges: `post_room_nights` (priced at the rate type chosen, Regular unless
-Special or Split is given), `post_charge` (posts to the item's daily cash
+Special or Split is given — the desk reads them as Double, Single and Split),
+`post_charge` (posts to the item's daily cash
 category, `charge_category`, unless told otherwise), `change_charge_quantity`
 (the line keeps the price per unit it was posted at; its taxes follow, and a
 room line's nights), `archive_transaction`, `sell_gift_certificate` (charge
@@ -143,8 +150,8 @@ deposit show it.
 `charges_cashed_out(p_date)` (0021) — the charge lines a day's cash sheet
 counts: a stay's charges on its check-out day, and a charge posted after its
 stay's check-out day (a walk-in sale on a daily sales account, a late charge)
-on the day it was posted. The top section's sales and taxes and the Items
-Cashed Out appendix read it.
+on the day it was posted. The top section's sales and taxes read it, and the
+Items Cashed Out appendix reads its lines other than rooms.
 
 `applied_at_check_out(p_date)` (0021) — the deposit or prepayment each stay
 checking out that day still holds, applied to its bill: received, less refunded
@@ -221,7 +228,7 @@ Every Access source table is represented in `ypl` with a readable name.
 Important model facts:
 
 - `ypl.reservations` is the reservation header.
-- `ypl.reservation_guests` links guests to reservations and carries vehicle, check-in/out, in-house, percent-of-bill, and in-house-report notes.
+- `ypl.reservation_guests` links each reservation to its one guest and carries vehicle, check-in/out, in-house, and in-house-report notes; Access's percent-of-bill column is kept as imported.
 - `ypl.room_assignments` is the room assignment / room move spine and links to `ypl.reservation_guests`.
 - `ypl.transactions` stores charge lines, amounts, taxes, inventory/room references, and occupancy date context.
 - `ypl.payments` stores deposits, prepayments, payments, refunds, A/R movements, gift certificates, gratuities, cash categories, and old card fields retained for the air-gapped local import.
@@ -238,8 +245,8 @@ Use tables directly for table-editor/admin work. Use views/RPCs when the applica
 
 - `ypl.search_guests_by_name(p_query, p_limit)` — partial-string match on
   last, first and display name. Every keyword must match, so extra characters
-  narrow rather than widen; `other_names` carries the other names the guest's
-  stays are booked under.
+  narrow rather than widen; partners booked as one double surname are found
+  from either half.
 - `ypl.search_all_fields(p_query)` — broad match over guest name, guest number,
   phones, address and email plus reservation number and group. Several keywords
   may be entered; a record is returned once, only when it carries them all, with
@@ -249,7 +256,6 @@ Use tables directly for table-editor/admin work. Use views/RPCs when the applica
   entry becomes LIKE patterns: keywords split on whitespace, placeholder
   punctuation at either end dropped (`-illington` finds `Shillington`), `*`
   honoured as a wildcard, literal LIKE metacharacters escaped.
-- `ypl.guest_co_names(p_guestid)`
 - `ypl.find_reservation(p_resnumber)`
 - `ypl.search_by_date(p_date, p_mode)` where `p_mode` is `arrivals`, `departures`, `both`, `in_house`, or `occupancy`
 - `ypl.search_by_date_range(p_from, p_to, p_mode)`

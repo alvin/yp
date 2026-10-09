@@ -26,7 +26,7 @@ export const load: PageLoad = async ({ params }) => {
   ]);
   return {
     summary,
-    reservationGuests: notes.reservationGuests,
+    reservationGuest: notes.reservationGuest,
     housekeeping: notes.housekeeping,
     kitchen: notes.kitchen,
     occupancy,
