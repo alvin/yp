@@ -31,7 +31,6 @@ const HIDDEN_TENDER_PREFIX = 'U.S.';
 // Populated by loadReference(); exported arrays are filled in place so every
 // importer sees the loaded data.
 export const SALUTATIONS: string[] = [];
-export const GUEST_DIETS: string[] = [];
 export const PHONE_TYPES: string[] = [];
 export const PAYMENT_CATEGORIES: PaymentCategory[] = [];
 export const PAYMENT_TYPES: PaymentType[] = [];
@@ -47,10 +46,9 @@ let loaded = false;
 /** Loads all reference data. Called once from the root layout after sign-in. */
 export async function loadReference(): Promise<void> {
 	if (loaded) return;
-	const [salutations, diets, phoneTypes, payCats, payTypes, rooms, inventory] =
+	const [salutations, phoneTypes, payCats, payTypes, rooms, inventory] =
 		await Promise.all([
 			supabase.from('lookup_salutations').select('salutation').order('salutation').then(unwrap),
-			supabase.from('lookup_guest_diets').select('guestdiet').order('guestdiet').then(unwrap),
 			supabase.from('lookup_phone_fax_types').select('phonefaxtype').order('phonefaxtype').then(unwrap),
 			supabase
 				.from('lookup_payment_categories')
@@ -73,7 +71,6 @@ export async function loadReference(): Promise<void> {
 		]);
 
 	fill(SALUTATIONS, (salutations as { salutation: string }[]).map((r) => r.salutation));
-	fill(GUEST_DIETS, (diets as { guestdiet: string }[]).map((r) => r.guestdiet));
 	fill(PHONE_TYPES, (phoneTypes as { phonefaxtype: string }[]).map((r) => r.phonefaxtype));
 	fill(PAYMENT_CATEGORIES, payCats as PaymentCategory[]);
 	fill(

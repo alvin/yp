@@ -15,8 +15,7 @@ import {
 	type Fixture
 } from '../helpers/db';
 
-const DIET = 'Vegetarian';
-const DIET_NOTES = 'No mushrooms';
+const DIET = 'Vegetarian, no mushrooms';
 const DEPOSIT = 120;
 /** The lodge's season repeats on the weekday, not the calendar date. */
 const SEASON = 364;
@@ -50,8 +49,8 @@ beforeAll(async () => {
 	});
 	await rpc('save_kitchen_meal', {
 		p_guestid: fx.guestid,
-		p_guestdiet: DIET,
-		p_notes: DIET_NOTES
+		p_guestdiet: null,
+		p_notes: DIET
 	});
 	await rpc('record_payment', {
 		p_reservationguestid: fx.reservationguestid,
@@ -77,8 +76,7 @@ describe('re-book a stay for next year', () => {
 		expect(await page.locator('[data-testid=attached-guest]').textContent()).toContain(
 			`#${fx.guestid}`
 		);
-		expect(await page.locator('#diet').textContent()).toContain(DIET);
-		expect(await page.inputValue('#kitchen-notes')).toBe(DIET_NOTES);
+		expect(await page.inputValue('#kitchen-notes')).toBe(DIET);
 	});
 
 	it('offers the same stay next season, with the room and party it came from', async () => {

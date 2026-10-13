@@ -40,9 +40,7 @@ export const load: PageLoad = async ({ url }) => {
 			departure: addDays(arrival, nights),
 			roomid: occupancy[0]?.roomid ?? null,
 			numadults: source.numadults,
-			numchildren: source.numchildren ?? 0,
-			bedtype: source.bedtype,
-			groupname: source.resgroupname
+			bedtype: source.bedtype
 		}
 	};
 };

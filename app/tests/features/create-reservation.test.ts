@@ -12,7 +12,6 @@ interface ReservationSummary {
 	resdeparturedate: string;
 	numnights: number;
 	numadults: number;
-	numchildren: number;
 	bedtype: string;
 	resbookedby: string;
 	rescancelled: boolean;
@@ -45,7 +44,6 @@ describe('create reservation', () => {
 			p_departure: departure,
 			p_bookedby: 'QA',
 			p_numadults: 2,
-			p_numchildren: 1,
 			p_bedtype: 'Twin',
 			p_roomid: await firstRoomId()
 		});
@@ -68,7 +66,6 @@ describe('create reservation', () => {
 	it('captures the stay details needed to hold the booking', async () => {
 		const s = await summary();
 		expect(s.numadults).toBe(2);
-		expect(s.numchildren).toBe(1);
 		expect(s.bedtype).toBe('Twin');
 		expect(s.resbookedby).toBe('QA');
 		expect(s.numnights).toBe(4);
@@ -89,6 +86,25 @@ describe('create reservation', () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0].reservationid).toBe(created.reservationid);
 		expect(rows[0].rescancelled).toBe(false);
+	});
+
+	describe('the party', () => {
+		let page: Page;
+
+		beforeAll(async () => {
+			page = await openAppPage();
+			await page.goto(`${APP_URL}/reservations/new`, { waitUntil: 'networkidle' });
+		});
+
+		afterAll(async () => {
+			await closeApp(page);
+		});
+
+		it('is entered as its number of adults, with no children or group fields', async () => {
+			expect(await page.getByLabel('Adults', { exact: true }).count()).toBe(1);
+			expect(await page.getByLabel('Children').count()).toBe(0);
+			expect(await page.getByLabel('Group').count()).toBe(0);
+		});
 	});
 
 	describe('bed layout', () => {

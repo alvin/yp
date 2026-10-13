@@ -12,6 +12,12 @@ currency and no US tender type. The conversion is untouched in the database,
 so records already on file and rows written directly still carry their CDN
 value, and the Daily Cash Activity Report still reports it.
 
+A guest's diet is kept as notes, in the guest's own words, and a party is
+booked as its number of adults. Access's diet types, child counts and group
+names stay in the database for the old records that carry them, but no screen
+asks for them. A diet type on file prints ahead of the notes, as it always has,
+so the screens show it in the notes, and saving them keeps it there as text.
+
 ## Setup
 
 1. Start (or connect to) the Supabase project. Locally:

@@ -24,7 +24,7 @@ async function folio(reservationid: number): Promise<GuestDocumentNotes> {
 	)[0];
 }
 
-let full: Fixture; // a diet and a housekeeping note revised once
+let full: Fixture; // a diet (with a type from Access) and a housekeeping note revised once
 let plain: Fixture; // neither
 let earlier: string;
 let latest: string;
@@ -204,11 +204,12 @@ describe('print diet and housekeeping notes on guest documents — the notes tab
 		await closeApp(page);
 	});
 
-	it('edits only the diet notes, leaving the diet as it is', async () => {
+	it('shows the diet notes as they print, the type from Access included, and saving them repeats nothing', async () => {
 		await page.getByRole('tab', { name: 'Kitchen' }).click();
-		const box = page.locator('[role=tabpanel][data-state=active] textarea');
-		expect(await box.inputValue()).toBe('1 vegan');
-		await page.locator('[role=tabpanel][data-state=active]').getByRole('button', { name: 'Save' }).click();
+		const panel = page.locator('[role=tabpanel][data-state=active]');
+		expect(await panel.locator('[data-slot=combobox-trigger]').count()).toBe(0);
+		expect(await panel.locator('textarea').inputValue()).toBe('Vegan 1 vegan');
+		await panel.getByRole('button', { name: 'Save' }).click();
 		await page.getByText('Kitchen notes saved').waitFor({ timeout: 10_000 });
 		expect((await confirmation(full.reservationid)).diet_notes).toBe('Vegan 1 vegan');
 	});
@@ -242,14 +243,36 @@ describe('print diet and housekeeping notes on guest documents — the notes tab
 		expect(history.map((h) => h.housekeepingnotes)).toEqual(expect.arrayContaining([earlier, latest]));
 	});
 
-	it('clears the diet when it is set to None and its notes emptied', async () => {
+	it('clears the diet when its notes are emptied', async () => {
 		await page.getByRole('tab', { name: 'Kitchen' }).click();
-		await page.click('#kitchen-diet');
-		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: 'None' }).click();
 		await page.locator('[role=tabpanel][data-state=active] textarea').fill('');
 		await page.locator('[role=tabpanel][data-state=active]').getByRole('button', { name: 'Save' }).click();
 		await expect
 			.poll(async () => (await confirmation(full.reservationid)).diet_notes, { timeout: 10_000 })
 			.toBeNull();
+	});
+
+	it('revises the diet it saved when the notes are saved again, rather than filing a second', async () => {
+		const stay = await makeReservation();
+		await page.goto(`${APP_URL}/reservations/${stay.resnumber}`, { waitUntil: 'networkidle' });
+		await page.getByRole('tab', { name: 'Kitchen' }).click();
+		const panel = page.locator('[role=tabpanel][data-state=active]');
+		await panel.locator('textarea').fill('No nuts');
+		await panel.getByRole('button', { name: 'Save' }).click();
+		await page.getByText('Kitchen notes saved').waitFor({ timeout: 10_000 });
+		await panel.locator('textarea').fill('No nuts or shellfish');
+		await panel.getByRole('button', { name: 'Save' }).click();
+		await expect
+			.poll(async () => (await confirmation(stay.reservationid)).diet_notes, { timeout: 10_000 })
+			.toBe('No nuts or shellfish');
+		const db = await staffClient();
+		const records = unwrap(
+			await db
+				.from('kitchen_meals')
+				.select('kitchenmealid')
+				.eq('guestid', stay.guestid)
+				.eq('kmarchive', false)
+		) as unknown[];
+		expect(records).toHaveLength(1);
 	});
 });

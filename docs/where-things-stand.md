@@ -2,11 +2,24 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 9 October 2026.
+Everything below is live on the hosted system as of 13 October 2026.
 
 ---
 
 ## What the lodge asked for
+
+**Diets are just the notes.** The Diet pick list (Vegan, Vegetarian and so
+on) is gone from the booking screen and from a reservation's Kitchen tab. A
+diet is written in the Diet & allergy notes, as the lodge always has: in all
+its history Access used the pick list once, for one guest out of 4,662 diets.
+No data changes. A type already on file still prints ahead of the notes, and
+the screens now show it in the notes box, where it can be read and corrected.
+
+**No children or group when booking.** New Reservation, and with it Re-book,
+asks for adults only; the Children and Group fields are gone. Access never
+recorded a child, and its group names are the daily sales accounts and a few
+stray keystrokes. The pen beside *Guests* asks for adults only too. An old
+booking with a group name still shows it.
 
 **A print run for each kind of folio.** The folio paper is printed on the back
 differently for each document (the waiver behind the check-in folio, arrival
@@ -126,6 +139,11 @@ September 2024) keeps it, and that day's report still shows it.
 
 ## What else changed along the way
 
+**A diet corrected straight after saving is filed once.** On a reservation's
+Kitchen tab, saving a new diet and then correcting it filed a second copy, and
+the kitchen report and guest documents printed both. A correction now replaces
+the first. It hadn't happened on the hosted system.
+
 **Room status is worked out, never guessed.** Rooms on the reservation screen
 used to read "In house" whatever the date. They now read Future, Past, Arrive
 today, Room move, Move out, In house or Depart today. On the Housekeeping and In
@@ -197,6 +215,12 @@ app does.
 
 ## Decisions made
 
+- **Diet types, child counts and group names stay in the database** for the
+  old records that carry them; only the screens stop asking. Nothing in the
+  data changes and everything prints as before. A diet type on file shows in
+  the notes box and, once saved, is kept there as text.
+- **The Number of guests pen dropped Children too,** so it asks what the
+  booking screen asks.
 - **Regular reads Double as well as Special reading Single,** to give the
   lodge's "double, single and split". Access's rate codes call them "Night for
   Two" and "Night for One", so nothing about the rates changes.

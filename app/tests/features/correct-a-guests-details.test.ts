@@ -79,7 +79,10 @@ describe("correct a guest's details", () => {
 			// Not on the form, so left as it was.
 			guestcompany: 'Kept Co'
 		});
-		expect(await page.textContent('body')).toContain('Ladysmith');
+		// The page reloads the guest after the saved message shows.
+		await expect
+			.poll(() => page.textContent('body'), { timeout: 10_000 })
+			.toContain('Ladysmith');
 	});
 
 	it('will not save an empty last name', async () => {

@@ -92,11 +92,9 @@ export interface NewReservationInput {
 	departure: string;
 	bookedby: string;
 	numadults?: number;
-	numchildren?: number;
 	numrooms?: number;
 	bedtype?: string;
 	arrivaltime?: string | null;
-	groupname?: string | null;
 	notes?: string | null;
 	roomid?: number | null;
 	numguests?: number | null;
@@ -116,11 +114,9 @@ export async function createReservation(input: NewReservationInput): Promise<Cre
 			p_departure: input.departure,
 			p_bookedby: input.bookedby,
 			p_numadults: input.numadults ?? 2,
-			p_numchildren: input.numchildren ?? 0,
 			p_numrooms: input.numrooms ?? 1,
 			p_bedtype: input.bedtype ?? 'Double',
 			p_arrivaltime: input.arrivaltime ?? null,
-			p_groupname: input.groupname ?? null,
 			p_notes: input.notes ?? null,
 			p_roomid: input.roomid ?? null,
 			p_numguests: input.numguests ?? null
@@ -133,11 +129,9 @@ export interface ReservationChanges {
 	arrival?: string;
 	departure?: string;
 	numadults?: number;
-	numchildren?: number;
 	numrooms?: number;
 	bedtype?: string;
 	arrivaltime?: string | null;
-	groupname?: string | null;
 	bookedby?: string | null;
 }
 
@@ -157,11 +151,9 @@ export async function updateReservation(
 			p_arrival: changes.arrival ?? null,
 			p_departure: changes.departure ?? null,
 			p_numadults: changes.numadults ?? null,
-			p_numchildren: changes.numchildren ?? null,
 			p_numrooms: changes.numrooms ?? null,
 			p_bedtype: changes.bedtype ?? null,
 			p_arrivaltime: changes.arrivaltime ?? null,
-			p_groupname: changes.groupname ?? null,
 			p_bookedby: changes.bookedby ?? null
 		})
 	);
@@ -420,16 +412,18 @@ export async function setHousekeepingNote(
 	);
 }
 
+/** A guest's diet, as notes alone. The record's diet type is cleared: a type
+ * Access recorded is shown as part of the notes (`dietText`), so it is saved
+ * back with them and prints as before. */
 export async function saveKitchenMeal(
 	guestid: number,
-	guestdiet: string,
-	notes?: string | null,
+	notes: string | null,
 	kitchenmealid?: number | null
 ): Promise<number> {
 	return unwrap(
 		await supabase.rpc('save_kitchen_meal', {
 			p_guestid: guestid,
-			p_guestdiet: guestdiet,
+			p_guestdiet: null,
 			p_notes: notes ?? null,
 			p_kitchenmealid: kitchenmealid ?? null
 		})

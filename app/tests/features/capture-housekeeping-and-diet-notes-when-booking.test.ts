@@ -21,10 +21,30 @@ let resnumber: number;
 let reservationid: number;
 let guestid: number;
 let arrival: string;
-let diet = '';
 
 const HK_NOTE = 'Two extra pillows and a crib in the room';
-const KITCHEN_NOTE = 'Severe shellfish allergy';
+const KITCHEN_NOTE = 'Vegetarian, severe shellfish allergy';
+
+async function meals(): Promise<{ guestdiet: string | null; kitchenmealnotes: string | null }[]> {
+	const db = await staffClient();
+	return unwrap(
+		await db
+			.from('kitchen_meals')
+			.select('guestdiet, kitchenmealnotes')
+			.eq('guestid', guestid)
+			.eq('kmarchive', false)
+	) as { guestdiet: string | null; kitchenmealnotes: string | null }[];
+}
+
+/** Saves the booking screen as it stands, as another stay `days` on. */
+async function bookAnotherStay(days: number): Promise<void> {
+	const next = addDays(arrival, days);
+	await page.fill('#bb', 'QA');
+	await page.fill('#arr', next);
+	await page.fill('#dep', addDays(next, 2));
+	await page.getByRole('button', { name: 'Save reservation' }).click();
+	await page.waitForURL(/\/reservations\/\d+$/, { timeout: 30_000 });
+}
 
 beforeAll(async () => {
 	surname = `ZZNotes${uid()}`;
@@ -37,18 +57,6 @@ beforeAll(async () => {
 	await page.fill('#bb', 'QA');
 	await page.fill('#arr', arrival);
 	await page.fill('#dep', addDays(arrival, 3));
-
-	// Diet comes from the lodge's diet list; the notes beside it are free text.
-	await page.click('#diet');
-	// The first real diet — the list opens with None, for taking one back.
-	const option = page
-		.locator('[data-testid=combobox-list] [role=option]')
-		.filter({ hasNotText: 'None' })
-		.first();
-	await option.waitFor({ timeout: 10_000 });
-	diet = (await option.textContent())?.trim() ?? '';
-	await option.click();
-
 	await page.fill('#kitchen-notes', KITCHEN_NOTE);
 	await page.fill('#hk-notes', HK_NOTE);
 
@@ -91,14 +99,18 @@ describe('capture housekeeping and diet notes when booking', () => {
 		expect(notes[0].hkarchive).toBe(false);
 	});
 
-	it('stores the diet and its notes against the stay’s guest', async () => {
-		const db = await staffClient();
-		const meals = unwrap(
-			await db.from('kitchen_meals').select('guestdiet, kitchenmealnotes').eq('guestid', guestid)
-		) as { guestdiet: string | null; kitchenmealnotes: string | null }[];
-		expect(meals).toHaveLength(1);
-		expect(meals[0].guestdiet).toBe(diet);
-		expect(meals[0].kitchenmealnotes).toBe(KITCHEN_NOTE);
+	it('takes the diet as notes, with no list of diet types', async () => {
+		await page.goto(APP_URL + '/reservations/new', { waitUntil: 'networkidle' });
+		const card = page.locator('[data-slot=card]', {
+			has: page.getByText('Housekeeping & diet', { exact: true })
+		});
+		expect(await card.locator('textarea#kitchen-notes').count()).toBe(1);
+		expect(await card.locator('[data-slot=combobox-trigger]').count()).toBe(0);
+		expect(await page.getByLabel('Diet', { exact: true }).count()).toBe(0);
+	});
+
+	it('stores the diet notes against the stay’s guest', async () => {
+		expect(await meals()).toEqual([{ guestdiet: null, kitchenmealnotes: KITCHEN_NOTE }]);
 	});
 
 	it('shows the note on the housekeeping report without a further step', async () => {
@@ -112,8 +124,7 @@ describe('capture housekeeping and diet notes when booking', () => {
 		const rows = await rpc<KitchenRow[]>('report_kitchen_meal', { p_date: arrival });
 		const mine = rows.find((r) => r.resnumber === resnumber);
 		expect(mine, 'the new stay is on the kitchen report').toBeDefined();
-		expect(mine!.diet_notes).toContain(KITCHEN_NOTE);
-		expect(mine!.diet_notes).toContain(diet);
+		expect(mine!.diet_notes).toBe(KITCHEN_NOTE);
 	});
 
 	it('records no notes at all when they are left blank', async () => {
@@ -132,18 +143,31 @@ describe('capture housekeeping and diet notes when booking', () => {
 		expect(meals).toHaveLength(0);
 	});
 
+	it('shows a diet type from Access in the notes, and saving them prints the same diet', async () => {
+		// Access's pick list put a diet type ahead of the notes, as on its records.
+		const db = await staffClient();
+		unwrap(
+			await db
+				.from('kitchen_meals')
+				.update({ guestdiet: 'Celiac' })
+				.eq('guestid', guestid)
+				.select('kitchenmealid')
+		);
+		const printed = `Celiac ${KITCHEN_NOTE}`;
+		expect(await rpc<string>('stay_diet_notes', { p_reservationid: reservationid })).toBe(printed);
+
+		await page.goto(`${APP_URL}/reservations/new?guest=${guestid}`, { waitUntil: 'networkidle' });
+		expect(await page.inputValue('#kitchen-notes')).toBe(printed);
+		await bookAnotherStay(10);
+		expect(await meals()).toEqual([{ guestdiet: null, kitchenmealnotes: printed }]);
+		expect(await rpc<string>('stay_diet_notes', { p_reservationid: reservationid })).toBe(printed);
+	});
+
 	it('shows a returning guest’s diet and clears it when emptied', async () => {
 		await page.goto(`${APP_URL}/reservations/new?guest=${guestid}`, { waitUntil: 'networkidle' });
-		expect(await page.inputValue('#kitchen-notes')).toBe(KITCHEN_NOTE);
-		await page.click('#diet');
-		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: 'None' }).click();
+		expect(await page.inputValue('#kitchen-notes')).toBe(`Celiac ${KITCHEN_NOTE}`);
 		await page.fill('#kitchen-notes', '');
-		const next = addDays(arrival, 10);
-		await page.fill('#bb', 'QA');
-		await page.fill('#arr', next);
-		await page.fill('#dep', addDays(next, 2));
-		await page.getByRole('button', { name: 'Save reservation' }).click();
-		await page.waitForURL(/\/reservations\/\d+$/, { timeout: 30_000 });
+		await bookAnotherStay(20);
 		expect(await rpc<string | null>('stay_diet_notes', { p_reservationid: reservationid })).toBeNull();
 	});
 });

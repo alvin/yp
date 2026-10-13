@@ -9,7 +9,7 @@ Feature: change the number of guests on a reservation
     Given a booked party changes size
 
   Scenario: Acceptance criteria
-    Then The number of guests on a reservation, adults and children, can be changed after it is booked, from its Guests field.
+    Then The number of adults on a reservation can be changed after it is booked, from its Guests field; children are not asked for, as on the booking screen.
     And Every room the whole party is in takes the new number, so the housekeeping and in-house reports, Total Guests and the guest documents count it.
     And Rooms the stay holds side by side split the party between them, so each keeps its own number, which can be changed on its own.
     And The rooms follow the same way when the number is changed straight in the database.

@@ -32,11 +32,7 @@ beforeAll(async () => {
 describe('change the number of guests on a reservation', () => {
 	it('gives the new number to the room the whole party is in, which the reports count', async () => {
 		const fx = await makeReservation({ numadults: 2 });
-		await rpc('update_reservation', {
-			p_reservationid: fx.reservationid,
-			p_numadults: 3,
-			p_numchildren: 1
-		});
+		await rpc('update_reservation', { p_reservationid: fx.reservationid, p_numadults: 4 });
 		expect((await rooms(fx)).map((r) => r.occupancynumguests)).toEqual([4]);
 
 		const night = addDays(fx.arrival, 1);
@@ -87,7 +83,7 @@ describe('change the number of guests on a reservation', () => {
 		unwrap(
 			await client
 				.from('reservations')
-				.update({ numadults: 1, numchildren: 2 })
+				.update({ numadults: 3 })
 				.eq('reservationid', fx.reservationid)
 				.select('reservationid')
 		);
@@ -97,11 +93,7 @@ describe('change the number of guests on a reservation', () => {
 	it('refuses a reservation or a room with no one in it', async () => {
 		const fx = await makeReservation();
 		await expect(
-			rpc('update_reservation', {
-				p_reservationid: fx.reservationid,
-				p_numadults: 0,
-				p_numchildren: 0
-			})
+			rpc('update_reservation', { p_reservationid: fx.reservationid, p_numadults: 0 })
 		).rejects.toThrow(/at least one guest/);
 		const [room] = await rooms(fx);
 		await expect(
@@ -123,21 +115,23 @@ describe('change the number of guests on a reservation — on screen', () => {
 
 	const guestsField = () => page.locator('dt', { hasText: 'Guests' }).locator('xpath=..');
 
-	it('changes the number from the Guests field', async () => {
+	it('changes the number of adults from the Guests field, asking for no children', async () => {
 		const fx = await makeReservation({ numadults: 2 });
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
 		expect(await guestsField().textContent()).toContain('2 adults');
 		await page.getByRole('button', { name: 'Change guests' }).click();
+		const dialog = page.getByRole('dialog');
+		await dialog.waitFor();
+		expect(await dialog.getByLabel('Children').count()).toBe(0);
 		await page.fill('#g-ad', '3');
-		await page.fill('#g-ch', '2');
 		// A party split across rooms isn't asked about room by room.
 		expect(await page.locator('[data-testid=guests-per-room]').count()).toBe(0);
 		await page.getByRole('button', { name: 'Save guests' }).click();
 		await expect
 			.poll(() => guestsField().textContent(), { timeout: 10_000 })
-			.toContain('3 adults, 2 children');
-		expect(await page.textContent('body')).toContain('5 guests');
-		expect((await rooms(fx)).map((r) => r.occupancynumguests)).toEqual([5]);
+			.toContain('3 adults');
+		expect(await page.textContent('body')).toContain('3 guests');
+		expect((await rooms(fx)).map((r) => r.occupancynumguests)).toEqual([3]);
 	});
 
 	it('asks for each room held side by side', async () => {

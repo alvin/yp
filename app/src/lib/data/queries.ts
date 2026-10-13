@@ -173,6 +173,17 @@ export async function guestKitchenMeal(guestid: number): Promise<KitchenMeal | u
 	return rows[0];
 }
 
+/** A diet record's text as the kitchen report prints it (`diet_text` in
+ * ypl.v_kitchen_diets). The desk keeps a diet as notes alone; a diet type from
+ * Access's pick list prints ahead of them, so the screens show it there too,
+ * and saving the notes keeps it as part of them. */
+export function dietText(meal: KitchenMeal | null | undefined): string {
+	return [meal?.guestdiet, meal?.kitchenmealnotes]
+		.filter((v) => v?.trim())
+		.join(' ')
+		.trim();
+}
+
 /** The guest a stay is booked under; a reservation holds one. A few Access
  * bookings were left with none. */
 async function reservationGuestSummary(

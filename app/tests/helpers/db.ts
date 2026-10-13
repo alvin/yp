@@ -105,7 +105,6 @@ export interface FixtureOptions {
 	lastname?: string;
 	firstname?: string;
 	numadults?: number;
-	numchildren?: number;
 }
 
 /** First active room in lodge order (stable across environments). */
@@ -136,7 +135,6 @@ export async function makeReservation(opts: FixtureOptions = {}): Promise<Fixtur
 		p_departure: departure,
 		p_bookedby: 'QA',
 		p_numadults: opts.numadults ?? 2,
-		p_numchildren: opts.numchildren ?? 0,
 		p_roomid: opts.roomid === undefined ? await firstRoomId() : opts.roomid
 	});
 	return { guestid, ...rows[0], lastname, arrival, departure };

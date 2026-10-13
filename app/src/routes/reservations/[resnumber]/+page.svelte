@@ -36,9 +36,10 @@
     import { guestDocTabs } from "$lib/report-nav.js";
     import { afterNavigate, invalidateAll } from "$app/navigation";
     import { addDays, bookingHorizon, dateMed, dateShort, money, nightsBetween } from "$lib/format.js";
-    import { GUEST_DIETS, ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
-    import { optionalOptions, roomOptions, textOptions } from "$lib/options.js";
+    import { ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
+    import { roomOptions } from "$lib/options.js";
     import {
+        dietText,
         occupancySummaries,
         roomMoves,
         roomsBooked,
@@ -84,8 +85,8 @@
             moves: d.moves,
             mIn: d.today,
             mOut: d.summary.resdeparturedate,
-            kitchenDiet: guestMeal(d)?.guestdiet ?? "",
-            kitchenText: guestMeal(d)?.kitchenmealnotes ?? "",
+            kitchenMealId: guestMeal(d)?.kitchenmealid ?? null,
+            kitchenText: dietText(guestMeal(d)),
             housekeepingText: currentHousekeepingNote(d),
             requestText: d.reservationGuest?.rgnotes ?? "",
             reservationText: d.summary.resnotes ?? "",
@@ -94,8 +95,8 @@
     const i = seed();
 
     // Each notes tab edits the guest's own text: the diet notes on their
-    // kitchen record, the housekeeping note in force (the one that prints),
-    // their requests.
+    // kitchen record (as they print), the housekeeping note in force (the one
+    // that prints), their requests.
     function guestMeal(d: typeof data) {
         return d.kitchen[0];
     }
@@ -420,10 +421,11 @@
     // number to every room the whole party is in, so the daily reports count
     // it. Rooms held side by side split the party in a way the reservation
     // doesn't record, so each of those keeps a number of its own, set here.
+    // Only adults are asked for, as on the booking screen; a child count
+    // already on file is left as it is and still shown.
     let guestsOpen = $state(false);
     let savingGuests = $state(false);
     let gAdults = $state<number | null>(null);
-    let gChildren = $state<number | null>(null);
     let gRooms = $state<Record<number, number | null>>({});
 
     function party(adults: number, children: number): string {
@@ -454,19 +456,14 @@
             return v != null && v !== o.occupancynumguests;
         }),
     );
-    const partyChanged = $derived(
-        gAdults !== s.numadults || gChildren !== (s.numchildren ?? 0),
-    );
+    const partyChanged = $derived(gAdults !== s.numadults);
     const guestsValid = $derived(
-        isCount(gAdults, 0) &&
-            isCount(gChildren, 0) &&
-            (gAdults ?? 0) + (gChildren ?? 0) >= 1 &&
+        isCount(gAdults, 1) &&
             roomsChanged.every((o) => isCount(gRooms[o.occupancyid], 1)),
     );
 
     function openGuests() {
         gAdults = s.numadults;
-        gChildren = s.numchildren ?? 0;
         gRooms = Object.fromEntries(
             sideBySide.map((o) => [o.occupancyid, o.occupancynumguests]),
         );
@@ -475,19 +472,15 @@
 
     async function saveGuests() {
         const adults = gAdults ?? 0;
-        const children = gChildren ?? 0;
         savingGuests = true;
         try {
             if (partyChanged)
-                await updateReservation(s.reservationid, {
-                    numadults: adults,
-                    numchildren: children,
-                });
+                await updateReservation(s.reservationid, { numadults: adults });
             for (const o of roomsChanged)
                 await setRoomGuests(o.occupancyid, gRooms[o.occupancyid]!);
             guestsOpen = false;
             toast.success("Guests updated", {
-                description: party(adults, children),
+                description: party(adults, s.numchildren ?? 0),
             });
             await invalidateAll();
             await refreshRooms();
@@ -503,9 +496,8 @@
     }
 
     // Notes tabs (report-feeding)
-    let kitchenDiet = $state(i.kitchenDiet);
+    let kitchenMealId = $state(i.kitchenMealId);
     let kitchenText = $state(i.kitchenText);
-    const dietOptions = optionalOptions(textOptions(GUEST_DIETS), "None");
     let housekeepingText = $state(i.housekeepingText);
     let requestText = $state(i.requestText);
     let reservationText = $state(i.reservationText);
@@ -513,14 +505,13 @@
         try {
             if (which === "Kitchen") {
                 // A diet on file is saved even when emptied, which clears it;
-                // with none on file, an empty tab adds nothing.
-                const meal = guestMeal(data);
-                if (meal || kitchenDiet || kitchenText.trim())
-                    await saveKitchenMeal(
+                // with none on file, an empty tab adds nothing. A record the
+                // tab writes is the one its next save revises, not a second.
+                if (kitchenMealId || kitchenText.trim())
+                    kitchenMealId = await saveKitchenMeal(
                         s.primary_guestid,
-                        kitchenDiet,
                         kitchenText,
-                        meal?.kitchenmealid ?? null,
+                        kitchenMealId,
                     );
             } else if (which === "Housekeeping") {
                 await setHousekeepingNote(
@@ -879,12 +870,6 @@
                         <Tabs.Trigger value="res">Reservation</Tabs.Trigger>
                     </Tabs.List>
                     <Tabs.Content value="kitchen" class="mt-3 space-y-2">
-                        <Combobox
-                            id="kitchen-diet"
-                            bind:value={kitchenDiet}
-                            options={dietOptions}
-                            placeholder="None"
-                        />
                         <Textarea
                             bind:value={kitchenText}
                             rows={4}
@@ -995,7 +980,7 @@
         <Dialog.Header>
             <Dialog.Title>Number of guests on #{s.resnumber}</Dialog.Title>
             <Dialog.Description>
-                Adults and children for this reservation.
+                Adults for this reservation.
             </Dialog.Description>
         </Dialog.Header>
         <div class="space-y-3">
@@ -1008,16 +993,6 @@
                         min="1"
                         step="1"
                         bind:value={gAdults}
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="g-ch">Children</Label>
-                    <Input
-                        id="g-ch"
-                        type="number"
-                        min="0"
-                        step="1"
-                        bind:value={gChildren}
                     />
                 </div>
             </div>

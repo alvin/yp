@@ -16,15 +16,14 @@
     import ChargeBasket from "$lib/components/app/charge-basket.svelte";
     import GuestSearch from "$lib/components/app/guest-search.svelte";
     import GuestFields from "$lib/components/app/guest-fields.svelte";
-    import { GUEST_DIETS } from "$lib/data/reference.js";
     import { guestForm } from "$lib/guest-form.js";
+    import { bedTypeOptions, roomOptions } from "$lib/options.js";
     import {
-        bedTypeOptions,
-        optionalOptions,
-        roomOptions,
-        textOptions,
-    } from "$lib/options.js";
-    import { getGuest, guestKitchenMeal, roomsBooked } from "$lib/data/queries.js";
+        dietText,
+        getGuest,
+        guestKitchenMeal,
+        roomsBooked,
+    } from "$lib/data/queries.js";
     import {
         createGuestFromForm,
         createReservation,
@@ -46,8 +45,7 @@
             attachedGuestId: g?.guestid ?? null,
             guest: guestForm(g),
             kitchenMealId: k?.kitchenmealid ?? null,
-            diet: k?.guestdiet ?? "",
-            kitchenNotes: k?.kitchenmealnotes ?? "",
+            kitchenNotes: dietText(k),
             src: data.source,
         };
     }
@@ -80,8 +78,7 @@
             guest = guestForm(full);
             if (!full) guest.lastName = g.guestlastname;
             kitchenMealId = meal?.kitchenmealid ?? null;
-            diet = meal?.guestdiet ?? "";
-            kitchenNotes = meal?.kitchenmealnotes ?? "";
+            kitchenNotes = dietText(meal);
             guestQuery = "";
         } catch (e) {
             toast.error(
@@ -97,18 +94,19 @@
     function clearGuest() {
         attachedGuestId = null;
         kitchenMealId = null;
-        diet = kitchenNotes = "";
+        kitchenNotes = "";
         guest = guestForm();
     }
 
     // Reservation fields
     let arrival = $state(src?.arrival ?? "");
     let departure = $state(src?.departure ?? "");
+    // The party is its adults. Children and a group name are not asked for:
+    // the lodge doesn't use them (Access never recorded a child), and the
+    // columns stay only for the old records that carry them.
     let adults = $state(src?.numadults ?? 2);
-    let children = $state(src?.numchildren ?? 0);
     let bedType = $state(src?.bedtype ?? "Double");
     let arrivalTime = $state("");
-    let groupName = $state(src?.groupname ?? "");
 
     // Booked-by initials (ypl.reservations.resbookedby), defaulted from the
     // signed-in staff account and editable before saving.
@@ -153,7 +151,6 @@
         ),
     );
     const bedTypes = bedTypeOptions();
-    const dietOptions = optionalOptions(textOptions(GUEST_DIETS), "None");
 
     // Charges and the deposit taken while booking. Held until the reservation
     // exists, then posted to it.
@@ -163,9 +160,9 @@
     // so they are captured here and feed the same reports as later edits.
     // Diet is held against the guest, not the stay, so an attached guest shows
     // what the kitchen already has and saving revises that record rather than
-    // adding a second one beside it.
+    // adding a second one beside it. A diet is notes alone, in the guest's
+    // words; there is no pick list of diet types.
     let kitchenMealId = $state<number | null>(i.kitchenMealId);
-    let diet = $state(i.diet);
     let kitchenNotes = $state(i.kitchenNotes);
     let housekeepingNotes = $state("");
 
@@ -205,12 +202,10 @@
                 departure,
                 bookedby: bookedBy.trim(),
                 numadults: adults,
-                numchildren: children,
                 bedtype: bedType,
                 arrivaltime: arrivalTime.trim() || null,
-                groupname: groupName.trim() || null,
                 roomid: Number(roomId) || null,
-                numguests: adults + children,
+                numguests: adults,
             });
             // Everything below happens after the reservation exists. If any
             // of it fails the booking still stands, so report what did not
@@ -233,11 +228,10 @@
             }
             // A guest's diet is saved when there is one to set or one on
             // file to change — emptied here, it is cleared.
-            if (kitchenMealId || diet || kitchenNotes.trim()) {
+            if (kitchenMealId || kitchenNotes.trim()) {
                 try {
                     await saveKitchenMeal(
                         guestid,
-                        diet,
                         kitchenNotes.trim() || null,
                         kitchenMealId,
                     );
@@ -357,15 +351,6 @@
             </Card.Header>
             <Card.Content class="space-y-4">
                 <div class="space-y-1.5">
-                    <Label for="diet">Diet</Label>
-                    <Combobox
-                        id="diet"
-                        bind:value={diet}
-                        options={dietOptions}
-                        placeholder="None"
-                    />
-                </div>
-                <div class="space-y-1.5">
                     <Label for="kitchen-notes">Diet & allergy notes</Label>
                     <Textarea
                         id="kitchen-notes"
@@ -439,21 +424,13 @@
                     </p>
                 {/if}
 
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1.5">
                         <Label for="ad2">Adults</Label><Input
                             id="ad2"
                             type="number"
                             min="1"
                             bind:value={adults}
-                        />
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label for="ch">Children</Label><Input
-                            id="ch"
-                            type="number"
-                            min="0"
-                            bind:value={children}
                         />
                     </div>
                     <div class="space-y-1.5">
@@ -473,14 +450,6 @@
                             placeholder="e.g. 3:00 PM"
                         />
                     </div>
-                    <div class="space-y-1.5">
-                        <Label for="gn">Group (optional)</Label><Input
-                            id="gn"
-                            bind:value={groupName}
-                        />
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1.5">
                         <Label for="bb">Booked by (initials)</Label><Input
                             id="bb"

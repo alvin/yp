@@ -14,14 +14,14 @@ import {
 import { itemLabel } from './inventory.js';
 import { money } from './format.js';
 
-/** Plain lookup values — salutations, diets. */
+/** Plain lookup values — salutations, phone types. */
 export function textOptions(values: string[]): ComboboxOption[] {
 	return values.map((v) => ({ value: v, label: v }));
 }
 
 /** An optional field's list, with an empty entry first so a choice can be taken back. */
-export function optionalOptions(options: ComboboxOption[], none = '—'): ComboboxOption[] {
-	return [{ value: '', label: none }, ...options];
+export function optionalOptions(options: ComboboxOption[]): ComboboxOption[] {
+	return [{ value: '', label: '—' }, ...options];
 }
 
 /** How the beds in the room are made up, in the lodge's words. */
