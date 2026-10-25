@@ -1,32 +1,25 @@
 // Story: spec/features/change-the-number-of-guests-on-a-reservation.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, field, useAppPage } from '../helpers/app';
+import {
+	addDays,
+	cancel,
+	makeReservation,
+	roomDirectory,
+	roomWindows,
+	rpc,
+	staffClient,
+	unwrap
+} from '../helpers/db';
 
-interface Room {
-	occupancyid: number;
-	roomid: number;
-	occupancynumguests: number | null;
-}
-
-async function rooms(fx: Fixture): Promise<Room[]> {
-	const client = await staffClient();
-	return unwrap(
-		await client
-			.from('room_assignments')
-			.select('occupancyid, roomid, occupancynumguests')
-			.eq('reservationguestid', fx.reservationguestid)
-			.eq('occupancyarchive', false)
-			.order('occupancyid')
-	) as Room[];
-}
+/** The stay's rooms, in the order it holds them. */
+const rooms = roomWindows;
 
 let roomIds: number[];
 
 beforeAll(async () => {
-	roomIds = (await rpc<{ roomid: number }[]>('room_directory')).map((r) => r.roomid);
+	roomIds = (await roomDirectory()).map((r) => r.roomid);
 });
 
 describe('change the number of guests on a reservation', () => {
@@ -103,22 +96,13 @@ describe('change the number of guests on a reservation', () => {
 });
 
 describe('change the number of guests on a reservation — on screen', () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
-
-	const guestsField = () => page.locator('dt', { hasText: 'Guests' }).locator('xpath=..');
+	const page = useAppPage();
+	const guestsField = () => field(page, 'Guests');
 
 	it('changes the number of adults from the Guests field, asking for no children', async () => {
 		const fx = await makeReservation({ numadults: 2 });
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
-		expect(await guestsField().textContent()).toContain('2 adults');
+		await expect.poll(() => guestsField().textContent(), { timeout: 10_000 }).toContain('2 adults');
 		await page.getByRole('button', { name: 'Change guests' }).click();
 		const dialog = page.getByRole('dialog');
 		await dialog.waitFor();
@@ -158,12 +142,7 @@ describe('change the number of guests on a reservation — on screen', () => {
 
 	it('offers no change on a cancelled reservation', async () => {
 		const fx = await makeReservation();
-		await rpc('cancel_reservation', {
-			p_reservationid: fx.reservationid,
-			p_date: fx.arrival,
-			p_deposit_handling: 'none',
-			p_notes: null
-		});
+		await cancel(fx);
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
 		await guestsField().waitFor();
 		expect(await page.getByRole('button', { name: 'Change guests' }).count()).toBe(0);

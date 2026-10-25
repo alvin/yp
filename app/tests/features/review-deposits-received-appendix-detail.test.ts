@@ -1,8 +1,9 @@
 // Story: spec/features/review-deposits-received-appendix-detail.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { dcarLine, makeReservation, pay, rpc, type Fixture } from '../helpers/db';
 
-interface DepRow {
+interface DepositRow {
 	payment_type: string;
 	resnumber: number;
 	guestlastname: string;
@@ -13,81 +14,47 @@ interface DepRow {
 }
 
 let fx: Fixture;
-let rows: DepRow[];
+let rows: DepositRow[];
+
+const page = useAppPage();
 
 beforeAll(async () => {
-	fx = await makeReservation();
-	await rpc('record_payment', {
-		p_reservationguestid: fx.reservationguestid,
-		p_paymentcategory: 'Deposit (Received)',
-		p_paymenttype: 'Visa',
-		p_amount: 175,
-		p_paymentdate: fx.arrival
-	});
-	await rpc('record_payment', {
-		p_reservationguestid: fx.reservationguestid,
-		p_paymentcategory: 'Deposit (Received)',
-		p_paymenttype: 'Cash',
-		p_amount: 60,
-		p_paymentdate: fx.arrival
-	});
+	fx = await makeReservation({ firstname: 'Dana' });
+	// Taken out of type order, so the grouping can only come from the report.
+	await pay(fx, 'Deposit (Received)', 100, { type: 'Visa' });
+	await pay(fx, 'Deposit (Received)', 50, { type: 'Cash' });
+	await pay(fx, 'Deposit (Received)', 80, { type: 'Visa' });
 	rows = await rpc('report_deposits_received', { p_date: fx.arrival });
 });
 
 describe('review deposits received appendix detail', () => {
-	it('lists each deposit with payment type, reservation, names, and amounts', () => {
-		expect(rows).toHaveLength(2);
-		const visa = rows.find((r) => r.payment_type === 'Visa')!;
-		expect(visa.resnumber).toBe(fx.resnumber);
-		expect(visa.guestlastname).toBe(fx.lastname);
-		expect(Number(visa.pymt_amount)).toBe(175);
-		expect(visa.funds).toBe('Canadian');
-		expect(Number(visa.pymt_cdn)).toBe(175);
+	it('groups the lines by payment type, each with its reservation, guest, amount, funds and Canadian value', () => {
+		expect(rows.map((r) => r.payment_type)).toEqual(['Cash', 'Visa', 'Visa']);
+		// Two lines of one type on one stay come in no particular order.
+		expect(
+			rows.map((r) => [
+				r.payment_type,
+				r.resnumber,
+				r.guestlastname,
+				r.guestfirstname,
+				Number(r.pymt_amount),
+				r.funds,
+				Number(r.pymt_cdn)
+			])
+		).toEqual(expect.arrayContaining([
+			['Cash', fx.resnumber, fx.lastname, 'Dana', 50, 'Canadian', 50],
+			['Visa', fx.resnumber, fx.lastname, 'Dana', 100, 'Canadian', 100],
+			['Visa', fx.resnumber, fx.lastname, 'Dana', 80, 'Canadian', 80]
+		]));
 	});
 
-	it('ties the day total to the DCAR deposit line', async () => {
-		const total = rows.reduce((s, r) => s + Number(r.pymt_cdn), 0);
-		const upper = await rpc<{ item: string; amount: number }[]>('report_dcar_upper', {
-			p_date: fx.arrival
-		});
-		expect(total).toBeCloseTo(
-			Number(upper.find((r) => r.item === 'Deposit (Received)')?.amount),
-			2
-		);
-	});
-});
-
-describe('review deposits received appendix detail — grouping by payment type', () => {
-	let groupFx: Fixture;
-	let groupRows: DepRow[];
-
-	beforeAll(async () => {
-		groupFx = await makeReservation();
-		for (const [type, amount] of [
-			['Visa', 100],
-			['Cash', 50],
-			['Visa', 80]
-		] as const) {
-			await rpc('record_payment', {
-				p_reservationguestid: groupFx.reservationguestid,
-				p_paymentcategory: 'Deposit (Received)',
-				p_paymenttype: type,
-				p_amount: amount,
-				p_paymentdate: groupFx.arrival
-			});
-		}
-		groupRows = await rpc('report_deposits_received', { p_date: groupFx.arrival });
+	it('totals the day to the deposit line on the Daily Cash Activity Report', async () => {
+		expect(await dcarLine(fx.arrival, 'Deposit (Received)', 'Adjustments')).toBe(230);
 	});
 
-	it('keeps lines of the same payment type together', () => {
-		const types = groupRows.map((r) => r.payment_type);
-		expect(types).toEqual(['Cash', 'Visa', 'Visa']);
-	});
-
-	it('shows funds and Canadian amounts on every line within a group', () => {
-		for (const r of groupRows) {
-			expect(r.funds).toBeTruthy();
-			expect(Number(r.pymt_cdn)).toBeGreaterThan(0);
-		}
+	it('shows the total beside its agreement with the report, in the viewer', async () => {
+		await page.goto(`${APP_URL}/reports/deposits-received?date=${fx.arrival}`, { waitUntil: 'networkidle' });
+		await expect.poll(() => page.textContent('.no-print')).toContain('Agrees with Daily Cash');
+		expect(await page.textContent('.report-page')).toContain('$230.00');
 	});
 });

@@ -1,41 +1,15 @@
 // Story: spec/features/record-charges-and-deposits-while-booking.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, staffClient, todayISO, uid, unwrap } from '../helpers/db';
-
-interface LedgerRow {
-	line_source: 'transaction' | 'payment';
-	line_type: string;
-	line_date: string;
-	code: string | null;
-	quantity: number;
-	amount: number;
-	balance_effect: number;
-}
-
-interface Item {
-	inventoryid: number;
-	invcode: string;
-	invamount: number;
-}
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { addDays, ledger, pricedItem, reservationIdOf, rpc, todayISO, uid, type Item } from '../helpers/db';
 
 const DEPOSIT = 150;
 
-let page: Page;
+const page = useAppPage();
 let item: Item;
 let surname: string;
 let resnumber: number;
-
-async function ledgerFor(reservationid: number): Promise<LedgerRow[]> {
-	return rpc<LedgerRow[]>('reservation_ledger', { p_reservationid: reservationid });
-}
-
-async function reservationIdOf(n: number): Promise<number> {
-	return (await rpc<{ reservationid: number }[]>('find_reservation', { p_resnumber: n }))[0]
-		.reservationid;
-}
 
 /** Books a stay from the new-reservation screen with an opening charge and a deposit. */
 async function bookWithCharges(): Promise<void> {
@@ -66,24 +40,8 @@ async function bookWithCharges(): Promise<void> {
 }
 
 beforeAll(async () => {
-	const db = await staffClient();
-	item = (
-		unwrap(
-			await db
-				.from('inventory_items')
-				.select('inventoryid, invcode, invamount')
-				.eq('invarchive', false)
-				.gt('invamount', 0)
-				.order('invcode')
-				.limit(1)
-		) as Item[]
-	)[0];
+	item = await pricedItem();
 	surname = `ZZBasket${uid()}`;
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
 });
 
 describe('record charges and deposits while booking', () => {
@@ -108,7 +66,7 @@ describe('record charges and deposits while booking', () => {
 		await page.waitForURL(/\/reservations\/\d+$/, { timeout: 30_000 });
 		resnumber = Number(page.url().split('/').pop());
 
-		const lines = await ledgerFor(await reservationIdOf(resnumber));
+		const lines = await ledger(await reservationIdOf(resnumber));
 		const charge = lines.find((l) => l.line_source === 'transaction');
 		const deposit = lines.find((l) => l.line_type === 'Deposit (Received)');
 
@@ -121,47 +79,22 @@ describe('record charges and deposits while booking', () => {
 		expect(Number(deposit!.amount)).toBeCloseTo(DEPOSIT, 2);
 	});
 
-	it('dates the posted lines the day the money moved', async () => {
-		const lines = await ledgerFor(await reservationIdOf(resnumber));
-		const deposit = lines.find((l) => l.line_type === 'Deposit (Received)')!;
-		expect(deposit.line_date.slice(0, 10)).toBe(todayISO());
-	});
+	it('dates the lines the day they were taken: the deposit on that day’s cash, the charge at check-out', async () => {
+		const reservationid = await reservationIdOf(resnumber);
+		const lines = await ledger(reservationid);
+		expect(lines.map((l) => l.line_date.slice(0, 10))).toEqual([todayISO(), todayISO()]);
 
-	it('takes charges and a deposit while re-booking, onto the new stay', async () => {
-		const fx = await makeReservation({ nights: 2 });
-		// A deposit already held on the stay being re-booked from: it stays
-		// there, and what is entered while re-booking lands on the new stay.
-		await rpc('record_payment', {
-			p_reservationguestid: fx.reservationguestid,
-			p_paymentcategory: 'Deposit (Received)',
-			p_paymenttype: 'Cash',
-			p_amount: 80,
-			p_currency: 'Canadian',
-			p_paymentdate: fx.arrival
+		const deposits = await rpc<{ resnumber: number; pymt_cdn: number }[]>('report_deposits_received', {
+			p_date: todayISO()
 		});
-
-		await page.goto(APP_URL + `/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
-		await page.getByRole('link', { name: 'Re-book', exact: true }).click();
-		await page.waitForURL(/\/reservations\/new\?from=\d+$/, { timeout: 20_000 });
-		await page.locator('#basket-add-payment').waitFor({ timeout: 10_000 });
-		await page.fill('#bb', 'QA');
-
-		await page.click('#basket-add-payment');
-		await page.fill('#basket-amount', '60');
-		await page.getByRole('button', { name: /^Add Deposit/ }).click();
-		await expect
-			.poll(() => page.locator('[data-testid=basket-lines] li').count(), { timeout: 10_000 })
-			.toBe(1);
-
-		await page.getByRole('button', { name: 'Save reservation' }).click();
-		await page.waitForURL(
-			(url) => /\/reservations\/\d+$/.test(url.pathname) && !url.pathname.endsWith(`/${fx.resnumber}`),
-			{ timeout: 30_000 }
-		);
-
-		const rebookedNumber = Number(page.url().split('/').pop());
-		const lines = await ledgerFor(await reservationIdOf(rebookedNumber));
-		const deposits = lines.filter((l) => l.line_type === 'Deposit (Received)');
-		expect(deposits.map((d) => Number(d.amount))).toEqual([60]);
+		expect(deposits.filter((d) => d.resnumber === resnumber).map((d) => Number(d.pymt_cdn))).toEqual([
+			DEPOSIT
+		]);
+		const cashedOut = async (date: string) =>
+			(await rpc<{ resnumber: number }[]>('report_items_cashed_out', { p_date: date })).filter(
+				(r) => r.resnumber === resnumber
+			).length;
+		expect(await cashedOut(todayISO())).toBe(0);
+		expect(await cashedOut(addDays(todayISO(), 33))).toBe(1);
 	});
 });

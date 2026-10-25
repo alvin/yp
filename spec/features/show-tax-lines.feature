@@ -9,7 +9,6 @@ Feature: show tax lines
     Given the daily cash report is being prepared
 
   Scenario: Acceptance criteria
-    Then Tax lines appear for each taxable charge included in the day’s activity.
-    And Each tax line is shown with the amount used in the report calculation.
-    And The tax rate type used for the calculation is visible in the report detail.
-    And Tax lines are presented in a way that supports the report’s two-section cash review process.
+    Then The upper section carries a line for each tax, named by its rate type — GST, PST, HST, Liquor Tax, Room Tax, Other Tax and Dest Mktg Tax — printed even at zero.
+    And Each line is that tax's total on the charges the day counts, and Total Taxes adds them up.
+    And The taxes count toward the day's revenue and expenses.

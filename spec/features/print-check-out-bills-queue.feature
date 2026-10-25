@@ -9,7 +9,6 @@ Feature: print check-out bills queue
     Given staff choose a departure date in the Print Center
 
   Scenario: Acceptance criteria
-    Then Staff can select one departure date to build the print run.
-    And The system lists the guests due to depart on that date who need a bill.
-    And Staff can print the selected bills together from the same screen.
-    And The print run is clearly tied to the chosen departure date.
+    Then The bills for a chosen date are the stays departing that day, and no others; a cancelled stay has none.
+    And The day's bills print together, in the batch's Check-out bills group for that date.
+    And Each bill carries the stay's reservation number and its balance owing.

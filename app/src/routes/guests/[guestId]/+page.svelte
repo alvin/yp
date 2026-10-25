@@ -1,6 +1,7 @@
 <script lang="ts">
     import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
     import NotebookIcon from "@lucide/svelte/icons/notebook-pen";
+    import ListIcon from "@lucide/svelte/icons/list";
     import CalendarPlusIcon from "@lucide/svelte/icons/calendar-plus";
     import MapPinIcon from "@lucide/svelte/icons/map-pin";
     import PhoneIcon from "@lucide/svelte/icons/phone";
@@ -11,10 +12,13 @@
     import { Badge } from "$lib/components/ui/badge/index.js";
     import Money from "$lib/components/app/money.svelte";
     import StatusBadge from "$lib/components/app/status-badge.svelte";
-    import GuestNotesDialog from "$lib/components/app/guest-notes-dialog.svelte";
+    import NotesDialog, {
+        GUEST_NOTES_PLACEHOLDER,
+    } from "$lib/components/app/notes-dialog.svelte";
     import GuestDetailsDialog from "$lib/components/app/guest-details-dialog.svelte";
     import PencilIcon from "@lucide/svelte/icons/pencil";
-    import { dateMed } from "$lib/format.js";
+    import { dateMed, guestName } from "$lib/format.js";
+    import { setGuestNotes } from "$lib/data/mutations.js";
     import type { GuestHistoryRow } from "$lib/data/types.js";
 
     let { data } = $props();
@@ -56,11 +60,7 @@
     ];
 </script>
 
-<svelte:head
-    ><title
-        >{g.guestlastname}{g.guestfirstname ? `, ${g.guestfirstname}` : ""} · Guest</title
-    ></svelte:head
->
+<svelte:head><title>{guestName(g)} · Guest</title></svelte:head>
 
 <div class="mb-4 flex items-center justify-between gap-3">
     <Button variant="ghost" size="sm" href="/"><ArrowLeftIcon /> Lookup</Button>
@@ -75,11 +75,7 @@
         <Card.Header>
             <div class="flex items-start justify-between gap-2">
                 <div>
-                    <Card.Title class="text-lg"
-                        >{g.guestlastname}{g.guestfirstname
-                            ? `, ${g.guestfirstname}`
-                            : ""}</Card.Title
-                    >
+                    <Card.Title class="text-lg">{guestName(g)}</Card.Title>
                     <Card.Description>Guest #{g.guestid}</Card.Description>
                 </div>
                 {#if g.guestsalutation}<Badge variant="secondary"
@@ -158,6 +154,13 @@
                             class="bg-primary ml-1 size-1.5 rounded-full"
                         ></span>{/if}
                 </Button>
+                <Button
+                    variant="secondary"
+                    class="col-span-2"
+                    href="/reports/guest-requests/{g.guestid}"
+                >
+                    <ListIcon /> Requests
+                </Button>
             </div>
         </Card.Content>
     </Card.Root>
@@ -231,5 +234,11 @@
     </div>
 </div>
 
-<GuestNotesDialog bind:open={notesOpen} guestid={g.guestid} notes={g.guestnotes} />
+<NotesDialog
+    bind:open={notesOpen}
+    title="Guest notes"
+    notes={g.guestnotes}
+    placeholder={GUEST_NOTES_PLACEHOLDER}
+    save={(text) => setGuestNotes(g.guestid, text)}
+/>
 <GuestDetailsDialog bind:open={detailsOpen} guest={g} />

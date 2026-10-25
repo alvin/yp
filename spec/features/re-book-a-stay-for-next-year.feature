@@ -13,5 +13,5 @@ Feature: re-book a stay for next year
     And The party size, bed type and room come across, and every field can be changed before saving.
     And The dates offered are the same stay next season — the same weekday, 52 weeks on — and can be changed.
     And The reservation re-booked from is left exactly as it stands: not cancelled, still holding its own deposit and charges.
-    And The new reservation's notes start empty, so nothing internal prints on the guest's confirmation.
+    And The new reservation's own notes start empty.
     And A deposit taken for next year is recorded against the new reservation while it is being booked.

@@ -28,7 +28,7 @@ from supabase.tools.access_table_map import (  # noqa: E402
     TABLES,
     TARGET_SCHEMA,
     retired_lookup_sql,
-    rewrite_export_sql,
+    export_insert_sql,
     sequence_reset_sql,
 )
 
@@ -47,30 +47,6 @@ def mdb_count(access_db: Path, access_table: str) -> str:
         text=True,
         stderr=subprocess.STDOUT,
     ).strip()
-
-
-def export_insert_sql(access_db: Path, access_table: str) -> str:
-    exported = subprocess.check_output(
-        [
-            "mdb-export",
-            "-I",
-            "postgres",
-            "-N",
-            TARGET_SCHEMA,
-            "-B",
-            "-D",
-            "%Y-%m-%d",
-            "-T",
-            "%Y-%m-%d %H:%M:%S",
-            "-b",
-            "strip",
-            str(access_db),
-            access_table,
-        ],
-        text=True,
-        stderr=subprocess.STDOUT,
-    )
-    return rewrite_export_sql(exported)
 
 
 def build_import_sql(access_db: Path, include_counts: bool) -> str:

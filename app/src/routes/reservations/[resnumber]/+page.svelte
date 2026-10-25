@@ -2,6 +2,7 @@
     import { toast } from "svelte-sonner";
     import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
     import NotebookIcon from "@lucide/svelte/icons/notebook-pen";
+    import ListIcon from "@lucide/svelte/icons/list";
     import UserIcon from "@lucide/svelte/icons/user";
     import CarIcon from "@lucide/svelte/icons/car";
     import BedIcon from "@lucide/svelte/icons/bed-double";
@@ -19,53 +20,45 @@
 
     import { Button } from "$lib/components/ui/button/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
-    import { Input } from "$lib/components/ui/input/index.js";
-    import { Label } from "$lib/components/ui/label/index.js";
-    import { Textarea } from "$lib/components/ui/textarea/index.js";
     import * as Card from "$lib/components/ui/card/index.js";
-    import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import * as Tabs from "$lib/components/ui/tabs/index.js";
-    import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Field from "$lib/components/app/field.svelte";
+    import RowAction from "$lib/components/app/row-action.svelte";
     import StatusBadge from "$lib/components/app/status-badge.svelte";
     import ReservationLedger from "$lib/components/app/reservation-ledger.svelte";
     import SharedRoomBadge from "$lib/components/app/shared-room-badge.svelte";
     import CancelDialog from "$lib/components/app/cancel-dialog.svelte";
     import SettleDepositDialog from "$lib/components/app/settle-deposit-dialog.svelte";
-    import GuestNotesDialog from "$lib/components/app/guest-notes-dialog.svelte";
+    import NotesDialog, {
+        GUEST_NOTES_PLACEHOLDER,
+    } from "$lib/components/app/notes-dialog.svelte";
+    import ChangeDatesDialog from "$lib/components/app/reservation/change-dates-dialog.svelte";
+    import PartySizeDialog from "$lib/components/app/reservation/party-size-dialog.svelte";
+    import RoomMoveDialog from "$lib/components/app/reservation/room-move-dialog.svelte";
+    import ChangeRoomDialog from "$lib/components/app/reservation/change-room-dialog.svelte";
+    import UndoMoveDialog from "$lib/components/app/reservation/undo-move-dialog.svelte";
+    import StayNotesCard from "$lib/components/app/reservation/stay-notes-card.svelte";
     import { guestDocTabs } from "$lib/report-nav.js";
     import { afterNavigate, invalidateAll } from "$app/navigation";
-    import { addDays, bookingHorizon, dateMed, dateShort, money, nightsBetween } from "$lib/format.js";
-    import { ROOMS, bedTypeLabel, roomById } from "$lib/data/reference.js";
-    import { roomOptions } from "$lib/options.js";
+    import { dateMed, dateShort, money, party, stayNights } from "$lib/format.js";
+    import { bedTypeLabel } from "$lib/data/reference.js";
     import {
-        dietText,
-        occupancySummaries,
-        roomMoves,
-        roomsBooked,
-        sharedRoomOccupancies,
-    } from "$lib/data/queries.js";
-    import {
-        setHousekeepingNote,
-        assignRoom,
         cancelReservation,
         confirmReservation,
+        setGuestNotes,
+        setReservationNotes,
         settleDeposit,
         uncancelReservation,
-        recordRoomMove,
-        undoRoomMove,
-        changeRoom,
-        setRoomGuests,
-        saveKitchenMeal,
-        setReservationNotes,
-        updateReservation,
-        updateReservationGuestNotes,
     } from "$lib/data/mutations.js";
+    import { errorMessage } from "$lib/utils.js";
     import type { OccupancySummary, SharedRoom } from "$lib/data/types.js";
 
     let { data } = $props();
     const s = $derived(data.summary);
     const today = $derived(data.today);
+    const cancelled = $derived(s.rescancelled);
+    const occupancy = $derived(data.occupancy);
+    // Which rooms are moves, each keyed to the room(s) it moved from.
+    const moves = $derived(data.moves);
 
     // Opened from a list of reservations — a guest's, a date search, an
     // all-fields search — the back button returns to that list, so checking
@@ -75,41 +68,6 @@
     afterNavigate(({ from }) => {
         backToList = /^\/(guests\/|date$|query$)/.test(from?.url.pathname ?? "");
     });
-
-    function seed() {
-        const d = data;
-        return {
-            cancelled: d.summary.rescancelled,
-            occupancy: d.occupancy,
-            shared: d.shared,
-            moves: d.moves,
-            mIn: d.today,
-            mOut: d.summary.resdeparturedate,
-            kitchenMealId: guestMeal(d)?.kitchenmealid ?? null,
-            kitchenText: dietText(guestMeal(d)),
-            housekeepingText: currentHousekeepingNote(d),
-            requestText: d.reservationGuest?.rgnotes ?? "",
-            reservationText: d.summary.resnotes ?? "",
-        };
-    }
-    const i = seed();
-
-    // Each notes tab edits the guest's own text: the diet notes on their
-    // kitchen record (as they print), the housekeeping note in force (the one
-    // that prints), their requests.
-    function guestMeal(d: typeof data) {
-        return d.kitchen[0];
-    }
-    function currentHousekeepingNote(d: typeof data): string {
-        const latest = [...d.housekeeping].sort(
-            (a, b) =>
-                (b.hknotesdate ?? "").localeCompare(a.hknotesdate ?? "") ||
-                b.housekeepingnotesid - a.housekeepingnotesid,
-        );
-        return latest[0]?.housekeepingnotes ?? "";
-    }
-
-    let cancelled = $state(i.cancelled);
 
     const statusToday = $derived.by(() => {
         if (cancelled) return "cancelled";
@@ -122,8 +80,29 @@
 
     const deposit = $derived(s.deposit_held || null);
 
-    // Guest notes (office only), saved to the guest record.
-    let notesOpen = $state(false);
+    // Rooms this stay holds at the same time as another reservation. The lodge
+    // does this deliberately as well as by accident, so it is shown, not barred.
+    const sharedByOccupancy = $derived.by(() => {
+        const byId = new Map<number, SharedRoom[]>();
+        for (const sh of data.shared) {
+            const list = byId.get(sh.occupancyid);
+            if (list) list.push(sh);
+            else byId.set(sh.occupancyid, [sh]);
+        }
+        return byId;
+    });
+
+    // Office-only notes, the guest's and the reservation's.
+    let guestNotesOpen = $state(false);
+    let reservationNotesOpen = $state(false);
+
+    let datesOpen = $state(false);
+    let guestsOpen = $state(false);
+    let moveOpen = $state(false);
+    let changeOpen = $state(false);
+    let changeTarget = $state<OccupancySummary | null>(null);
+    let undoOpen = $state(false);
+    let undoTarget = $state<OccupancySummary | null>(null);
 
     // Confirm
     let confirming = $state(false);
@@ -134,410 +113,14 @@
             toast.success(`Reservation #${s.resnumber} confirmed`);
             await invalidateAll();
         } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not confirm.",
-            );
+            toast.error(errorMessage(e, "Could not confirm."));
         } finally {
             confirming = false;
         }
     }
 
-    // Change dates: the same stay, extended or shortened. The database moves
-    // the reservation guests and their room assignments with it and recomputes
-    // the night count; charges already posted stay as posted.
-    let datesOpen = $state(false);
-    let dArrival = $state("");
-    let dDeparture = $state("");
-    let savingDates = $state(false);
-    function openDates() {
-        dArrival = s.resarrivaldate;
-        dDeparture = s.resdeparturedate;
-        datesOpen = true;
-    }
-    const dNights = $derived(
-        dArrival && dDeparture && dDeparture > dArrival
-            ? nightsBetween(dArrival, dDeparture)
-            : 0,
-    );
-    const dChanged = $derived(
-        dArrival !== s.resarrivaldate || dDeparture !== s.resdeparturedate,
-    );
-    async function saveDates() {
-        if (!dArrival || !dDeparture || dDeparture <= dArrival) {
-            toast.error("Departure must be after arrival.");
-            return;
-        }
-        savingDates = true;
-        try {
-            await updateReservation(s.reservationid, {
-                arrival: dArrival,
-                departure: dDeparture,
-            });
-            datesOpen = false;
-            toast.success(`Stay dates updated`, {
-                description: `${dateMed(dArrival)} → ${dateMed(dDeparture)} · ${dNights} night${dNights === 1 ? "" : "s"}`,
-            });
-            await invalidateAll();
-            await refreshRooms();
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not change the dates.",
-            );
-        } finally {
-            savingDates = false;
-        }
-    }
-
-    // Rooms: mid-stay moves (split the current occupancy at the move date)
-    // or an additional room for the same stay.
-    let occupancy = $state<OccupancySummary[]>(i.occupancy);
-
-    // Rooms this stay holds at the same time as another reservation. The lodge
-    // does this deliberately as well as by accident, so it is shown, not barred.
-    let shared = $state<SharedRoom[]>(i.shared);
-    const sharedByOccupancy = $derived.by(() => {
-        const byId = new Map<number, SharedRoom[]>();
-        for (const sh of shared) {
-            const list = byId.get(sh.occupancyid);
-            if (list) list.push(sh);
-            else byId.set(sh.occupancyid, [sh]);
-        }
-        return byId;
-    });
-    // Which rooms are moves, each keyed to the room(s) it moved from.
-    let moves = $state<Map<number, number[]>>(i.moves);
-
-    async function refreshRooms() {
-        [occupancy, shared, moves] = await Promise.all([
-            occupancySummaries(s.reservationid),
-            sharedRoomOccupancies(s.reservationid),
-            roomMoves(s.reservationid),
-        ]);
-    }
-
-    let moveOpen = $state(false);
-    let mMode = $state<"move" | "add">("move");
-    let mFrom = $state("");
-    let mRoom = $state(String(ROOMS[0].roomid));
-    let mMoveDate = $state(i.mIn);
-    let mMoveOut = $state("");
-    let mIn = $state(i.mIn);
-    let mOut = $state(i.mOut);
-    let mGuests = $state(2);
-    let mNotes = $state("");
-    const rooms = roomOptions();
-    const occupancyOptions = $derived(
-        occupancy.map((o) => ({
-            value: String(o.occupancyid),
-            label: `${o.room_compact} · ${dateShort(o.occupancyin)} → ${dateShort(o.occupancyout)}`,
-        })),
-    );
-
-    // A move happens inside the room being left — after its first night and
-    // before its last morning — so the date box offers only those dates, and
-    // starts on today when today is one of them, otherwise the first. The room
-    // that runs to the end of the stay can also be left on the check-out date:
-    // a guest who stays on if another room is free. The stay then runs to a new
-    // departure, in the new room only.
-    const moveDates = $derived.by(() => {
-        const o = occupancy.find((x) => String(x.occupancyid) === mFrom);
-        if (!o) return null;
-        const min = addDays(o.occupancyin, 1);
-        const max =
-            o.occupancyout === s.resdeparturedate
-                ? o.occupancyout
-                : addDays(o.occupancyout, -1);
-        return min <= max ? { min, max } : null;
-    });
-    const extending = $derived(
-        moveDates?.max === s.resdeparturedate && mMoveDate === moveDates.max,
-    );
-    const moveDateOk = $derived(
-        !!moveDates &&
-            mMoveDate >= moveDates.min &&
-            mMoveDate <= moveDates.max &&
-            (!extending || mMoveOut > mMoveDate),
-    );
-    function firstMoveDate(): string {
-        if (!moveDates) return "";
-        return today >= moveDates.min && today <= moveDates.max
-            ? today
-            : moveDates.min;
-    }
-
-    function openMove() {
-        mMode = occupancy.length ? "move" : "add";
-        const current =
-            occupancy.find(
-                (o) => o.occupancyin <= today && o.occupancyout >= today,
-            ) ?? occupancy[occupancy.length - 1];
-        mFrom = current ? String(current.occupancyid) : "";
-        mMoveDate = firstMoveDate();
-        mMoveOut = addDays(s.resdeparturedate, 1);
-        mIn = today;
-        mOut = s.resdeparturedate;
-        mGuests = current?.occupancynumguests ?? s.numadults;
-        mNotes = "";
-        moveOpen = true;
-    }
-
-    async function addMove() {
-        const room = roomById(Number(mRoom))!;
-        try {
-            if (mMode === "move") {
-                if (!mFrom) {
-                    toast.error("Choose the room being left.");
-                    return;
-                }
-                await recordRoomMove(
-                    Number(mFrom),
-                    room.roomid,
-                    mMoveDate,
-                    mNotes || null,
-                    extending ? mMoveOut : null,
-                );
-                if (extending) await invalidateAll();
-            } else {
-                await assignRoom(
-                    s.primary_reservationguestid,
-                    room.roomid,
-                    mIn,
-                    mOut,
-                    mGuests,
-                    mNotes || null,
-                );
-            }
-            await refreshRooms();
-            moveOpen = false;
-            toast.success(
-                `${mMode === "move" ? "Room move recorded" : "Room added"} — ${room.roomname}${room.roomnumber ? " " + room.roomnumber : ""}`,
-            );
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not save the room move.",
-            );
-        }
-    }
-
-    // Undo a move booked ahead and no longer needed: the stay keeps the room
-    // it was leaving. Where two rooms moved on the same day the database can't
-    // tell which one this move replaced, so the desk picks it.
-    let undoOpen = $state(false);
-    let undoing = $state(false);
-    let undoTarget = $state<OccupancySummary | null>(null);
-    let undoFrom = $state("");
-    const undoFromOptions = $derived(
-        (undoTarget ? (moves.get(undoTarget.occupancyid) ?? []) : []).map(
-            (id) => {
-                const o = occupancy.find((x) => x.occupancyid === id);
-                return {
-                    value: String(id),
-                    label: o
-                        ? `${o.room_compact} · ${dateShort(o.occupancyin)} → ${dateShort(o.occupancyout)}`
-                        : String(id),
-                };
-            },
-        ),
-    );
-    const undoKeeps = $derived(
-        occupancy.find((o) => String(o.occupancyid) === undoFrom),
-    );
-
-    function askUndoMove(o: OccupancySummary) {
-        const from = moves.get(o.occupancyid) ?? [];
-        undoTarget = o;
-        undoFrom = from.length === 1 ? String(from[0]) : "";
-        undoOpen = true;
-    }
-
-    async function confirmUndoMove() {
-        const o = undoTarget;
-        if (!o || !undoFrom) return;
-        undoing = true;
-        try {
-            await undoRoomMove(o.occupancyid, Number(undoFrom));
-            await refreshRooms();
-            undoOpen = false;
-            undoTarget = null;
-            toast.success(`Room move undone — ${o.room_compact}`);
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not undo the move.",
-            );
-        } finally {
-            undoing = false;
-        }
-    }
-
-    // Change a room outright — the stay holds another room for the same
-    // nights. The database refuses while a room charge for the old room is
-    // posted over them, or when the new room is the one the stay moves from or
-    // to next door (that is undoing the move).
-    let changeOpen = $state(false);
-    let changing = $state(false);
-    let changeTarget = $state<OccupancySummary | null>(null);
-    let changeTo = $state("");
-    let changeBooked = $state(new Set<number>());
-    const changeOptions = $derived(
-        rooms
-            .filter((o) => o.value !== String(changeTarget?.roomid))
-            .map((o) =>
-                changeBooked.has(Number(o.value)) ? { ...o, hint: "Booked" } : o,
-            ),
-    );
-
-    async function askChangeRoom(o: OccupancySummary) {
-        changeTarget = o;
-        changeTo = "";
-        changeBooked = new Set();
-        changeOpen = true;
-        changeBooked = await roomsBooked(o.occupancyin, o.occupancyout).catch(
-            () => new Set<number>(),
-        );
-    }
-
-    async function confirmChangeRoom() {
-        const o = changeTarget;
-        if (!o || !changeTo) return;
-        changing = true;
-        try {
-            await changeRoom(o.occupancyid, Number(changeTo));
-            await refreshRooms();
-            changeOpen = false;
-            const room = roomById(Number(changeTo))!;
-            toast.success(
-                `Room changed — ${room.roomname}${room.roomnumber ? " " + room.roomnumber : ""}`,
-            );
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not change the room.",
-            );
-        } finally {
-            changing = false;
-        }
-    }
-
-    // The number of guests, changed after booking. The database gives the new
-    // number to every room the whole party is in, so the daily reports count
-    // it. Rooms held side by side split the party in a way the reservation
-    // doesn't record, so each of those keeps a number of its own, set here.
-    // Only adults are asked for, as on the booking screen; a child count
-    // already on file is left as it is and still shown.
-    let guestsOpen = $state(false);
-    let savingGuests = $state(false);
-    let gAdults = $state<number | null>(null);
-    let gRooms = $state<Record<number, number | null>>({});
-
-    function party(adults: number, children: number): string {
-        const a = `${adults} adult${adults === 1 ? "" : "s"}`;
-        return children
-            ? `${a}, ${children} ${children === 1 ? "child" : "children"}`
-            : a;
-    }
-
-    // Rooms of the stay that share a night with another of its rooms
-    // (ypl.reservations_sync_room_guests leaves these alone).
-    const sideBySide = $derived(
-        occupancy.filter((o) =>
-            occupancy.some(
-                (x) =>
-                    x.occupancyid !== o.occupancyid &&
-                    x.occupancyin < o.occupancyout &&
-                    o.occupancyin < x.occupancyout,
-            ),
-        ),
-    );
-    const isCount = (v: number | null | undefined, min: number) =>
-        v != null && Number.isInteger(v) && v >= min;
-    // A room left blank keeps the number it has.
-    const roomsChanged = $derived(
-        sideBySide.filter((o) => {
-            const v = gRooms[o.occupancyid];
-            return v != null && v !== o.occupancynumguests;
-        }),
-    );
-    const partyChanged = $derived(gAdults !== s.numadults);
-    const guestsValid = $derived(
-        isCount(gAdults, 1) &&
-            roomsChanged.every((o) => isCount(gRooms[o.occupancyid], 1)),
-    );
-
-    function openGuests() {
-        gAdults = s.numadults;
-        gRooms = Object.fromEntries(
-            sideBySide.map((o) => [o.occupancyid, o.occupancynumguests]),
-        );
-        guestsOpen = true;
-    }
-
-    async function saveGuests() {
-        const adults = gAdults ?? 0;
-        savingGuests = true;
-        try {
-            if (partyChanged)
-                await updateReservation(s.reservationid, { numadults: adults });
-            for (const o of roomsChanged)
-                await setRoomGuests(o.occupancyid, gRooms[o.occupancyid]!);
-            guestsOpen = false;
-            toast.success("Guests updated", {
-                description: party(adults, s.numchildren ?? 0),
-            });
-            await invalidateAll();
-            await refreshRooms();
-        } catch (e) {
-            toast.error(
-                e instanceof Error
-                    ? e.message
-                    : "Could not change the number of guests.",
-            );
-        } finally {
-            savingGuests = false;
-        }
-    }
-
-    // Notes tabs (report-feeding)
-    let kitchenMealId = $state(i.kitchenMealId);
-    let kitchenText = $state(i.kitchenText);
-    let housekeepingText = $state(i.housekeepingText);
-    let requestText = $state(i.requestText);
-    let reservationText = $state(i.reservationText);
-    async function saveNotes(which: string) {
-        try {
-            if (which === "Kitchen") {
-                // A diet on file is saved even when emptied, which clears it;
-                // with none on file, an empty tab adds nothing. A record the
-                // tab writes is the one its next save revises, not a second.
-                if (kitchenMealId || kitchenText.trim())
-                    kitchenMealId = await saveKitchenMeal(
-                        s.primary_guestid,
-                        kitchenText,
-                        kitchenMealId,
-                    );
-            } else if (which === "Housekeeping") {
-                await setHousekeepingNote(
-                    s.primary_reservationguestid,
-                    housekeepingText,
-                    today,
-                );
-            } else if (which === "Request") {
-                await updateReservationGuestNotes(
-                    s.primary_reservationguestid,
-                    requestText,
-                );
-            } else {
-                await setReservationNotes(s.reservationid, reservationText);
-            }
-            toast.success(`${which} notes saved`);
-        } catch (e) {
-            toast.error(
-                e instanceof Error
-                    ? e.message
-                    : `Could not save ${which} notes.`,
-            );
-        }
-    }
-
-    // Cancel
+    // Cancel. A cancellation note goes on the notice, with the first room's
+    // occupancy notes (ypl.cancel_reservation).
     let cancelOpen = $state(false);
     async function onCancelled(r: {
         date: string;
@@ -556,18 +139,12 @@
                 handling,
                 r.notes || null,
             );
-            cancelled = true;
-            if (r.notes) reservationText = r.notes;
             toast.success(`Reservation #${s.resnumber} cancelled`, {
                 description: r.outcome !== "none" ? r.outcome : undefined,
             });
             await invalidateAll();
         } catch (e) {
-            toast.error(
-                e instanceof Error
-                    ? e.message
-                    : "Could not cancel the reservation.",
-            );
+            toast.error(errorMessage(e, "Could not cancel the reservation."));
         }
     }
 
@@ -578,13 +155,10 @@
         uncancelling = true;
         try {
             await uncancelReservation(s.reservationid);
-            cancelled = false;
             toast.success(`Reservation #${s.resnumber} un-cancelled`);
             await invalidateAll();
         } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not un-cancel the reservation.",
-            );
+            toast.error(errorMessage(e, "Could not un-cancel the reservation."));
         } finally {
             uncancelling = false;
         }
@@ -603,9 +177,7 @@
             toast.success(`Recorded ${r.outcome} — ${money(amount)}`);
             await invalidateAll();
         } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not settle the deposit.",
-            );
+            toast.error(errorMessage(e, "Could not settle the deposit."));
         }
     }
 
@@ -644,7 +216,7 @@
             </Button>
         {/if}
         {#if !cancelled}
-            <Button variant="outline" size="sm" onclick={openDates}>
+            <Button variant="outline" size="sm" onclick={() => (datesOpen = true)}>
                 <CalendarIcon /> Change dates
             </Button>
         {/if}
@@ -698,16 +270,25 @@
                     <Card.Title class="flex items-center gap-2 text-base"
                         ><UserIcon class="size-4" /> Guest</Card.Title
                     >
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onclick={() => (notesOpen = true)}
-                    >
-                        <NotebookIcon /> Guest notes
-                        {#if data.guestNotes}<span
-                                class="bg-primary ml-1 size-1.5 rounded-full"
-                            ></span>{/if}
-                    </Button>
+                    <div class="flex gap-2">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            href="/reports/guest-requests/{s.primary_guestid}?from={s.resnumber}"
+                        >
+                            <ListIcon /> Requests
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onclick={() => (guestNotesOpen = true)}
+                        >
+                            <NotebookIcon /> Guest notes
+                            {#if data.guestNotes}<span
+                                    class="bg-primary ml-1 size-1.5 rounded-full"
+                                ></span>{/if}
+                        </Button>
+                    </div>
                 </div>
             </Card.Header>
             {#if data.reservationGuest}
@@ -736,7 +317,19 @@
         <!-- Reservation details -->
         <Card.Root>
             <Card.Header class="border-b pb-4">
-                <Card.Title class="text-base">Reservation details</Card.Title>
+                <div class="flex items-center justify-between">
+                    <Card.Title class="text-base">Reservation details</Card.Title>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onclick={() => (reservationNotesOpen = true)}
+                    >
+                        <NotebookIcon /> Reservation notes
+                        {#if s.resnotes}<span
+                                class="bg-primary ml-1 size-1.5 rounded-full"
+                            ></span>{/if}
+                    </Button>
+                </div>
             </Card.Header>
             <Card.Content>
                 <dl class="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -747,13 +340,12 @@
                     />
                     <Field
                         label="Nights"
-                        value={s.numnights ??
-                            nightsBetween(s.resarrivaldate, s.resdeparturedate)}
+                        value={stayNights(s)}
                     />
                     <Field
                         label="Guests"
                         value={party(s.numadults, s.numchildren ?? 0)}
-                        onedit={cancelled ? undefined : openGuests}
+                        onedit={cancelled ? undefined : () => (guestsOpen = true)}
                     />
                     <Field label="Beds" value={bedTypeLabel(s.bedtype)} />
                     <Field label="Arrival time" value={s.resarrivaltime} />
@@ -779,7 +371,7 @@
                     <Card.Title class="flex items-center gap-2 text-base"
                         ><BedIcon class="size-4" /> Rooms & moves</Card.Title
                     >
-                    <Button variant="outline" size="sm" onclick={openMove}
+                    <Button variant="outline" size="sm" onclick={() => (moveOpen = true)}
                         ><PlusIcon /> Room move</Button
                     >
                 </div>
@@ -828,112 +420,42 @@
                                 </div>
                             {/each}
                         </div>
-                        <button
-                            type="button"
-                            aria-label="Change room {o.room_compact}"
+                        <RowAction
+                            icon={PencilIcon}
+                            label="Change room {o.room_compact}"
                             title="Change room"
-                            onclick={() => askChangeRoom(o)}
-                            class="text-muted-foreground hover:text-foreground ml-auto shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                        >
-                            <PencilIcon class="size-3.5" />
-                        </button>
+                            class="ml-auto shrink-0"
+                            onclick={() => {
+                                changeTarget = o;
+                                changeOpen = true;
+                            }}
+                        />
                         {#if moves.has(o.occupancyid)}
-                            <button
-                                type="button"
-                                aria-label="Undo move to {o.room_compact}"
+                            <RowAction
+                                icon={TrashIcon}
+                                label="Undo move to {o.room_compact}"
                                 title="Undo this move"
-                                onclick={() => askUndoMove(o)}
-                                class="text-muted-foreground hover:text-destructive shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                            >
-                                <TrashIcon class="size-3.5" />
-                            </button>
+                                class="shrink-0"
+                                destructive
+                                onclick={() => {
+                                    undoTarget = o;
+                                    undoOpen = true;
+                                }}
+                            />
                         {/if}
                     </div>
                 {/each}
             </Card.Content>
         </Card.Root>
 
-        <!-- Report-feeding notes -->
-        <Card.Root>
-            <Card.Header class="border-b pb-4">
-                <Card.Title class="text-base">Notes for reports</Card.Title>
-                <Card.Description
-                    >Notes that print on the daily reports and guest documents.</Card.Description
-                >
-            </Card.Header>
-            <Card.Content>
-                <Tabs.Root value="kitchen">
-                    <Tabs.List class="grid w-full grid-cols-4">
-                        <Tabs.Trigger value="kitchen">Kitchen</Tabs.Trigger>
-                        <Tabs.Trigger value="hk">Housekeeping</Tabs.Trigger>
-                        <Tabs.Trigger value="req">Requests</Tabs.Trigger>
-                        <Tabs.Trigger value="res">Reservation</Tabs.Trigger>
-                    </Tabs.List>
-                    <Tabs.Content value="kitchen" class="mt-3 space-y-2">
-                        <Textarea
-                            bind:value={kitchenText}
-                            rows={4}
-                            placeholder="Allergies, meal preferences"
-                        />
-                        <p class="text-muted-foreground text-xs">
-                            Prints on the kitchen report, confirmation and check-in folio.
-                        </p>
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            onclick={() => saveNotes("Kitchen")}>Save</Button
-                        >
-                    </Tabs.Content>
-                    <Tabs.Content value="hk" class="mt-3 space-y-2">
-                        <Textarea
-                            bind:value={housekeepingText}
-                            rows={4}
-                            placeholder="Bed setup, room readiness"
-                        />
-                        <p class="text-muted-foreground text-xs">
-                            Prints on the housekeeping report, confirmation and check-in folio.
-                        </p>
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            onclick={() => saveNotes("Housekeeping")}
-                            >Save</Button
-                        >
-                    </Tabs.Content>
-                    <Tabs.Content value="req" class="mt-3 space-y-2">
-                        <Textarea
-                            bind:value={requestText}
-                            rows={4}
-                            placeholder="Occupancy & in-house requests"
-                        />
-                        <p class="text-muted-foreground text-xs">
-                            Prints on the in-house report.
-                        </p>
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            onclick={() => saveNotes("Request")}>Save</Button
-                        >
-                    </Tabs.Content>
-                    <Tabs.Content value="res" class="mt-3 space-y-2">
-                        <Textarea
-                            bind:value={reservationText}
-                            rows={4}
-                            placeholder="Reservation message"
-                        />
-                        <p class="text-muted-foreground text-xs">
-                            Prints on the confirmation and cancellation notice.
-                        </p>
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            onclick={() => saveNotes("Reservation")}
-                            >Save</Button
-                        >
-                    </Tabs.Content>
-                </Tabs.Root>
-            </Card.Content>
-        </Card.Root>
+        <StayNotesCard
+            {s}
+            kitchenMeal={data.kitchenMeal}
+            housekeepingNote={data.housekeepingNote}
+            requests={data.reservationGuest?.rgnotes ?? null}
+            {occupancy}
+            {today}
+        />
     </div>
 
     <!-- Right: ledger + print -->
@@ -968,342 +490,25 @@
     </div>
 </div>
 
-<GuestNotesDialog
-    bind:open={notesOpen}
-    guestid={s.primary_guestid}
+<NotesDialog
+    bind:open={guestNotesOpen}
+    title="Guest notes"
     notes={data.guestNotes}
+    placeholder={GUEST_NOTES_PLACEHOLDER}
+    save={(text) => setGuestNotes(s.primary_guestid, text)}
 />
-
-<!-- Change the number of guests -->
-<Dialog.Root bind:open={guestsOpen}>
-    <Dialog.Content class="sm:max-w-md">
-        <Dialog.Header>
-            <Dialog.Title>Number of guests on #{s.resnumber}</Dialog.Title>
-            <Dialog.Description>
-                Adults for this reservation.
-            </Dialog.Description>
-        </Dialog.Header>
-        <div class="space-y-3">
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
-                    <Label for="g-ad">Adults</Label>
-                    <Input
-                        id="g-ad"
-                        type="number"
-                        min="1"
-                        step="1"
-                        bind:value={gAdults}
-                    />
-                </div>
-            </div>
-            {#if sideBySide.length}
-                <div class="space-y-1.5" data-testid="guests-per-room">
-                    <p class="text-sm font-medium">Guests per room</p>
-                    {#each sideBySide as o (o.occupancyid)}
-                        <div class="flex items-center justify-between gap-3">
-                            <Label
-                                for="g-room-{o.occupancyid}"
-                                class="text-muted-foreground font-normal"
-                                >{o.room_compact} · {dateShort(o.occupancyin)} → {dateShort(
-                                    o.occupancyout,
-                                )}</Label
-                            >
-                            <Input
-                                id="g-room-{o.occupancyid}"
-                                type="number"
-                                min="1"
-                                step="1"
-                                class="w-20 shrink-0"
-                                bind:value={gRooms[o.occupancyid]}
-                            />
-                        </div>
-                    {/each}
-                </div>
-            {/if}
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (guestsOpen = false)}
-                >Cancel</Button
-            >
-            <Button
-                onclick={saveGuests}
-                disabled={savingGuests ||
-                    !guestsValid ||
-                    (!partyChanged && !roomsChanged.length)}
-            >
-                Save guests
-            </Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Change stay dates -->
-<Dialog.Root bind:open={datesOpen}>
-    <Dialog.Content class="sm:max-w-md">
-        <Dialog.Header>
-            <Dialog.Title>Change the dates of #{s.resnumber}</Dialog.Title>
-            <Dialog.Description>
-                New stay dates for this reservation.
-            </Dialog.Description>
-        </Dialog.Header>
-        <div class="space-y-3">
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
-                    <Label for="d-arr">Arrival</Label>
-                    <Input
-                        id="d-arr"
-                        type="date"
-                        bind:value={dArrival}
-                        max={bookingHorizon(today)}
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="d-dep">Departure</Label>
-                    <Input
-                        id="d-dep"
-                        type="date"
-                        bind:value={dDeparture}
-                        min={dArrival}
-                        aria-invalid={!!dArrival &&
-                            !!dDeparture &&
-                            dDeparture <= dArrival}
-                    />
-                </div>
-            </div>
-            {#if dNights > 0 && dChanged}
-                <p class="text-muted-foreground text-xs">
-                    {dNights} night{dNights === 1 ? "" : "s"} — was {s.numnights ??
-                        nightsBetween(s.resarrivaldate, s.resdeparturedate)}.
-                </p>
-            {/if}
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (datesOpen = false)}
-                >Cancel</Button
-            >
-            <Button
-                onclick={saveDates}
-                disabled={savingDates || !dChanged || dNights <= 0}
-            >
-                <CalendarIcon /> Save dates
-            </Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Room move dialog -->
-<Dialog.Root bind:open={moveOpen}>
-    <Dialog.Content class="sm:max-w-md">
-        <Dialog.Header>
-            <Dialog.Title>
-                {mMode === "move" ? "Move rooms" : "Add a room"}
-            </Dialog.Title>
-            <Dialog.Description
-                >Both rooms stay in the stay history.</Dialog.Description
-            >
-        </Dialog.Header>
-        <div class="space-y-3">
-            <div class="bg-muted grid grid-cols-2 gap-1 rounded-lg p-1">
-                <button
-                    type="button"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {mMode ===
-                    'move'
-                        ? 'bg-field shadow-sm'
-                        : 'text-muted-foreground'}"
-                    onclick={() => (mMode = "move")}>Move rooms</button
-                >
-                <button
-                    type="button"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {mMode ===
-                    'add'
-                        ? 'bg-field shadow-sm'
-                        : 'text-muted-foreground'}"
-                    onclick={() => (mMode = "add")}>Add another room</button
-                >
-            </div>
-
-            {#if mMode === "move"}
-                <div class="space-y-1.5">
-                    <Label for="m-from">Room being left</Label>
-                    <Combobox
-                        id="m-from"
-                        bind:value={mFrom}
-                        options={occupancyOptions}
-                        placeholder="Select room"
-                        onchange={() => (mMoveDate = firstMoveDate())}
-                    />
-                </div>
-            {/if}
-
-            <div class="space-y-1.5">
-                <Label for="m-room">{mMode === "move" ? "New room" : "Room"}</Label>
-                <Combobox
-                    id="m-room"
-                    bind:value={mRoom}
-                    options={rooms}
-                    searchPlaceholder="Room name or number…"
-                />
-            </div>
-
-            {#if mMode === "move"}
-                <div class="space-y-1.5">
-                    <Label for="m-date">Move date</Label>
-                    <Input
-                        id="m-date"
-                        type="date"
-                        bind:value={mMoveDate}
-                        min={moveDates?.min}
-                        max={moveDates?.max}
-                        disabled={!moveDates}
-                    />
-                    <p class="text-muted-foreground text-xs">
-                        The stay switches rooms on this date.
-                    </p>
-                </div>
-                {#if extending}
-                    <div class="space-y-1.5">
-                        <Label for="m-dep">Departure</Label>
-                        <Input
-                            id="m-dep"
-                            type="date"
-                            bind:value={mMoveOut}
-                            min={addDays(mMoveDate, 1)}
-                        />
-                    </div>
-                {/if}
-            {:else}
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="space-y-1.5">
-                        <Label for="m-in">In</Label><Input
-                            id="m-in"
-                            type="date"
-                            bind:value={mIn}
-                        />
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label for="m-out">Out</Label><Input
-                            id="m-out"
-                            type="date"
-                            bind:value={mOut}
-                            min={addDays(mIn, 1)}
-                        />
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label for="m-g">Guests</Label><Input
-                            id="m-g"
-                            type="number"
-                            min="1"
-                            bind:value={mGuests}
-                        />
-                    </div>
-                </div>
-            {/if}
-            <div class="space-y-1.5">
-                <Label for="m-n">Notes</Label><Input
-                    id="m-n"
-                    bind:value={mNotes}
-                    placeholder="e.g. Moved per guest request"
-                />
-            </div>
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (moveOpen = false)}
-                >Cancel</Button
-            >
-            <Button
-                onclick={addMove}
-                disabled={mMode === "move" ? !moveDateOk : mOut <= mIn}
-            >
-                {mMode === "move" ? "Record move" : "Add room"}
-            </Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Change a room outright -->
-<Dialog.Root bind:open={changeOpen}>
-    <Dialog.Content class="sm:max-w-sm">
-        <Dialog.Header>
-            <Dialog.Title>Change room</Dialog.Title>
-            {#if changeTarget}
-                <Dialog.Description>
-                    {changeTarget.room_compact} · {dateShort(
-                        changeTarget.occupancyin,
-                    )} → {dateShort(changeTarget.occupancyout)}
-                </Dialog.Description>
-            {/if}
-        </Dialog.Header>
-        <div class="space-y-1.5">
-            <Label for="cr-room">New room</Label>
-            <Combobox
-                id="cr-room"
-                bind:value={changeTo}
-                options={changeOptions}
-                placeholder="Select room"
-                searchPlaceholder="Room name or number…"
-            />
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (changeOpen = false)}
-                >Cancel</Button
-            >
-            <Button disabled={changing || !changeTo} onclick={confirmChangeRoom}
-                >Change room</Button
-            >
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Undo a room move -->
-<Dialog.Root bind:open={undoOpen}>
-    <Dialog.Content class="sm:max-w-sm">
-        <Dialog.Header>
-            <Dialog.Title>Undo this move?</Dialog.Title>
-            <Dialog.Description>
-                {#if undoKeeps && undoTarget}
-                    The stay keeps {undoKeeps.room_compact} to {dateShort(
-                        undoTarget.occupancyout,
-                    )}.
-                {:else}
-                    The stay keeps the room it was leaving.
-                {/if}
-            </Dialog.Description>
-        </Dialog.Header>
-        {#if undoTarget}
-            <div class="bg-muted/40 rounded-lg border px-3 py-2 text-sm">
-                <div class="font-medium">{undoTarget.room_compact}</div>
-                <div class="text-muted-foreground mt-0.5 text-xs">
-                    {dateShort(undoTarget.occupancyin)} → {dateShort(
-                        undoTarget.occupancyout,
-                    )}
-                </div>
-            </div>
-            {#if undoFromOptions.length > 1}
-                <div class="space-y-1.5">
-                    <Label for="u-from">Moving from</Label>
-                    <Combobox
-                        id="u-from"
-                        bind:value={undoFrom}
-                        options={undoFromOptions}
-                        placeholder="Select room"
-                    />
-                </div>
-            {/if}
-        {/if}
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (undoOpen = false)}
-                >Keep it</Button
-            >
-            <Button
-                variant="destructive"
-                disabled={undoing || !undoFrom}
-                onclick={confirmUndoMove}
-            >
-                <TrashIcon /> Undo move
-            </Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
+<NotesDialog
+    bind:open={reservationNotesOpen}
+    title="Reservation notes"
+    notes={s.resnotes}
+    placeholder="Anything the office should know about this stay…"
+    save={(text) => setReservationNotes(s.reservationid, text)}
+/>
+<PartySizeDialog bind:open={guestsOpen} {s} {occupancy} />
+<ChangeDatesDialog bind:open={datesOpen} {s} {today} />
+<RoomMoveDialog bind:open={moveOpen} {s} {occupancy} {today} />
+<ChangeRoomDialog bind:open={changeOpen} target={changeTarget} />
+<UndoMoveDialog bind:open={undoOpen} target={undoTarget} {occupancy} {moves} />
 
 <CancelDialog
     bind:open={cancelOpen}

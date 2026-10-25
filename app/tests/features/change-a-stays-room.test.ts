@@ -1,32 +1,26 @@
 // Story: spec/features/change-a-stays-room.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
-
-interface RoomRow {
-	roomid: number;
-	roomname: string;
-	roomnumber: string | null;
-}
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import {
+	addDays,
+	archiveCharge,
+	makeReservation,
+	postRoomNights,
+	roomDirectory,
+	roomWindows,
+	rpc,
+	type Fixture,
+	type RoomRow
+} from '../helpers/db';
 
 let rooms: RoomRow[];
 
-async function windows(fx: Fixture): Promise<{ occupancyid: number; roomid: number }[]> {
-	const db = await staffClient();
-	return unwrap(
-		await db
-			.from('room_assignments')
-			.select('occupancyid, roomid')
-			.eq('reservationguestid', fx.reservationguestid)
-			.eq('occupancyarchive', false)
-			.order('occupancyin')
-	) as { occupancyid: number; roomid: number }[];
-}
+const windows = async (fx: Fixture) =>
+	(await roomWindows(fx)).map(({ occupancyid, roomid }) => ({ occupancyid, roomid }));
 
 beforeAll(async () => {
-	rooms = (await rpc<RoomRow[]>('room_directory')).slice(0, 4);
+	rooms = (await roomDirectory()).slice(0, 4);
 });
 
 describe("change a stay's room", () => {
@@ -40,23 +34,16 @@ describe("change a stay's room", () => {
 	it('refuses while a room charge for the old room is posted, and allows it once removed', async () => {
 		const fx = await makeReservation({ roomid: rooms[0].roomid });
 		const [w] = await windows(fx);
-		const charge = await rpc<number>('post_room_nights', {
-			p_reservationguestid: fx.reservationguestid,
-			p_roomid: rooms[0].roomid,
-			p_occupancyin: fx.arrival,
-			p_occupancyout: fx.departure,
-			p_rate: 100,
-			p_transdate: fx.departure
-		});
+		const charge = await postRoomNights(fx, 100, { roomid: rooms[0].roomid, transdate: fx.departure });
 		await expect(
 			rpc('update_room_assignment', { p_occupancyid: w.occupancyid, p_roomid: rooms[1].roomid })
 		).rejects.toThrow(/room charge .* is posted/i);
-		await rpc('archive_transaction', { p_transactionid: charge });
+		await archiveCharge(charge);
 		await rpc('update_room_assignment', { p_occupancyid: w.occupancyid, p_roomid: rooms[1].roomid });
 		expect((await windows(fx))[0].roomid).toBe(rooms[1].roomid);
 	});
 
-	it('refuses the room the stay moves from next door', async () => {
+	it('refuses the room the stay moves from, or to, next door', async () => {
 		const fx = await makeReservation({ roomid: rooms[0].roomid, nights: 4 });
 		const [w] = await windows(fx);
 		const moved = await rpc<number>('record_room_move', {
@@ -67,19 +54,15 @@ describe("change a stay's room", () => {
 		await expect(
 			rpc('update_room_assignment', { p_occupancyid: moved, p_roomid: rooms[0].roomid })
 		).rejects.toThrow(/undo the move/i);
+		await expect(
+			rpc('update_room_assignment', { p_occupancyid: w.occupancyid, p_roomid: rooms[1].roomid })
+		).rejects.toThrow(/undo the move/i);
+		expect((await windows(fx)).map((x) => x.roomid)).toEqual([rooms[0].roomid, rooms[1].roomid]);
 	});
 });
 
 describe("change a stay's room — on screen", () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
+	const page = useAppPage();
 
 	it('changes the room from the pencil beside it, marking rooms held those nights', async () => {
 		const other = await makeReservation({ roomid: rooms[2].roomid });
@@ -89,7 +72,7 @@ describe("change a stay's room — on screen", () => {
 		await page.click('#cr-room');
 		const list = page.locator('[data-testid=combobox-list] [role=option]');
 		await list.first().waitFor({ timeout: 10_000 });
-		const name = (r: RoomRow) => `${r.roomname} ${r.roomnumber ?? ''}`.trim();
+		const name = (r: RoomRow) => r.room_compact;
 		await expect
 			.poll(async () => (await list.allTextContents()).filter((o) => o.includes('Booked')), {
 				timeout: 10_000

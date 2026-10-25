@@ -1,12 +1,14 @@
 // Story: spec/features/keep-one-guest-per-reservation.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import {
 	addDays,
+	firstRoomId,
 	isolatedDate,
+	ledger,
 	makeReservation,
+	postRoomNights,
 	rpc,
 	staffClient,
 	uid,
@@ -32,15 +34,10 @@ async function liveGuests(reservationid: number) {
 }
 
 let fx: Fixture;
-let page: Page;
+const page = useAppPage();
 
 beforeAll(async () => {
 	fx = await makeReservation();
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
 });
 
 describe('keep one guest per reservation', () => {
@@ -62,13 +59,13 @@ describe('keep one guest per reservation', () => {
 		// Nor is there a call left that adds a name.
 		await expect(
 			rpc('add_reservation_guest', { p_reservationid: fx.reservationid, p_guestid: other })
-		).rejects.toThrow();
+		).rejects.toThrow(/Could not find the function ypl\.add_reservation_guest/);
 	});
 
 	it('posts every charge and payment to the guest, with nothing splitting the bill', async () => {
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
-		const body = await page.textContent('body');
-		expect(body).not.toContain('of bill');
+		await page.getByRole('button', { name: 'Charge', exact: true }).waitFor({ timeout: 10_000 });
+		expect(await page.textContent('body')).not.toContain('of bill');
 		expect(await page.getByRole('button', { name: 'Add guest' }).count()).toBe(0);
 
 		await page.getByRole('button', { name: 'Charge', exact: true }).click();
@@ -100,7 +97,7 @@ describe('keep one guest per reservation', () => {
 
 	it('leaves a shared room’s charge whole on the reservation it is posted to', async () => {
 		// Two parties in one room, booked as two reservations.
-		const roomid = (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid;
+		const roomid = await firstRoomId();
 		const first = await makeReservation({ roomid });
 		const second = await makeReservation({ roomid, arrival: first.arrival, departure: first.departure });
 		const shared = await rpc<{ other_resnumber: number }[]>('shared_room_occupancies', {
@@ -108,20 +105,9 @@ describe('keep one guest per reservation', () => {
 		});
 		expect(shared.map((r) => r.other_resnumber)).toContain(second.resnumber);
 
-		await rpc('post_room_nights', {
-			p_reservationguestid: first.reservationguestid,
-			p_roomid: roomid,
-			p_occupancyin: first.arrival,
-			p_occupancyout: first.departure,
-			p_rate: 200,
-			p_transdate: first.arrival
-		});
+		await postRoomNights(first, 200, { roomid });
 		const charges = async (fx: Fixture) =>
-			(
-				await rpc<{ line_source: string; amount: number }[]>('reservation_ledger', {
-					p_reservationid: fx.reservationid
-				})
-			)
+			(await ledger(fx.reservationid))
 				.filter((l) => l.line_source === 'transaction')
 				.map((l) => Number(l.amount));
 		expect(await charges(first)).toEqual([600]);

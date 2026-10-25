@@ -3,9 +3,6 @@ import type { PageLoad } from './$types.js';
 
 export const load: PageLoad = async ({ url }) => {
 	const date = url.searchParams.get('date') ?? TODAY;
-	return {
-		date,
-		rows: await reportKitchenMeal(date),
-		total_guests: await guestsInHouse(date)
-	};
+	const [rows, total_guests] = await Promise.all([reportKitchenMeal(date), guestsInHouse(date)]);
+	return { date, rows, total_guests };
 };

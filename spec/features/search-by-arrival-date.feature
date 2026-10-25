@@ -11,5 +11,7 @@ Feature: search by arrival date
   Scenario: Acceptance criteria
     Then The date search defaults to arrivals unless another mode is chosen.
     And The results show the reservations arriving on the chosen date, and only those.
-    And Each row shows the stay's dates, party size and the deposit still held — received, less any refunded, applied to the bill or kept.
-    And Staff can open a listed reservation from the results.
+    And Each row shows the guest's last and first name, the room — or a dash where none is assigned — the stay's dates, nights and party size, and the deposit still held: received, less any refunded, applied to the bill or kept.
+    And Within each section, rows run alphabetically by last name, then first name.
+    And A cancelled reservation is still listed, marked Cancelled.
+    And Choosing a row opens that reservation.

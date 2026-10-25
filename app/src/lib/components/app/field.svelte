@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import RowAction from '$lib/components/app/row-action.svelte';
 
 	let {
 		label,
@@ -18,15 +19,13 @@
 	{#if onedit}
 		<dd class="mt-0.5 flex items-center gap-1 text-sm font-medium break-words">
 			{value ?? '—'}
-			<button
-				type="button"
-				aria-label="Change {label.toLowerCase()}"
+			<RowAction
+				icon={PencilIcon}
+				label="Change {label.toLowerCase()}"
 				title="Change {label.toLowerCase()}"
+				class="shrink-0"
 				onclick={onedit}
-				class="text-muted-foreground hover:text-foreground shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-			>
-				<PencilIcon class="size-3.5" />
-			</button>
+			/>
 		</dd>
 	{:else}
 		<dd class="mt-0.5 text-sm font-medium break-words">{value ?? '—'}</dd>

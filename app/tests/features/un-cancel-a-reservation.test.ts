@@ -1,8 +1,7 @@
 // Story: spec/features/un-cancel-a-reservation.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { cancel, makeReservation, pay, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 interface ReservationRow {
 	resnumber: number;
@@ -23,27 +22,13 @@ async function reservation(reservationid: number): Promise<ReservationRow> {
 	return rows[0];
 }
 
-async function deposit(fx: Fixture, amount: number): Promise<void> {
-	await rpc('record_payment', {
-		p_reservationguestid: fx.reservationguestid,
-		p_paymentcategory: 'Deposit (Received)',
-		p_paymenttype: 'Visa',
-		p_amount: amount,
-		p_paymentdate: fx.arrival
-	});
-}
-
 describe('un-cancel a reservation', () => {
 	let fx: Fixture;
 
 	beforeAll(async () => {
 		fx = await makeReservation();
-		await deposit(fx, 35);
-		await rpc('cancel_reservation', {
-			p_reservationid: fx.reservationid,
-			p_date: fx.arrival,
-			p_deposit_handling: 'none'
-		});
+		await pay(fx, 'Deposit (Received)', 35);
+		await cancel(fx);
 	});
 
 	it('restores the booking as it was, back on the daily reports', async () => {
@@ -76,18 +61,14 @@ describe('un-cancel a reservation', () => {
 
 	it('gives a deposit decided later back to the stay', async () => {
 		expect(
-			await rpc('reservationguest_deposit_held', { p_reservationguestid: fx.reservationguestid })
+			Number(await rpc('reservationguest_deposit_held', { p_reservationguestid: fx.reservationguestid }))
 		).toBe(35);
 	});
 
 	it('leaves a deposit refunded on cancelling as it was recorded', async () => {
 		const refunded = await makeReservation();
-		await deposit(refunded, 40);
-		await rpc('cancel_reservation', {
-			p_reservationid: refunded.reservationid,
-			p_date: refunded.arrival,
-			p_deposit_handling: 'refund'
-		});
+		await pay(refunded, 'Deposit (Received)', 40);
+		await cancel(refunded, 'refund');
 		await rpc('uncancel_reservation', { p_reservationid: refunded.reservationid });
 
 		const db = await staffClient();
@@ -115,23 +96,11 @@ describe('un-cancel a reservation', () => {
 });
 
 describe('un-cancel a reservation — on the reservation screen', () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
+	const page = useAppPage();
 
 	it('has Un-cancel where Cancel was, and brings the booking back', async () => {
 		const fx = await makeReservation();
-		await rpc('cancel_reservation', {
-			p_reservationid: fx.reservationid,
-			p_date: fx.arrival,
-			p_deposit_handling: 'none'
-		});
+		await cancel(fx);
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
 		const uncancel = page.getByRole('button', { name: 'Un-cancel' });
 		await uncancel.waitFor({ timeout: 10_000 });

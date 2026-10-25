@@ -7,7 +7,9 @@ be exported directly from the .accdb and loaded without per-column transforms.
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
 TARGET_SCHEMA = "ypl"
 
@@ -90,9 +92,6 @@ TABLES: tuple[AccessTable, ...] = (
 
 TABLE_RENAMES: dict[str, str] = {
     table.mdbtools_name: table.postgres_name for table in TABLES
-}
-ACCESS_NAME_BY_POSTGRES: dict[str, str] = {
-    table.postgres_name: table.access_name for table in TABLES
 }
 
 # Reference/configuration tables that are useful as repeatable Supabase seed data.
@@ -195,16 +194,40 @@ def rewrite_export_sql(sql: str) -> str:
     for access_name, postgres_name in sorted(
         TABLE_RENAMES.items(), key=lambda item: len(item[0]), reverse=True
     ):
-        for source_schema in (TARGET_SCHEMA, "legacy-db"):
-            rewritten = rewritten.replace(
-                f'"{source_schema}"."{access_name}"',
-                f'"{TARGET_SCHEMA}"."{postgres_name}"',
-            )
-            rewritten = rewritten.replace(
-                f"{source_schema}.{access_name}",
-                f"{TARGET_SCHEMA}.{postgres_name}",
-            )
+        rewritten = rewritten.replace(
+            f'"{TARGET_SCHEMA}"."{access_name}"',
+            f'"{TARGET_SCHEMA}"."{postgres_name}"',
+        )
+        rewritten = rewritten.replace(
+            f"{TARGET_SCHEMA}.{access_name}",
+            f"{TARGET_SCHEMA}.{postgres_name}",
+        )
     return rewritten
+
+
+def export_insert_sql(access_db: Path, access_table: str) -> str:
+    """One Access table as INSERT statements into its ypl table (mdb-export)."""
+    exported = subprocess.check_output(
+        [
+            "mdb-export",
+            "-I",
+            "postgres",
+            "-N",
+            TARGET_SCHEMA,
+            "-B",
+            "-D",
+            "%Y-%m-%d",
+            "-T",
+            "%Y-%m-%d %H:%M:%S",
+            "-b",
+            "strip",
+            str(access_db),
+            access_table,
+        ],
+        text=True,
+        stderr=subprocess.STDOUT,
+    )
+    return rewrite_export_sql(exported)
 
 
 # Lookup values the lodge has retired. Access still carries them, so every

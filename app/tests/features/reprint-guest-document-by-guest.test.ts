@@ -1,67 +1,75 @@
 // Story: spec/features/reprint-guest-document-by-guest.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { cancel, makeReservation, type Fixture } from '../helpers/db';
+
+const DOCUMENTS = ['Confirmation', 'Check-in folio', 'Check-out bill'];
+const SLUGS = ['confirmation', 'check-in-folio', 'checkout-bill'];
 
 let fx: Fixture;
-let page: Page;
+let cancelled: Fixture;
+let byNumber: string;
+
+const page = useAppPage();
+const tabs = () => page.locator('nav[aria-label="Reports in this workflow"] a');
 
 beforeAll(async () => {
-	fx = await makeReservation();
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
+	fx = await makeReservation({ firstname: 'Rory' });
+	cancelled = await makeReservation({ roomid: null });
+	await cancel(cancelled);
 });
 
 describe('reprint guest document by guest', () => {
-	it('reprints an individual document from the print centre by reservation number', async () => {
+	it('opens a document by its reservation number', async () => {
 		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
-		await page.fill('#ind-confirmation', String(fx.resnumber));
-		await page.click('button:has-text("Open")');
-		await page.waitForURL(new RegExp(`/reports/confirmation/${fx.resnumber}`), {
-			timeout: 15_000
-		});
+		await page.getByRole('tab', { name: /^Check-in folio/ }).click();
+		await page.fill('#ind-check_in_folio', String(fx.resnumber));
+		await page.locator('[role=tabpanel]:visible').getByRole('button', { name: 'Open' }).click();
+		await page.waitForURL(`${APP_URL}/reports/check-in-folio/${fx.resnumber}`, { timeout: 15_000 });
+		byNumber = (await page.locator('.report-page').textContent()) ?? '';
 	});
 
-	it('renders the same document as the original print', async () => {
-		const sheet = await page.textContent('.report-page');
+	it("finds one guest by name, lists the guest's stays, and opens the document for the stay chosen", async () => {
+		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
+		await page.getByRole('tab', { name: /^Check-in folio/ }).click();
+		const panel = page.locator('[role=tabpanel]:visible');
+		await panel.locator('#guest-doc-q').fill(fx.lastname.slice(0, 12));
+		await panel.locator('[data-testid=guest-matches] button', { hasText: fx.lastname }).first().click();
+		await panel.locator(`button:has-text("#${fx.resnumber}")`).click();
+		await page.waitForURL(`${APP_URL}/reports/check-in-folio/${fx.resnumber}`, { timeout: 15_000 });
+	});
+
+	it('is the same document as any other print of the stay', async () => {
+		await expect.poll(() => page.locator('.report-page').textContent()).toBe(byNumber);
+	});
+
+	it('names the guest and the reservation, and marks which document is showing', async () => {
+		const sheet = (await page.locator('.report-page').textContent()) ?? '';
+		expect(sheet).toContain(`${fx.lastname}, Rory`);
 		expect(sheet).toContain(`Res. No. ${fx.resnumber}`);
-	});
-
-	it('selects one guest and views that guest’s documents for reprinting', async () => {
-		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
-		await page.fill('#guest-doc-q', fx.lastname.slice(0, 12));
-		await page.waitForSelector(`button:has-text("${fx.lastname}")`, { timeout: 10_000 });
-		await page.click(`button:has-text("${fx.lastname}")`);
-		await page.waitForSelector(`button:has-text("#${fx.resnumber}")`, { timeout: 10_000 });
-		await page.click(`button:has-text("#${fx.resnumber}")`);
-		await page.waitForURL(new RegExp(`/reports/confirmation/${fx.resnumber}`), {
-			timeout: 15_000
-		});
-		expect(await page.textContent('.report-page')).toContain(`Res. No. ${fx.resnumber}`);
-	});
-
-	it('reprints any of the document types the reservation has', async () => {
-		const tabs = await page.textContent('nav[aria-label="Reports in this workflow"]');
-		for (const t of ['Confirmation', 'Check-in folio', 'Check-out bill']) {
-			expect(tabs).toContain(t);
-		}
-		// Only a cancelled reservation has a cancellation notice to reprint.
-		expect(tabs).not.toContain('Cancellation');
-		const cancelled = await makeReservation();
-		await rpc('cancel_reservation', {
-			p_reservationid: cancelled.reservationid,
-			p_date: cancelled.arrival,
-			p_deposit_handling: 'none'
-		});
-		await page.goto(`${APP_URL}/reports/confirmation/${cancelled.resnumber}`, {
-			waitUntil: 'networkidle'
-		});
-		expect(await page.textContent('nav[aria-label="Reports in this workflow"]')).toContain(
-			'Cancellation'
+		expect(await page.locator('nav[aria-label="Reports in this workflow"] a[aria-current=page]').textContent()).toBe(
+			'Check-in folio'
 		);
+	});
+
+	it("puts the stay's other documents a tab away, a cancellation notice only for a cancelled stay", async () => {
+		expect((await tabs().allTextContents()).map((t) => t.trim())).toEqual(DOCUMENTS);
+		await page.goto(`${APP_URL}/reports/confirmation/${cancelled.resnumber}`, { waitUntil: 'networkidle' });
+		await expect.poll(async () => (await tabs().allTextContents()).map((t) => t.trim())).toEqual([
+			...DOCUMENTS,
+			'Cancellation'
+		]);
+	});
+
+	it('opens each document from the reservation screen too', async () => {
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		for (const slug of SLUGS) {
+			await page.locator(`a[href="/reports/${slug}/${fx.resnumber}"]`).waitFor({ timeout: 10_000 });
+		}
+		expect(await page.locator(`a[href="/reports/cancellation/${fx.resnumber}"]`).count()).toBe(0);
+		await page.goto(`${APP_URL}/reservations/${cancelled.resnumber}`, { waitUntil: 'networkidle' });
+		await page
+			.locator(`a[href="/reports/cancellation/${cancelled.resnumber}"]`)
+			.waitFor({ timeout: 10_000 });
 	});
 });

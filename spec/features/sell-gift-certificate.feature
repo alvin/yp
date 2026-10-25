@@ -6,10 +6,9 @@ Feature: sell gift certificate
   So that the sale counts as a charge-side activity and flows into daily cash reporting
 
   Background:
-    Given when staff need to sell a gift certificate at the desk
+    Given staff need to sell a gift certificate at the desk
 
   Scenario: Acceptance criteria
-    Then Staff can record a gift certificate sale from the transaction workspace.
-    And The sale is treated as a charge-side activity.
-    And The sale contributes to daily cash reporting.
-    And The transaction remains part of the reservation office workflow.
+    Then Staff record a gift certificate sale on a reservation's transactions: the certificate charged as an item, the money taken as a payment.
+    And The sale is a charge on the daily cash report, on its Gift Certificate line, the day it is sold.
+    And The money taken is in that day's receipts, so the day balances.

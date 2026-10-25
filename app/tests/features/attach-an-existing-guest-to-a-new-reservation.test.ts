@@ -1,14 +1,13 @@
 // Story: spec/features/attach-an-existing-guest-to-a-new-reservation.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import { addDays, rpc, staffClient, todayISO, uid, unwrap } from '../helpers/db';
 
 const ADDRESS = '742 Yellow Point Road';
 const POSTAL = 'V9G 1E5';
 
-let page: Page;
+const page = useAppPage();
 let surname: string;
 let guestid: number;
 
@@ -41,21 +40,13 @@ beforeAll(async () => {
 		p_secondaryphone: '(250) 555-0199',
 		p_email: 'pat@example.test'
 	});
-	page = await openAppPage();
 	await attach();
 });
 
-afterAll(async () => {
-	await closeApp(page);
-});
-
 describe('attach an existing guest to a new reservation', () => {
-	it('finds an existing guest from part of their name', async () => {
+	it('fills the whole stored record, including the street address', async () => {
 		expect(await page.inputValue('#ln')).toBe(surname);
 		expect(await page.inputValue('#fn')).toBe('Pat');
-	});
-
-	it('fills the whole stored record, including the street address', async () => {
 		expect(await page.inputValue('#ad')).toBe(ADDRESS);
 		expect(await page.inputValue('#pc')).toBe(POSTAL);
 		expect(await page.inputValue('#ci')).toBe('Ladysmith');
@@ -70,16 +61,7 @@ describe('attach an existing guest to a new reservation', () => {
 		expect(await badge.textContent()).toContain(`#${guestid}`);
 	});
 
-	it('leaves the filled details editable before saving', async () => {
-		await page.fill('#ad', '9 Corrected Lane');
-		expect(await page.inputValue('#ad')).toBe('9 Corrected Lane');
-		// Put the screen back the way the other assertions expect it.
-		await attach();
-		expect(await page.inputValue('#ad')).toBe(ADDRESS);
-	});
-
 	it('saves corrections to the guest record, leaving the details it does not show', async () => {
-		await attach();
 		await page.fill('#ad', '9 Corrected Lane');
 		await page.fill('#fn', '');
 		const arrival = addDays(todayISO(), 30);

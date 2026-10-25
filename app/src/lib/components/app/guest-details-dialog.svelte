@@ -9,6 +9,7 @@
     import GuestFields from "$lib/components/app/guest-fields.svelte";
     import { updateGuest } from "$lib/data/mutations.js";
     import { guestForm } from "$lib/guest-form.js";
+    import { errorMessage } from "$lib/utils.js";
     import type { Guest } from "$lib/data/types.js";
 
     let { open = $bindable(false), guest }: { open?: boolean; guest: Guest } =
@@ -29,9 +30,7 @@
             toast.success("Guest details saved");
             await invalidateAll();
         } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not save the details.",
-            );
+            toast.error(errorMessage(e, "Could not save the details."));
         } finally {
             saving = false;
         }

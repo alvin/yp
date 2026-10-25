@@ -1,8 +1,7 @@
 // Story: spec/features/correct-a-guests-details.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import { rpc, staffClient, uid, unwrap } from '../helpers/db';
 
 interface GuestRow {
@@ -15,7 +14,7 @@ interface GuestRow {
 	guestcompany: string | null;
 }
 
-let page: Page;
+const page = useAppPage();
 let guestid: number;
 let surname: string;
 
@@ -45,11 +44,6 @@ beforeAll(async () => {
 		p_secondaryphone: '(250) 555-0111',
 		p_company: 'Kept Co'
 	});
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
 });
 
 describe("correct a guest's details", () => {
@@ -89,7 +83,9 @@ describe("correct a guest's details", () => {
 		await page.getByRole('button', { name: 'Edit details' }).click();
 		const dialog = page.getByRole('dialog');
 		await dialog.locator('#ln').fill('');
-		expect(await dialog.getByRole('button', { name: 'Save details' }).isDisabled()).toBe(true);
+		await expect
+			.poll(() => dialog.getByRole('button', { name: 'Save details' }).isDisabled())
+			.toBe(true);
 		await expect(rpc('update_guest', { p_guestid: guestid, p_lastname: ' ' })).rejects.toThrow(
 			/last name is required/i
 		);
@@ -104,8 +100,11 @@ describe("correct a guest's details", () => {
 		});
 		await page.goto(`${APP_URL}/guests/${older}`, { waitUntil: 'networkidle' });
 		await page.getByRole('button', { name: 'Edit details' }).click();
-		await page.getByRole('dialog').locator('#ph-type').waitFor({ timeout: 10_000 });
-		expect((await page.getByRole('dialog').locator('#ph-type').textContent())?.trim()).toBe('Phone');
+		await expect
+			.poll(async () => (await page.getByRole('dialog').locator('#ph-type').textContent())?.trim(), {
+				timeout: 10_000
+			})
+			.toBe('Phone');
 	});
 });
 

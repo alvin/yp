@@ -31,6 +31,7 @@ export function opsTabs(date: string, current: string): ReportTab[] {
 	return [
 		{ label: 'Housekeeping', slug: 'housekeeping' },
 		{ label: 'In house', slug: 'in-house' },
+		{ label: 'Requests', slug: 'requests' },
 		{ label: 'Kitchen / meals', slug: 'kitchen' },
 		{ label: 'Kitchen (filtered)', slug: 'kitchen-filtered' },
 		{ label: 'Manual sales', slug: 'manual-sales' },

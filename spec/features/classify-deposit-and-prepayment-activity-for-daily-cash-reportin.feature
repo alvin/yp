@@ -11,6 +11,6 @@ Feature: classify deposit and prepayment activity for daily cash reporting
   Scenario: Acceptance criteria
     Then Deposit activity can be recorded as received, refunded, or kept.
     And Prepayment activity can be recorded as received or refunded.
-    And Staff never record a deposit or prepayment as applied: whatever a stay still holds is applied when the guest checks out.
-    And Deposit entries remain separate from prepayment entries.
+    And Staff are never offered a deposit or prepayment as applied; that is done for them when the guest checks out.
+    And Deposit entries remain separate from prepayment entries: a prepayment is never counted as deposit held.
     And The reservation shows the correct category for each money movement.

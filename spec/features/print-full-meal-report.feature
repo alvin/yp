@@ -10,9 +10,8 @@ Feature: print full meal report
 
   Scenario: Acceptance criteria
     Then The kitchen report appears as a selectable option in the print menu.
-    And The report can be produced for one selected day.
-    And The printed output lists every stay in house that day with a diet on file, the diet and kitchen notes together.
-    And Each row shows the stay's arrival and departure dates.
-    And The report carries the day's Total Guests, a party moving rooms counted once.
-    And The printed output is suitable for daily kitchen use without requiring screen review first.
-    And The report matches the lodge’s expected printed workflow for meal planning.
+    And The report is produced for the one day chosen, and the day prints in its heading.
+    And It lists every stay in house that day with a diet on file, and no other: its reservation number, guest, arrival and departure dates, and the diet and kitchen notes together.
+    And The diet and notes print word for word as they were entered.
+    And The report carries the day's Total Guests.
+    And On screen it can be narrowed to the stays whose diet mentions an allergy; the narrowed list carries no Total Guests.

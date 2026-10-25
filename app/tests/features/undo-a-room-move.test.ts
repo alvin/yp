@@ -1,44 +1,27 @@
 // Story: spec/features/undo-a-room-move.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
-
-interface Window {
-	occupancyid: number;
-	roomid: number;
-	occupancyin: string;
-	occupancyout: string;
-}
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import {
+	addDays,
+	firstOccupancyId as firstWindow,
+	makeReservation,
+	postRoomNights,
+	roomDirectory,
+	roomWindows,
+	rpc,
+	staffClient,
+	unwrap,
+	type Fixture
+} from '../helpers/db';
 
 let rooms: number[];
 
-/** The stay's live room windows, in stay order, as [room, in, out]. */
+/** The stay's live room windows, in stay order (room order within a day), as [room, in, out]. */
 async function windows(fx: Fixture): Promise<[number, string, string][]> {
-	const db = await staffClient();
-	const rows = unwrap(
-		await db
-			.from('room_assignments')
-			.select('occupancyid, roomid, occupancyin, occupancyout')
-			.eq('reservationguestid', fx.reservationguestid)
-			.eq('occupancyarchive', false)
-			.order('occupancyin')
-			.order('roomid')
-	) as Window[];
-	return rows.map((w) => [w.roomid, w.occupancyin.slice(0, 10), w.occupancyout.slice(0, 10)]);
-}
-
-async function firstWindow(fx: Fixture): Promise<number> {
-	const db = await staffClient();
-	const rows = unwrap(
-		await db
-			.from('room_assignments')
-			.select('occupancyid')
-			.eq('reservationguestid', fx.reservationguestid)
-			.eq('occupancyarchive', false)
-	) as { occupancyid: number }[];
-	return rows[0].occupancyid;
+	return (await roomWindows(fx))
+		.map((w): [number, string, string] => [w.roomid, w.occupancyin, w.occupancyout])
+		.sort((a, b) => a[1].localeCompare(b[1]) || a[0] - b[0]);
 }
 
 function move(occupancyid: number, roomid: number, date: string): Promise<number> {
@@ -50,7 +33,7 @@ function move(occupancyid: number, roomid: number, date: string): Promise<number
 }
 
 beforeAll(async () => {
-	rooms = (await rpc<{ roomid: number }[]>('room_directory')).slice(0, 5).map((r) => r.roomid);
+	rooms = (await roomDirectory()).slice(0, 5).map((r) => r.roomid);
 });
 
 describe('undo a room move', () => {
@@ -123,14 +106,7 @@ describe('undo a room move', () => {
 		const fx = await makeReservation({ nights: 4, roomid: rooms[0] });
 		const moveDate = addDays(fx.arrival, 2);
 		const moved = await move(await firstWindow(fx), rooms[1], moveDate);
-		const charge = await rpc<number>('post_room_nights', {
-			p_reservationguestid: fx.reservationguestid,
-			p_roomid: rooms[1],
-			p_occupancyin: moveDate,
-			p_occupancyout: fx.departure,
-			p_rate: 100,
-			p_transdate: moveDate
-		});
+		const charge = await postRoomNights(fx, 100, { roomid: rooms[1], from: moveDate, transdate: moveDate });
 		await rpc('undo_room_move', { p_occupancyid: moved });
 		const db = await staffClient();
 		const [line] = unwrap(
@@ -144,15 +120,7 @@ describe('undo a room move', () => {
 });
 
 describe('undo a room move — on screen', () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
+	const page = useAppPage();
 
 	async function open(fx: Fixture): Promise<void> {
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
@@ -193,11 +161,11 @@ describe('undo a room move — on screen', () => {
 		const dialog = page.getByRole('dialog');
 		const undo = dialog.getByRole('button', { name: 'Undo move' });
 		await dialog.locator('#u-from').waitFor({ timeout: 10_000 });
-		expect(await undo.isDisabled()).toBe(true);
+		await expect.poll(() => undo.isDisabled()).toBe(true);
 
 		await page.click('#u-from');
 		await page.locator('[data-testid=combobox-list] [role=option]').first().click();
-		expect(await undo.isDisabled()).toBe(false);
+		await expect.poll(() => undo.isDisabled()).toBe(false);
 		await undo.click();
 		await expect.poll(async () => (await windows(fx)).length, { timeout: 10_000 }).toBe(3);
 	});

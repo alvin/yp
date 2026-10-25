@@ -3,65 +3,29 @@
 // deposit handling, the one-year horizon) live in the database, so writes made
 // here and writes made directly in Supabase behave identically.
 
-import { supabase, unwrap } from './client';
-import type { RoomRateType } from './types';
-import type { GuestForm } from '../guest-form';
+import { supabase, unwrap } from './client.js';
+import type { RoomRateType } from './types.js';
+import type { GuestForm } from '../guest-form.js';
 
-export interface NewGuestInput {
-	lastname: string;
-	firstname?: string | null;
-	salutation?: string | null;
-	address?: string | null;
-	city?: string | null;
-	region?: string | null;
-	country?: string | null;
-	pczip?: string | null;
-	primaryphone?: string | null;
-	primaryphonetype?: string | null;
-	secondaryphone?: string | null;
-	secondaryphonetype?: string | null;
-	email?: string | null;
-	notes?: string | null;
-}
-
-export async function createGuest(input: NewGuestInput): Promise<number> {
+/** A new guest from the booking form; an empty field is left blank. */
+export async function createGuestFromForm(f: GuestForm): Promise<number> {
 	return unwrap(
 		await supabase.rpc('create_guest', {
-			p_lastname: input.lastname,
-			p_firstname: input.firstname ?? null,
-			p_salutation: input.salutation ?? null,
-			p_address: input.address ?? null,
-			p_city: input.city ?? null,
-			p_region: input.region ?? null,
-			p_country: input.country ?? null,
-			p_pczip: input.pczip ?? null,
-			p_primaryphone: input.primaryphone ?? null,
-			p_primaryphonetype: input.primaryphonetype ?? null,
-			p_secondaryphone: input.secondaryphone ?? null,
-			p_secondaryphonetype: input.secondaryphonetype ?? null,
-			p_email: input.email ?? null,
-			p_notes: input.notes ?? null
+			p_lastname: f.lastName.trim(),
+			p_firstname: f.firstName.trim() || null,
+			p_salutation: f.salutation || null,
+			p_address: f.address.trim() || null,
+			p_city: f.city.trim() || null,
+			p_region: f.region.trim() || null,
+			p_country: f.country.trim() || null,
+			p_pczip: f.postal.trim() || null,
+			p_primaryphone: f.phone.trim() || null,
+			p_primaryphonetype: f.phoneType || null,
+			p_secondaryphone: f.secondaryPhone.trim() || null,
+			p_secondaryphonetype: f.secondaryPhoneType || null,
+			p_email: f.email.trim() || null
 		})
 	);
-}
-
-/** A new guest from the booking form. */
-export async function createGuestFromForm(f: GuestForm): Promise<number> {
-	return createGuest({
-		lastname: f.lastName.trim(),
-		firstname: f.firstName.trim() || null,
-		salutation: f.salutation || null,
-		address: f.address.trim() || null,
-		city: f.city.trim() || null,
-		region: f.region.trim() || null,
-		country: f.country.trim() || null,
-		pczip: f.postal.trim() || null,
-		primaryphone: f.phone.trim() || null,
-		primaryphonetype: f.phoneType || null,
-		secondaryphone: f.secondaryPhone.trim() || null,
-		secondaryphonetype: f.secondaryPhoneType || null,
-		email: f.email.trim() || null
-	});
 }
 
 /** Saves a guest's corrected details; an emptied field is cleared. */
@@ -92,15 +56,13 @@ export interface NewReservationInput {
 	departure: string;
 	bookedby: string;
 	numadults?: number;
-	numrooms?: number;
 	bedtype?: string;
 	arrivaltime?: string | null;
-	notes?: string | null;
 	roomid?: number | null;
 	numguests?: number | null;
 }
 
-export interface CreatedReservation {
+interface CreatedReservation {
 	reservationid: number;
 	resnumber: number;
 	reservationguestid: number;
@@ -114,10 +76,8 @@ export async function createReservation(input: NewReservationInput): Promise<Cre
 			p_departure: input.departure,
 			p_bookedby: input.bookedby,
 			p_numadults: input.numadults ?? 2,
-			p_numrooms: input.numrooms ?? 1,
 			p_bedtype: input.bedtype ?? 'Double',
 			p_arrivaltime: input.arrivaltime ?? null,
-			p_notes: input.notes ?? null,
 			p_roomid: input.roomid ?? null,
 			p_numguests: input.numguests ?? null
 		})
@@ -125,14 +85,10 @@ export async function createReservation(input: NewReservationInput): Promise<Cre
 	return rows[0];
 }
 
-export interface ReservationChanges {
+interface ReservationChanges {
 	arrival?: string;
 	departure?: string;
 	numadults?: number;
-	numrooms?: number;
-	bedtype?: string;
-	arrivaltime?: string | null;
-	bookedby?: string | null;
 }
 
 /**
@@ -150,11 +106,7 @@ export async function updateReservation(
 			p_reservationid: reservationid,
 			p_arrival: changes.arrival ?? null,
 			p_departure: changes.departure ?? null,
-			p_numadults: changes.numadults ?? null,
-			p_numrooms: changes.numrooms ?? null,
-			p_bedtype: changes.bedtype ?? null,
-			p_arrivaltime: changes.arrivaltime ?? null,
-			p_bookedby: changes.bookedby ?? null
+			p_numadults: changes.numadults ?? null
 		})
 	);
 }
@@ -163,6 +115,11 @@ export async function setReservationNotes(reservationid: number, notes: string):
 	unwrap(
 		await supabase.rpc('set_reservation_notes', { p_reservationid: reservationid, p_notes: notes })
 	);
+}
+
+/** A room's occupancy notes; empty clears them. */
+export async function setOccupancyNotes(occupancyid: number, notes: string): Promise<void> {
+	unwrap(await supabase.rpc('set_occupancy_notes', { p_occupancyid: occupancyid, p_notes: notes }));
 }
 
 export async function updateReservationGuestNotes(
@@ -177,17 +134,9 @@ export async function updateReservationGuestNotes(
 	);
 }
 
-export async function confirmReservation(
-	reservationid: number,
-	confirmed = true,
-	date?: string
-): Promise<void> {
+export async function confirmReservation(reservationid: number): Promise<void> {
 	unwrap(
-		await supabase.rpc('confirm_reservation', {
-			p_reservationid: reservationid,
-			p_confirmed: confirmed,
-			...(date ? { p_date: date } : {})
-		})
+		await supabase.rpc('confirm_reservation', { p_reservationid: reservationid, p_confirmed: true })
 	);
 }
 
@@ -375,24 +324,6 @@ export async function recordPayment(
  * the correction stays auditable — it leaves the ledger and daily cash. */
 export async function archivePayment(paymentid: number): Promise<void> {
 	unwrap(await supabase.rpc('archive_payment', { p_paymentid: paymentid }));
-}
-
-export async function sellGiftCertificate(
-	reservationguestid: number,
-	amount: number,
-	paymenttype: string,
-	date: string,
-	notes?: string | null
-): Promise<number> {
-	return unwrap(
-		await supabase.rpc('sell_gift_certificate', {
-			p_reservationguestid: reservationguestid,
-			p_amount: amount,
-			p_paymenttype: paymenttype,
-			p_date: date,
-			p_notes: notes ?? null
-		})
-	);
 }
 
 // --- Notes ---------------------------------------------------------------------

@@ -1,8 +1,7 @@
 // Story: spec/features/return-more-name-matches-in-a-scrollable-list.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import { rpc, uid } from '../helpers/db';
 
 interface NameRow {
@@ -15,7 +14,7 @@ interface NameRow {
 // not hide the guest being looked for.
 const FAMILY_SIZE = 14;
 
-let page: Page;
+const page = useAppPage();
 let stem: string;
 let ids: number[] = [];
 
@@ -33,11 +32,6 @@ beforeAll(async () => {
 	}
 	// A near neighbour, so "closest match first" has something to beat.
 	await rpc<number>('create_guest', { p_lastname: `${stem}son`, p_firstname: 'Farther' });
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
 });
 
 describe('return more name matches in a scrollable list', () => {

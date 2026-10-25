@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, staffClient, todayISO, uid, unwrap } from '../helpers/db';
+import { addDays, rpc, staffClient, todayISO, uid, unwrap } from '../helpers/db';
 
 interface HousekeepingRow {
 	resnumber: number;
@@ -128,19 +128,29 @@ describe('capture housekeeping and diet notes when booking', () => {
 	});
 
 	it('records no notes at all when they are left blank', async () => {
-		const plain = await makeReservation();
+		await page.goto(APP_URL + '/reservations/new', { waitUntil: 'networkidle' });
+		await page.fill('#ln', `ZZBlank${uid()}`);
+		await page.fill('#bb', 'QA');
+		await page.fill('#arr', addDays(arrival, 40));
+		await page.fill('#dep', addDays(arrival, 42));
+		await page.getByRole('button', { name: 'Save reservation' }).click();
+		await page.waitForURL(/\/reservations\/\d+$/, { timeout: 30_000 });
+		const [blank] = await rpc<{ primary_guestid: number; primary_reservationguestid: number }[]>(
+			'find_reservation',
+			{ p_resnumber: Number(page.url().split('/').pop()) }
+		);
 		const db = await staffClient();
 		const notes = unwrap(
 			await db
 				.from('housekeeping_notes')
 				.select('housekeepingnotesid')
-				.eq('reservationguestid', plain.reservationguestid)
+				.eq('reservationguestid', blank.primary_reservationguestid)
 		) as unknown[];
-		const meals = unwrap(
-			await db.from('kitchen_meals').select('kitchenmealid').eq('guestid', plain.guestid)
+		const diets = unwrap(
+			await db.from('kitchen_meals').select('kitchenmealid').eq('guestid', blank.primary_guestid)
 		) as unknown[];
 		expect(notes).toHaveLength(0);
-		expect(meals).toHaveLength(0);
+		expect(diets).toHaveLength(0);
 	});
 
 	it('shows a diet type from Access in the notes, and saving them prints the same diet', async () => {

@@ -2,7 +2,7 @@
 // returns that RPC's exact row shape. Screens call only these functions, so the
 // database remains the single source of truth for search, ledgers, and reports.
 
-import { supabase, unwrap } from './client';
+import { supabase, unwrap } from './client.js';
 import type {
 	AllFieldsRow,
 	CancellationListRow,
@@ -35,13 +35,15 @@ import type {
 	ManualSalesRow,
 	NextYearsDepositsRow,
 	OccupancySummary,
+	RequestRow,
+	GuestRequestRow,
 	ReservationGuestSummary,
 	ReservationSummary,
 	FolioReceipt,
 	RoomRateType,
 	SharedRoom,
 	StayRoomRow
-} from './types';
+} from './types.js';
 
 /** Today's business date (YYYY-MM-DD, local time). */
 export const TODAY = new Date().toLocaleDateString('en-CA');
@@ -120,10 +122,7 @@ export async function findReservation(resnumber: number): Promise<ReservationSum
 	return rows.length ? reservationSummaryRow(rows[0]) : null;
 }
 
-export async function searchByDate(
-	date: string,
-	mode: DateMode = 'arrivals'
-): Promise<DateSearchRow[]> {
+export async function searchByDate(date: string, mode: DateMode): Promise<DateSearchRow[]> {
 	const rows = unwrap(
 		await supabase.rpc('search_by_date', { p_date: date, p_mode: mode })
 	) as DateSearchRow[];
@@ -133,15 +132,15 @@ export async function searchByDate(
 export async function searchByDateRange(
 	from: string,
 	to: string,
-	mode = 'overlap'
+	mode: string
 ): Promise<DateRangeRow[]> {
 	return unwrap(
 		await supabase.rpc('search_by_date_range', { p_from: from, p_to: to, p_mode: mode })
 	);
 }
 
-export async function guestHistory(guestid: number, ref = TODAY): Promise<GuestHistoryRow[]> {
-	const rows = unwrap(await supabase.rpc('guest_history', { p_guestid: guestid, p_ref_date: ref }));
+export async function guestHistory(guestid: number): Promise<GuestHistoryRow[]> {
+	const rows = unwrap(await supabase.rpc('guest_history', { p_guestid: guestid, p_ref_date: TODAY }));
 	return rows.map((r: GuestHistoryRow) => ({ ...r, balance_owing: num(r.balance_owing) }));
 }
 
@@ -280,62 +279,47 @@ export async function effectiveRoomRate(
 	return rate == null ? null : Number(rate);
 }
 
-export interface ReservationNotes {
-	housekeeping: HousekeepingNote[];
-	kitchen: KitchenMeal[];
+interface ReservationNotes {
 	reservationGuest: ReservationGuestSummary | null;
+	kitchenMeal: KitchenMeal | undefined;
+	/** The housekeeping note in force, the one that prints. */
+	housekeepingNote: string;
 }
 
+/** What the notes tabs of a reservation edit: the guest's diet record, the
+ * housekeeping note in force and, on the reservation guest, the requests. */
 export async function reservationNotes(reservationid: number): Promise<ReservationNotes> {
 	const rg = await reservationGuestSummary(reservationid);
-	const [housekeeping, kitchen] = await Promise.all([
-		rg
-			? supabase
-					.from('housekeeping_notes')
-					.select('*')
-					.eq('reservationguestid', rg.reservationguestid)
-					.eq('hkarchive', false)
-					.order('hknotesdate', { ascending: false })
-					.then(unwrap)
-			: Promise.resolve([]),
-		rg
-			? supabase
-					.from('kitchen_meals')
-					.select('*')
-					.eq('guestid', rg.guestid)
-					.eq('kmarchive', false)
-					.order('kitchenmealid')
-					.then(unwrap)
-			: Promise.resolve([])
+	if (!rg) return { reservationGuest: null, kitchenMeal: undefined, housekeepingNote: '' };
+	const [kitchenMeal, hk] = await Promise.all([
+		guestKitchenMeal(rg.guestid),
+		supabase
+			.from('v_current_housekeeping_notes')
+			.select('housekeepingnotes')
+			.eq('reservationguestid', rg.reservationguestid)
+			.then(unwrap) as Promise<Pick<HousekeepingNote, 'housekeepingnotes'>[]>
 	]);
-	return {
-		housekeeping: (housekeeping as HousekeepingNote[]).map((h) => ({
-			...h,
-			hknotesdate: d(h.hknotesdate)
-		})),
-		kitchen: kitchen as KitchenMeal[],
-		reservationGuest: rg
-	};
+	return { reservationGuest: rg, kitchenMeal, housekeepingNote: hk[0]?.housekeepingnotes ?? '' };
 }
 
 // ---------------------------------------------------------------------------
 // Guest documents
 // ---------------------------------------------------------------------------
 
-export async function reportConfirmation(
-	reservationid: number
-): Promise<ConfirmationReport | null> {
-	const rows = unwrap(
-		await supabase.rpc('report_reservation_confirmation', { p_reservationid: reservationid })
-	);
+/** A guest document's one row for a stay; null when the stay has none. */
+async function documentRow<T>(rpc: string, reservationid: number): Promise<T | null> {
+	const rows = unwrap(await supabase.rpc(rpc, { p_reservationid: reservationid })) as T[];
 	return rows[0] ?? null;
 }
 
+export async function reportConfirmation(
+	reservationid: number
+): Promise<ConfirmationReport | null> {
+	return documentRow('report_reservation_confirmation', reservationid);
+}
+
 export async function reportCheckInFolio(reservationid: number): Promise<FolioReport | null> {
-	const rows = unwrap(
-		await supabase.rpc('report_check_in_folio', { p_reservationid: reservationid })
-	);
-	return rows[0] ?? null;
+	return documentRow('report_check_in_folio', reservationid);
 }
 
 /** Every room of a stay, in stay order — the room moves a folio or slip lists. */
@@ -354,10 +338,7 @@ export async function reportFolioReceipts(reservationid: number): Promise<FolioR
 export async function reportCheckoutBillHeader(
 	reservationid: number
 ): Promise<CheckoutBillHeader | null> {
-	const rows = unwrap(
-		await supabase.rpc('report_checkout_bill_header', { p_reservationid: reservationid })
-	);
-	return rows[0] ?? null;
+	return documentRow('report_checkout_bill_header', reservationid);
 }
 
 export async function reportCheckoutBillLines(reservationid: number): Promise<CheckoutBillLine[]> {
@@ -367,10 +348,7 @@ export async function reportCheckoutBillLines(reservationid: number): Promise<Ch
 export async function reportCancellationNotice(
 	reservationid: number
 ): Promise<CancellationReport | null> {
-	const rows = unwrap(
-		await supabase.rpc('report_cancellation_notice', { p_reservationid: reservationid })
-	);
-	return rows[0] ?? null;
+	return documentRow('report_cancellation_notice', reservationid);
 }
 
 export async function reportGuestDocumentQueue(
@@ -392,6 +370,16 @@ export async function reportHousekeeping(date: string): Promise<HousekeepingRow[
 
 export async function reportInHouse(date: string): Promise<InHouseRow[]> {
 	return unwrap(await supabase.rpc('report_in_house', { p_date: date }));
+}
+
+/** Everyone at the lodge on a day whose stay carries a request. */
+export async function reportRequests(date: string): Promise<RequestRow[]> {
+	return unwrap(await supabase.rpc('report_requests', { p_date: date }));
+}
+
+/** A guest's requests, stay by stay, oldest first. */
+export async function reportGuestRequests(guestid: number): Promise<GuestRequestRow[]> {
+	return unwrap(await supabase.rpc('report_guest_requests', { p_guestid: guestid }));
 }
 
 export async function reportKitchenMeal(date: string): Promise<KitchenMealRow[]> {
@@ -468,18 +456,22 @@ export async function reportNextYearsDeposits(year: number): Promise<NextYearsDe
 	}));
 }
 
-export async function reportDepositsReceived(date: string): Promise<DepositReportRow[]> {
-	const rows = unwrap(
-		await supabase.rpc('report_deposits_received', { p_date: date })
-	) as DepositReportRow[];
+/** The sheet's amount on one of its upper lines ('Room', 'Deposit (Received)'…); 0 when absent. */
+export function dcarLine(upper: DcarUpperRow[], item: string): number {
+	return upper.find((r) => r.item === item)?.amount ?? 0;
+}
+
+async function depositRows(rpc: string, date: string): Promise<DepositReportRow[]> {
+	const rows = unwrap(await supabase.rpc(rpc, { p_date: date })) as DepositReportRow[];
 	return rows.map((r) => ({ ...r, pymt_amount: num(r.pymt_amount), pymt_cdn: num(r.pymt_cdn) }));
 }
 
+export async function reportDepositsReceived(date: string): Promise<DepositReportRow[]> {
+	return depositRows('report_deposits_received', date);
+}
+
 export async function reportDepositsApplied(date: string): Promise<DepositReportRow[]> {
-	const rows = unwrap(
-		await supabase.rpc('report_deposits_applied', { p_date: date })
-	) as DepositReportRow[];
-	return rows.map((r) => ({ ...r, pymt_amount: num(r.pymt_amount), pymt_cdn: num(r.pymt_cdn) }));
+	return depositRows('report_deposits_applied', date);
 }
 
 export async function reportCashierDetail(date: string): Promise<CashierDetailRow[]> {

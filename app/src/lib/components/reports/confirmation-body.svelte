@@ -6,8 +6,9 @@
 
 	let { r, rooms = [] }: { r: ConfirmationReport; rooms?: StayRoomRow[] } = $props();
 
-	// The diet and housekeeping notes sit in the space above the office hours.
-	const notes = $derived(Boolean(r.diet_notes || r.housekeeping_notes));
+	// The diet, housekeeping notes and requests sit in the space above the
+	// office hours.
+	const notes = $derived(Boolean(r.diet_notes || r.housekeeping_notes || r.request_notes));
 
 	// A stay that never moves rooms prints the one row it always did; a stay
 	// that moves prints a row per room, in the order it occupies them.
@@ -55,8 +56,8 @@
 		{/each}
 	</tbody>
 </table>
-{#if r.reservation_notes}
-	<p class="center note">{r.reservation_notes}</p>
+{#if r.occupancy_notes}
+	<p class="center note">{r.occupancy_notes}</p>
 {/if}
 {#if r.deposit_amount != null}
 	<table>
@@ -76,6 +77,9 @@
 		{/if}
 		{#if r.housekeeping_notes}
 			<p><b>Housekeeping:</b>&nbsp;<span class="note">{r.housekeeping_notes}</span></p>
+		{/if}
+		{#if r.request_notes}
+			<p><b>Requests:</b>&nbsp;<span class="note">{r.request_notes}</span></p>
 		{/if}
 	</div>
 {/if}

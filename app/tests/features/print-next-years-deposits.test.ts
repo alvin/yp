@@ -1,9 +1,8 @@
 // Story: spec/features/print-next-years-deposits.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { isolatedDate, makeReservation, rpc, staffClient, unwrap } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { isolatedDate, makeReservation, pay, rpc, staffClient, unwrap } from '../helpers/db';
 
 interface Month {
 	month: string;
@@ -21,23 +20,14 @@ let after: Month[];
 
 const report = (y: number) => rpc<Month[]>('report_next_years_deposits', { p_year: y });
 
-async function pay(rgid: number, category: string, amount: number, date: string) {
-	await rpc('record_payment', {
-		p_reservationguestid: rgid,
-		p_paymentcategory: category,
-		p_paymenttype: 'Visa',
-		p_amount: amount,
-		p_paymentdate: date
-	});
-}
-
 beforeAll(async () => {
 	paid = isolatedDate();
 	year = Number(paid.slice(0, 4));
 	before = await report(year);
-	const nextYear = await makeReservation({ arrival: `${year + 1}-06-15`, nights: 2 });
-	const thisYear = await makeReservation({ arrival: `${year}-12-20`, nights: 2 });
-	await pay(nextYear.reservationguestid, 'Deposit (Received)', 100, paid);
+	// Without rooms: these stays fall on dates other tests may own.
+	const nextYear = await makeReservation({ arrival: `${year + 1}-06-15`, nights: 2, roomid: null });
+	const thisYear = await makeReservation({ arrival: `${year}-12-20`, nights: 2, roomid: null });
+	await pay(nextYear, 'Deposit (Received)', 100, { date: paid });
 	// The $0.00 deposit line Access added to new bookings; the app refuses one,
 	// so it is written straight to the table as the import did.
 	const db = await staffClient();
@@ -56,8 +46,8 @@ beforeAll(async () => {
 			})
 			.select('paymentid')
 	);
-	await pay(nextYear.reservationguestid, 'Deposit (Refund)', 30, paid);
-	await pay(thisYear.reservationguestid, 'Deposit (Received)', 500, paid);
+	await pay(nextYear, 'Deposit (Refund)', 30, { date: paid });
+	await pay(thisYear, 'Deposit (Received)', 500, { date: paid });
 	after = await report(year);
 });
 
@@ -84,15 +74,7 @@ describe("print next year's deposits", () => {
 });
 
 describe("print next year's deposits — on paper", () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
+	const page = useAppPage();
 
 	it('opens from the Print Center and prints the year with its total held', async () => {
 		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });

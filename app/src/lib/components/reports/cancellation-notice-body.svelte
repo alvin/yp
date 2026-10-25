@@ -52,8 +52,8 @@
 		</tbody>
 	</table>
 {/if}
-{#if r.cancellation_notes}
-	<p class="note">{r.cancellation_notes}</p>
+{#if r.occupancy_notes}
+	<p class="note">{r.occupancy_notes}</p>
 {/if}
 <p class="center standoff" style="--standoff: 120px">
 	Our office is open from 8:00 AM to 10:30 PM every day for your calls.<br />We hope we will be

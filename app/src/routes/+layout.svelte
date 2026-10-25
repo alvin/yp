@@ -11,7 +11,7 @@
     import { goto } from "$app/navigation";
     import { dateMed } from "$lib/format.js";
     import { TODAY } from "$lib/data/queries.js";
-    import { supabase } from "$lib/data/client";
+    import { supabase } from "$lib/data/client.js";
 
     let { children } = $props();
 

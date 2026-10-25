@@ -1,8 +1,7 @@
 // Story: spec/features/match-a-phone-number-in-any-format.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { useAppPage } from '../helpers/app';
 import { formatPhone } from '../../src/lib/phone';
 import { rpc, staffClient, uid, unwrap } from '../helpers/db';
 
@@ -98,27 +97,18 @@ describe('match a phone number in any format — entering one', () => {
 	});
 
 	describe('on the new-reservation screen', () => {
-		let page: Page;
-
-		beforeAll(async () => {
-			page = await openAppPage();
-			await page.goto(`${APP_URL}/reservations/new`, { waitUntil: 'networkidle' });
-		});
-
-		afterAll(async () => {
-			await closeApp(page);
-		});
+		const page = useAppPage('/reservations/new');
 
 		it('formats the number when the clerk leaves the field', async () => {
 			await page.fill('#ph', '2505926029');
 			await page.locator('#em').focus();
-			expect(await page.inputValue('#ph')).toBe('(250) 592-6029');
+			await expect.poll(() => page.inputValue('#ph')).toBe('(250) 592-6029');
 		});
 
 		it('leaves a number it does not recognise alone', async () => {
 			await page.fill('#ph', '+44 20 7946 0958');
 			await page.locator('#em').focus();
-			expect(await page.inputValue('#ph')).toBe('+44 20 7946 0958');
+			await expect.poll(() => page.inputValue('#ph')).toBe('+44 20 7946 0958');
 		});
 	});
 

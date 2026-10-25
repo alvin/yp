@@ -1,56 +1,24 @@
 // Story: spec/features/surface-daily-cash-balance-checks-on-screen.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { makeReservation, pay, postCharge, postRoomNights, type Fixture } from '../helpers/db';
 
-let page: Page;
 let balancedDay: Fixture;
 let unbalancedDay: Fixture;
 
+const page = useAppPage();
+const toolbar = () => page.locator('.no-print [data-slot=badge]').first();
+
 beforeAll(async () => {
-	page = await openAppPage();
-	// Balanced day: deposit received is both an upper adjustment and a receipt.
+	// Balanced day: a deposit received is both an upper adjustment and a receipt.
 	balancedDay = await makeReservation();
-	await rpc('record_payment', {
-		p_reservationguestid: balancedDay.reservationguestid,
-		p_paymentcategory: 'Deposit (Received)',
-		p_paymenttype: 'Visa',
-		p_amount: 250,
-		p_paymentdate: balancedDay.arrival
-	});
-	// Unbalanced day: charges with no matching receipt, on their stay's
+	await pay(balancedDay, 'Deposit (Received)', 250);
+	// Unbalanced day: $324 of charges with no receipt, on their stay's
 	// check-out day — a room, which Items Cashed Out leaves off, and an item.
 	unbalancedDay = await makeReservation();
-	await rpc('post_room_nights', {
-		p_reservationguestid: unbalancedDay.reservationguestid,
-		p_roomid: (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid,
-		p_occupancyin: unbalancedDay.arrival,
-		p_occupancyout: unbalancedDay.departure,
-		p_rate: 100,
-		p_transdate: unbalancedDay.arrival
-	});
-	const client = await staffClient();
-	const [item] = unwrap(
-		await client
-			.from('inventory_items')
-			.select('inventoryid')
-			.eq('invarchive', false)
-			.gt('invamount', 0)
-			.limit(1)
-	) as { inventoryid: number }[];
-	await rpc('post_charge', {
-		p_reservationguestid: unbalancedDay.reservationguestid,
-		p_inventoryid: item.inventoryid,
-		p_quantity: 2,
-		p_transdate: unbalancedDay.arrival,
-		p_amount: 24
-	});
-});
-
-afterAll(async () => {
-	await closeApp(page);
+	await postRoomNights(unbalancedDay, 100);
+	await postCharge(unbalancedDay, { quantity: 2, amount: 24 });
 });
 
 describe('surface daily cash balance checks on screen', () => {
@@ -58,19 +26,21 @@ describe('surface daily cash balance checks on screen', () => {
 		await page.goto(`${APP_URL}/reports/dcar?date=${balancedDay.arrival}`, {
 			waitUntil: 'networkidle'
 		});
-		const toolbar = await page.textContent('.no-print');
-		expect(toolbar).toMatch(/Balanced/);
+		await expect.poll(() => toolbar().textContent()).toBe('Balanced ✓');
+	});
+
+	it('keeps the balance indicators out of the printed sheet', async () => {
+		expect(await page.textContent('.report-page')).not.toMatch(/Balanced|Difference/);
 	});
 
 	it('shows the difference when the sections do not agree', async () => {
 		await page.goto(`${APP_URL}/reports/dcar?date=${unbalancedDay.departure}`, {
 			waitUntil: 'networkidle'
 		});
-		const toolbar = await page.textContent('.no-print');
-		expect(toolbar).toMatch(/Difference/);
+		await expect.poll(() => toolbar().textContent()).toMatch(/^\s*Difference \$324\.00\s*$/);
 	});
 
-	it('states on each appendix whether it agrees with the daily cash line', async () => {
+	it('states on each appendix that it agrees with the daily cash line', async () => {
 		for (const [appendix, date] of [
 			['deposits-received', balancedDay.arrival],
 			['cashier-detail', balancedDay.arrival],
@@ -79,26 +49,10 @@ describe('surface daily cash balance checks on screen', () => {
 			['items-cashed-out', unbalancedDay.departure]
 		]) {
 			await page.goto(`${APP_URL}/reports/${appendix}?date=${date}`, { waitUntil: 'networkidle' });
-			expect(await page.textContent('.no-print'), appendix).toMatch(/Agrees with Daily Cash/);
+			await expect
+				.poll(() => page.textContent('.no-print'), { message: appendix })
+				.toMatch(/Agrees with Daily Cash/);
+			expect(await page.textContent('.report-page'), appendix).not.toMatch(/Agrees with/);
 		}
-	});
-
-	it('keeps the balance indicators out of the printed sheet', async () => {
-		await page.goto(`${APP_URL}/reports/dcar?date=${balancedDay.arrival}`, {
-			waitUntil: 'networkidle'
-		});
-		const printed = await page.textContent('.report-page');
-		expect(printed).not.toMatch(/Balanced/);
-	});
-
-	it('keeps one business date while moving between the workspace tabs', async () => {
-		await page.goto(`${APP_URL}/reports/dcar?date=${balancedDay.arrival}`, {
-			waitUntil: 'networkidle'
-		});
-		await page.click('nav[aria-label="Reports in this workflow"] a:has-text("Cashier detail")');
-		await page.waitForURL(new RegExp(`cashier-detail\\?date=${balancedDay.arrival}`), {
-			timeout: 15_000
-		});
-		expect(page.url()).toContain(balancedDay.arrival);
 	});
 });

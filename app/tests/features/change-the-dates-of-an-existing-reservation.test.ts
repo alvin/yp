@@ -1,9 +1,16 @@
 // Story: spec/features/change-the-dates-of-an-existing-reservation.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, firstRoomId, makeReservation, rpc, staffClient, unwrap } from '../helpers/db';
+import { describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import {
+	addDays,
+	firstOccupancyId,
+	makeReservation,
+	roomDirectory,
+	rpc,
+	staffClient,
+	unwrap
+} from '../helpers/db';
 
 interface Summary {
 	reservationid: number;
@@ -20,7 +27,7 @@ interface Occupancy {
 	occupancyout: string;
 }
 
-let page: Page;
+const page = useAppPage();
 
 async function summary(resnumber: number): Promise<Summary> {
 	return (await rpc<Summary[]>('find_reservation', { p_resnumber: resnumber }))[0];
@@ -52,14 +59,6 @@ async function checkDates(reservationid: number): Promise<{ in: string; out: str
 	return rows.map((r) => ({ in: r.checkindate.slice(0, 10), out: r.checkoutdate.slice(0, 10) }));
 }
 
-beforeAll(async () => {
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
-});
-
 describe('change the dates of an existing reservation', () => {
 	it('changes the arrival and departure of an existing reservation', async () => {
 		const fx = await makeReservation({ nights: 3 });
@@ -75,7 +74,8 @@ describe('change the dates of an existing reservation', () => {
 
 	it('keeps the reservation number, its guests, and its rooms', async () => {
 		const fx = await makeReservation({ nights: 3 });
-		const roomsBefore = (await occupancies(fx.reservationid)).length;
+		const roomsBefore = (await occupancies(fx.reservationid)).map((o) => o.occupancyid);
+		expect(roomsBefore).toHaveLength(1);
 		await rpc('update_reservation', {
 			p_reservationid: fx.reservationid,
 			p_departure: addDays(fx.departure, 2)
@@ -84,7 +84,7 @@ describe('change the dates of an existing reservation', () => {
 		expect(s.reservationid).toBe(fx.reservationid);
 		expect(s.resnumber).toBe(fx.resnumber);
 		expect(s.primary_guestid).toBe(fx.guestid);
-		expect((await occupancies(fx.reservationid)).length).toBe(roomsBefore);
+		expect((await occupancies(fx.reservationid)).map((o) => o.occupancyid)).toEqual(roomsBefore);
 	});
 
 	it('recalculates the night count from the new dates', async () => {
@@ -121,10 +121,9 @@ describe('change the dates of an existing reservation', () => {
 	it('leaves a room booked for part of the stay only on its own dates', async () => {
 		const fx = await makeReservation({ nights: 4 });
 		const moveDate = addDays(fx.arrival, 2);
-		const [first] = await occupancies(fx.reservationid);
-		const otherRoom = (await rpc<{ roomid: number }[]>('room_directory'))[1].roomid;
+		const otherRoom = (await roomDirectory())[1].roomid;
 		await rpc('record_room_move', {
-			p_occupancyid: first.occupancyid,
+			p_occupancyid: await firstOccupancyId(fx),
 			p_new_roomid: otherRoom,
 			p_move_date: moveDate
 		});
@@ -144,14 +143,13 @@ describe('change the dates of an existing reservation', () => {
 	});
 
 	it('takes off a room the new dates leave with no nights', async () => {
-		const rooms = await rpc<{ roomid: number }[]>('room_directory');
+		const rooms = await roomDirectory();
 		const shortened = await makeReservation({ nights: 4, roomid: rooms[0].roomid });
 		const late = await makeReservation({ nights: 4, roomid: rooms[0].roomid });
 		const moveDate = addDays(shortened.arrival, 2);
 		for (const fx of [shortened, late]) {
-			const [first] = await occupancies(fx.reservationid);
 			await rpc('record_room_move', {
-				p_occupancyid: first.occupancyid,
+				p_occupancyid: await firstOccupancyId(fx),
 				p_new_roomid: rooms[1].roomid,
 				p_move_date: addDays(fx.arrival, 2)
 			});
@@ -183,12 +181,11 @@ describe('change the dates of an existing reservation', () => {
 	});
 
 	it('changes the dates from the reservation screen', async () => {
-		const fx = await makeReservation({ nights: 2, roomid: await firstRoomId() });
+		const fx = await makeReservation({ nights: 2 });
 		const extended = addDays(fx.departure, 3);
 
 		await page.goto(APP_URL + `/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
 		await page.getByRole('button', { name: 'Change dates' }).click();
-		await page.locator('#d-dep').waitFor({ timeout: 10_000 });
 		await page.fill('#d-dep', extended);
 		await page.getByRole('button', { name: 'Save dates' }).click();
 

@@ -2,11 +2,37 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 13 October 2026.
+Everything below is live on the hosted system as of 13 October 2026, except
+the notes changes of 25 October, which go live with the next deploy.
 
 ---
 
 ## What the lodge asked for
+
+**Notes for reports, as on Richard's chart.** Kitchen and Housekeeping are as
+they were. The other three:
+
+- **Requests** now print on the confirmation, beside the diet and housekeeping
+  notes. Two new reports list them. **Requests** in the Print Center's daily
+  reports lists everyone at the lodge that day with a request (arriving, in
+  house or leaving, the same people as the In House report). A **Requests**
+  button beside **Guest notes**, on the reservation screen and the guest's
+  page, lists that guest's requests stay by stay, oldest first. Cancelled stays
+  are left out of both.
+- **Occupancy** is a new tab. It edits the note each room of a stay carries,
+  which Access called the occupancy notes and the In House report has always
+  printed, though until now no screen could edit it. It prints on the In House
+  report, the cancellation notice and, as Access did, under the room on the
+  confirmation. Those notes are the lodge's messages to the guest: "Please let
+  us know who will be joining you", "ONE YEAR ONLY". The lodge's own sample
+  confirmation prints one, and it now prints exactly as the sample does. A note
+  typed when cancelling joins them, so it still prints on the cancellation
+  notice.
+- **Reservation notes** are now office-only, like Guest notes: a button on the
+  Reservation details card, marked "Office only — never printed." They used to
+  print on the confirmation and the cancellation notice. That was a real leak:
+  in Access these are the office's own record of a booking ("equal billing",
+  "can no longer come due to medical reasons").
 
 **Diets are just the notes.** The Diet pick list (Vegan, Vegetarian and so
 on) is gone from the booking screen and from a reservation's Kitchen tab. A
@@ -103,8 +129,8 @@ printed.
 **Diet and housekeeping notes on the confirmation and check-in folio.**
 Both documents now print the guest's diet (with its notes) and the
 housekeeping note, so guests can catch mistakes when the confirmation arrives
-and confirm their requests again when they sign in. Internal notes (guest
-notes, request notes, room notes) never print on anything a guest sees.
+and confirm their requests again when they sign in. Guest notes and
+reservation notes never print on anything a guest sees.
 
 **The room charge showed $0.00 before posting.** The charge dialog now shows
 the room's rate before the charge is posted, and staff can still type over it.
@@ -138,6 +164,14 @@ September 2024) keeps it, and that day's report still shows it.
 ---
 
 ## What else changed along the way
+
+**A cleanup pass.** Unused code is gone, and code written several times over
+is now written once. The reservation screen, about a quarter of the app's
+screen code, is now a set of small parts, and the tests and the written
+description of the system no longer repeat each other. Nothing the lodge sees
+changed. The tools that load the data from Access produce exactly the same data
+as before, and a rehearsal of go-live (an empty database, every change,
+the full Access file, the smoke test) passes.
 
 **A diet corrected straight after saving is filed once.** On a reservation's
 Kitchen tab, saving a new diet and then correcting it filed a second copy, and
@@ -215,6 +249,14 @@ app does.
 
 ## Decisions made
 
+- **Occupancy notes print on the confirmation too,** under the room, as Access
+  printed them, though the chart listed only the cancellation notice and In
+  House (you, 25 October). The request reports leave out cancelled stays, and
+  the day's report isn't added to the batch print run; either is a small change
+  if the lodge wants it.
+- **A cancellation note goes with the first room's occupancy notes,** the room
+  the notice names, so it still prints on the notice now that reservation notes
+  don't.
 - **Diet types, child counts and group names stay in the database** for the
   old records that carry them; only the screens stop asking. Nothing in the
   data changes and everything prints as before. A diet type on file shows in
@@ -247,10 +289,6 @@ app does.
 - **A charge posted after its stay's check-out counts on the day it is posted.**
   That covers walk-in sales on the daily sales accounts, which Access re-dated
   every night.
-- **Reservation notes stay on the confirmation.** The old Access confirmation
-  printed them, and the lodge uses them for messages to the guest. What was
-  internal was the "Re-booked from #…" reference the app added; it no longer
-  does.
 - **Undoing a move made on the check-out date keeps the longer stay,** in the
   room the guest was leaving. That suits the lodge's reason for undo — a room
   frees up and the guest needn't move. If the guest isn't staying on after all,
@@ -269,43 +307,41 @@ app does.
 ## Open items
 
 **For you to decide**
-1. **Weak tests** — see `docs/test-review-2026-09-29.md`, sorted into obvious
-   fixes, obvious removals and questions.
-2. **Date-range search** sorts by arrival rather than name, and never shows the
+1. **Date-range search** sorts by arrival rather than name, and never shows the
    Cancelled or Shared badges.
-3. **Gift certificates.** The system can record a sale, but there's no button
+2. **Gift certificates.** The system can record a sale, but there's no button
    for it. You want to understand this before it goes to the lodge. A sale rung
    up on a daily sales account counts on the cash sheet the day it is sold; one
    added to a guest's stay waits for their check-out, like any charge.
 
 **For the lodge**
-4. **Testing the cash sheet before switchover.** The system's bookings are the
+3. **Testing the cash sheet before switchover.** The system's bookings are the
    Access copy from 28 March 2026. Stays that have checked out since were settled
    in Access, so their deposits (2,852 stays, $164,325) show as applied on their
    check-out days with nothing to match. A fresh Access import at switchover
    clears this.
-5. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
+4. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
    room charges entered through the new system went in at the Split rate:
    reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
    and 107033. Worth checking any that were real rather than testing.
-6. **A record of changes to a reservation.** The system keeps when a booking
+5. **A record of changes to a reservation.** The system keeps when a booking
    was made, confirmed and cancelled, but not when its details were later
    changed. Offered to Richard as a "last changed" date or a full history.
-7. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-8. **Older charges.** 387 room charges from the Access years bill a room the guest
+6. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+7. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-9. **Questions still open from their original feature pack:** the weekly
+8. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes;
    printing or reprinting a single document; how exact the printed layouts need
    to be; moving a deposit when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-10. A room's own dates can't be edited separately, as they could in Access;
+9. A room's own dates can't be edited separately, as they could in Access;
    stay dates change through *Change dates*. A room's own guest count can be set
    only where the stay holds rooms side by side; otherwise the room follows the
    booking's number.
-11. All-fields search takes a few hundred milliseconds whatever is typed.
+10. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 

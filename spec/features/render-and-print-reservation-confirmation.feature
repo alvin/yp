@@ -9,7 +9,7 @@ Feature: render and print reservation confirmation
     Given confirmations are queued for printing in the Print Center
 
   Scenario: Acceptance criteria
-    Then The slip shows the guest name and reservation details needed to identify the booking.
-    And The slip clearly shows that the reservation is confirmed.
-    And The slip includes arrival and stay details relevant to the booking.
-    And The slip can be printed for the guest or for office records.
+    Then The slip shows the guest's name and mailing address, the reservation number, the date it was confirmed and the date it was printed.
+    And The slip shows the arrival and departure, each room with its in and out dates and number of guests, and the deposit received.
+    And The check-in folio and the check-out bill carry the reservation number and the date printed too.
+    And The slip prints from its own screen, and closes with the lodge's phone number.

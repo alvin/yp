@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PrinterIcon from '@lucide/svelte/icons/printer';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import ReportDateInput from '$lib/components/app/report-date-input.svelte';
 	import CancellationNoticeBody from '$lib/components/reports/cancellation-notice-body.svelte';
 	import CheckInFolioBody from '$lib/components/reports/check-in-folio-body.svelte';
 	import CheckoutBillBody from '$lib/components/reports/checkout-bill-body.svelte';
@@ -78,13 +77,6 @@
 			printing = null;
 		}
 	}
-
-	function changeDate(d: string) {
-		if (!d) return;
-		const params = new URLSearchParams(page.url.searchParams);
-		params.set('date', d);
-		goto(`/print/batch?${params.toString()}`);
-	}
 </script>
 
 <svelte:head>
@@ -122,14 +114,7 @@
 			>
 			<span class="text-muted-foreground text-xs tabular-nums">{countLine}</span>
 			<div class="ml-auto flex flex-wrap items-center gap-2">
-				<label class="text-muted-foreground text-xs" for="batch-date">Date</label>
-				<input
-					id="batch-date"
-					type="date"
-					value={data.date}
-					onchange={(e) => changeDate(e.currentTarget.value)}
-					class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
-				/>
+				<ReportDateInput id="batch-date" value={data.date} />
 				{#each groups as g (g.key)}
 					<Button
 						size="sm"

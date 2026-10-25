@@ -1,6 +1,6 @@
 // Story: spec/features/show-tender-types.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
+import { makeReservation, pay, rpc, type Fixture } from '../helpers/db';
 
 const TENDERS = [
 	'Mastercard',
@@ -22,13 +22,7 @@ let rows: { paymenttype: string; calc_amount: number; sort_order: number }[];
 
 beforeAll(async () => {
 	fx = await makeReservation();
-	await rpc('record_payment', {
-		p_reservationguestid: fx.reservationguestid,
-		p_paymentcategory: 'Payment (Regular)',
-		p_paymenttype: 'Amex',
-		p_amount: 42,
-		p_paymentdate: fx.arrival
-	});
+	await pay(fx, 'Payment (Regular)', 42, { type: 'Amex' });
 	rows = await rpc('report_dcar_payments', { p_date: fx.arrival });
 });
 
@@ -52,31 +46,21 @@ describe('show tender types', () => {
 			rpc<{ paymenttype: string; calc_amount: number }[]>('report_dcar_payments', {
 				p_date: day.arrival
 			});
-		await rpc('record_payment', {
-			p_reservationguestid: day.reservationguestid,
-			p_paymentcategory: 'Gift Certificate Received',
-			p_paymenttype: 'Gift Certificate',
-			p_amount: 40,
-			p_paymentdate: day.arrival
-		});
-		expect((await tenders()).some((t) => t.paymenttype === 'Gift Certificate')).toBe(false);
-		expect((await tenders()).some((t) => t.paymenttype === 'None (Sent to A/R)')).toBe(false);
+		await pay(day, 'Gift Certificate Received', 40, { type: 'Gift Certificate' });
+		await pay(day, 'A/R (Sent To Accounts)', 15, { type: 'None (Sent to A/R)' });
+		const settled = (await tenders()).map((t) => t.paymenttype);
+		expect(settled).not.toContain('Gift Certificate');
+		expect(settled).not.toContain('None (Sent to A/R)');
 
-		await rpc('record_payment', {
-			p_reservationguestid: day.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'Gift Certificate',
-			p_amount: 25,
-			p_paymentdate: day.arrival
-		});
+		await pay(day, 'Payment (Regular)', 25, { type: 'Gift Certificate' });
 		expect(
 			Number((await tenders()).find((t) => t.paymenttype === 'Gift Certificate')?.calc_amount)
 		).toBe(25);
 	});
 
-	it('supports reconciling receipts by type against the day total', async () => {
+	it('adds the tender lines up to the day’s receipts, for reconciling by hand', async () => {
 		const sum = rows.reduce((s, r) => s + Number(r.calc_amount), 0);
-		const receipts = await rpc<number>('report_dcar_receipts_total', { p_date: fx.arrival });
-		expect(sum).toBeCloseTo(Number(receipts), 2);
+		expect(sum).toBe(42);
+		expect(Number(await rpc('report_dcar_receipts_total', { p_date: fx.arrival }))).toBe(42);
 	});
 });

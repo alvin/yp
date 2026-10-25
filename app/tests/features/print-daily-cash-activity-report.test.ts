@@ -1,86 +1,121 @@
 // Story: spec/features/print-daily-cash-activity-report.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import {
+	addDays,
+	dcarLine,
+	insertTaxedCharge,
+	makeReservation,
+	pay,
+	postCharge,
+	postRoomNights,
+	rpc,
+	type Fixture
+} from '../helpers/db';
 
-let fx: Fixture;
-let page: Page;
+interface UpperRow {
+	group_name: string;
+	item: string;
+	amount: number;
+}
 
-beforeAll(async () => {
-	fx = await makeReservation();
-	page = await openAppPage();
-});
+interface Summary {
+	upper_total: number;
+	receipts_total: number;
+	balance_owed: number;
+	manual_adjustments_stored: boolean;
+}
 
-afterAll(async () => {
-	await closeApp(page);
-});
+const summary = async (date: string) =>
+	(await rpc<Summary[]>('report_dcar_summary', { p_date: date }))[0];
 
-describe('print daily cash activity report', () => {
-	it('offers a print action on the daily cash report', async () => {
-		await page.goto(`${APP_URL}/reports/dcar?date=${fx.arrival}`, { waitUntil: 'networkidle' });
-		expect(await page.isVisible('button:has-text("Print")')).toBe(true);
+function longDate(iso: string): string {
+	const [y, m, d] = iso.split('-').map(Number);
+	const month = new Date(Date.UTC(2000, m - 1, 1)).toLocaleString('en-US', {
+		month: 'long',
+		timeZone: 'UTC'
 	});
+	return `${month} ${d}, ${y}`;
+}
 
-	it('prints the report for the selected business date', async () => {
-		const sheet = await page.textContent('.report-page h1');
-		expect(sheet).toContain('Daily Cash Activity Report for');
-	});
+describe('print daily cash activity report — the sheet', () => {
+	// A stay checking out on its own day: three room nights at $100, an extra
+	// carrying $7.50 GST, a $40 deposit taken earlier and $300 paid at the desk.
+	let stay: Fixture;
 
-	it('keeps the manual-entry columns on the printed sheet', async () => {
-		const sheet = await page.textContent('.report-page');
-		expect(sheet).toContain('Adjustments:');
-		expect(sheet).toContain('Actual Amount:');
-	});
-});
-
-describe('print daily cash activity report — the two balancing sections', () => {
-	let dayFx: Fixture;
-	let sectionsPage: Page;
+	const page = useAppPage();
 
 	beforeAll(async () => {
-		dayFx = await makeReservation();
-		await rpc('post_room_nights', {
-			p_reservationguestid: dayFx.reservationguestid,
-			p_roomid: (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid,
-			p_occupancyin: dayFx.arrival,
-			p_occupancyout: dayFx.departure,
-			p_rate: 100,
-			p_transdate: dayFx.arrival
-		});
-		await rpc('record_payment', {
-			p_reservationguestid: dayFx.reservationguestid,
-			p_paymentcategory: 'Deposit (Received)',
-			p_paymenttype: 'Visa',
-			p_amount: 80,
-			p_paymentdate: dayFx.arrival
-		});
-		sectionsPage = await openAppPage();
+		stay = await makeReservation();
+		await postRoomNights(stay, 100);
+		await insertTaxedCharge(stay, 50, { transgstamount: 7.5 });
+		await pay(stay, 'Deposit (Received)', 40, { date: addDays(stay.arrival, -1) });
+		await pay(stay, 'Payment (Regular)', 300, { type: 'Cash', date: stay.departure });
+		await page.goto(`${APP_URL}/reports/dcar?date=${stay.departure}`, { waitUntil: 'networkidle' });
 	});
 
-	afterAll(async () => {
-		await closeApp(sectionsPage);
+	it('opens for the chosen date and prints it in the heading', async () => {
+		await expect
+			.poll(() => page.textContent('.report-page h1'))
+			.toBe(`Daily Cash Activity Report for ${longDate(stay.departure)}`);
 	});
 
-	it('summarizes the day’s activity in two balancing sections', async () => {
-		const summary = await rpc<{ upper_total: number; receipts_total: number }[]>(
-			'report_dcar_summary',
-			{ p_date: dayFx.arrival }
+	it('runs sales and charges, then taxes, then adjustments, to the day’s revenue and expenses', async () => {
+		const upper = await rpc<UpperRow[]>('report_dcar_upper', { p_date: stay.departure });
+		const groups = upper.map((r) => r.group_name).filter((g, i, all) => all.indexOf(g) === i);
+		expect(groups).toEqual(['Revenue', 'Taxes', 'Adjustments']);
+		const line = (item: string) => Number(upper.find((r) => r.item === item)?.amount);
+		expect(line('Room')).toBe(300);
+		expect(line('Sundries')).toBe(50);
+		expect(line('Total Sales and Charges')).toBe(350);
+		expect(line('GST')).toBe(7.5);
+		expect(line('Total Taxes')).toBe(7.5);
+		expect(line('Deposit (Applied)')).toBe(-40);
+		expect(Number((await summary(stay.departure)).upper_total)).toBe(317.5);
+
+		const sheet = (await page.textContent('.report-page')) ?? '';
+		expect(sheet.indexOf('Total Sales and Charges:')).toBeLessThan(sheet.indexOf('Total Taxes:'));
+		expect(sheet.indexOf('Total Taxes:')).toBeLessThan(sheet.indexOf('Deposit (Applied)'));
+		expect(sheet).toMatch(/Today's Revenue and Expenses:\s*\$317\.50/);
+	});
+
+	it('lists the receipts by type of cash, then the day’s receipts and the balance owed', async () => {
+		const sheet = (await page.textContent('.report-page')) ?? '';
+		expect(sheet).toMatch(/Cash\s*\$300\.00/);
+		expect(sheet).toMatch(/Total Receipts Today:\s*\$300\.00/);
+		expect(sheet).toMatch(/Balance Owed:\s*\$17\.50/);
+		expect(sheet.indexOf('Type of Cash:')).toBeLessThan(sheet.indexOf('Total Receipts Today:'));
+		expect(sheet.indexOf('Total Receipts Today:')).toBeLessThan(sheet.indexOf('Balance Owed:'));
+	});
+
+	it('keeps the hand-filled columns, printed empty, and stores no hand adjustment', async () => {
+		const [upperHead, lowerHead] = await page.locator('.report-page table thead').allTextContents();
+		expect(upperHead).toContain('Adjustments:');
+		expect(lowerHead).toContain('Actual Amount:');
+		expect(lowerHead).toContain('Adjustments:');
+		// Both tables carry their hand-filled columns from the third on.
+		const handColumns = await page.$$eval('.report-page table tbody tr', (rows) =>
+			rows.flatMap((row) =>
+				Array.from(row.children)
+					.slice(2)
+					.map((cell) => (cell as HTMLElement).innerText.trim())
+			)
 		);
-		expect(Number(summary[0].upper_total)).toBeGreaterThan(0);
-		expect(Number(summary[0].receipts_total)).toBe(80);
+		expect(handColumns.length).toBeGreaterThan(20);
+		expect(handColumns.every((c) => c === '')).toBe(true);
+		expect((await summary(stay.departure)).manual_adjustments_stored).toBe(false);
 	});
 
-	it('renders the printed sheet with both sections for the chosen date', async () => {
-		await sectionsPage.goto(`${APP_URL}/reports/dcar?date=${dayFx.arrival}`, {
-			waitUntil: 'networkidle'
+	it('sends the report to paper from its print action', async () => {
+		await page.evaluate(() => {
+			const w = window as unknown as { __printed?: number };
+			w.__printed = 0;
+			window.print = () => {
+				w.__printed = (w.__printed ?? 0) + 1;
+			};
 		});
-		const sheet = await sectionsPage.textContent('.report-page');
-		expect(sheet).toContain('Daily Cash Activity Report');
-		expect(sheet).toContain('Total Sales and Charges:');
-		expect(sheet).toContain('Type of Cash:');
-		expect(sheet).toContain('Total Receipts Today:');
-		expect(sheet).toContain('Balance Owed:');
+		await page.getByRole('button', { name: 'Print', exact: true }).click();
+		expect(await page.evaluate(() => (window as unknown as { __printed?: number }).__printed)).toBe(1);
 	});
 });
 
@@ -88,46 +123,21 @@ describe('print daily cash activity report — every line the totals count', () 
 	it('gives a payment type or charge category missing from the lodge lists its own line', async () => {
 		const day = await makeReservation();
 		const date = day.arrival;
-		await rpc('record_payment', {
-			p_reservationguestid: day.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'Discover',
-			p_amount: 25,
-			p_paymentdate: date
-		});
-		const db = await staffClient();
-		const [item] = unwrap(
-			await db.from('inventory_items').select('inventoryid').eq('invarchive', false).limit(1)
-		) as { inventoryid: number }[];
-		await rpc('post_charge', {
-			p_reservationguestid: day.reservationguestid,
-			p_inventoryid: item.inventoryid,
-			p_quantity: 1,
-			p_transdate: date,
-			p_amount: 10,
-			p_transtype: 'Unlisted category'
-		});
+		await pay(day, 'Payment (Regular)', 25, { type: 'Discover' });
+		await postCharge(day, { amount: 10, transtype: 'Unlisted category' });
 
 		const payments = await rpc<{ paymenttype: string; calc_amount: number }[]>(
 			'report_dcar_payments',
 			{ p_date: date }
 		);
 		expect(Number(payments.find((l) => l.paymenttype === 'Discover')?.calc_amount)).toBe(25);
-		const receipts = await rpc<number>('report_dcar_receipts_total', { p_date: date });
 		const lines = payments.reduce((sum, l) => sum + Number(l.calc_amount), 0);
-		expect(lines).toBeCloseTo(Number(receipts), 2);
+		expect(lines).toBe(25);
+		expect(Number(await rpc('report_dcar_receipts_total', { p_date: date }))).toBe(25);
 
 		// The charge reaches the sheet with its stay's check-out.
-		const upper = await rpc<{ group_name: string; item: string; amount: number }[]>(
-			'report_dcar_upper',
-			{ p_date: day.departure }
-		);
-		const revenue = upper.filter((l) => l.group_name === 'Revenue');
-		expect(Number(revenue.find((l) => l.item === 'Unlisted category')?.amount)).toBe(10);
-		const total = revenue.find((l) => l.item === 'Total Sales and Charges')!;
-		const items = revenue.filter((l) => l !== total).reduce((sum, l) => sum + Number(l.amount), 0);
-		expect(items).toBeCloseTo(Number(total.amount), 2);
-		expect(Number(total.amount)).toBe(10);
+		expect(await dcarLine(day.departure, 'Unlisted category', 'Revenue')).toBe(10);
+		expect(await dcarLine(day.departure, 'Total Sales and Charges')).toBe(10);
 	});
 });
 
@@ -135,70 +145,27 @@ describe('print daily cash activity report — a stay counts on its check-out da
 	let stay: Fixture;
 	let late: string;
 
-	async function line(date: string, item: string): Promise<number> {
-		const upper = await rpc<{ item: string; amount: number }[]>('report_dcar_upper', { p_date: date });
-		return Number(upper.find((l) => l.item === item)?.amount ?? 0);
-	}
-
 	beforeAll(async () => {
 		stay = await makeReservation();
-		const db = await staffClient();
-		const [item] = unwrap(
-			await db.from('inventory_items').select('inventoryid').eq('invarchive', false).limit(1)
-		) as { inventoryid: number }[];
-		await rpc('record_payment', {
-			p_reservationguestid: stay.reservationguestid,
-			p_paymentcategory: 'Deposit (Received)',
-			p_paymenttype: 'Visa',
-			p_amount: 100,
-			p_paymentdate: stay.arrival
-		});
-		await rpc('post_room_nights', {
-			p_reservationguestid: stay.reservationguestid,
-			p_roomid: (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid,
-			p_occupancyin: stay.arrival,
-			p_occupancyout: stay.departure,
-			p_rate: 100,
-			p_transdate: stay.arrival
-		});
-		await rpc('post_charge', {
-			p_reservationguestid: stay.reservationguestid,
-			p_inventoryid: item.inventoryid,
-			p_quantity: 1,
-			p_transdate: addDays(stay.arrival, 1),
-			p_amount: 20
-		});
+		await pay(stay, 'Deposit (Received)', 100);
+		await postRoomNights(stay, 100);
+		await postCharge(stay, { amount: 20, transdate: addDays(stay.arrival, 1) });
 		// The guest settles at check-out: the charges, less the deposit.
-		await rpc('record_payment', {
-			p_reservationguestid: stay.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'Visa',
-			p_amount: 220,
-			p_paymentdate: stay.departure
-		});
+		await pay(stay, 'Payment (Regular)', 220, { date: stay.departure });
 		late = addDays(stay.departure, 1);
-		await rpc('post_charge', {
-			p_reservationguestid: stay.reservationguestid,
-			p_inventoryid: item.inventoryid,
-			p_quantity: 1,
-			p_transdate: late,
-			p_amount: 15
-		});
+		await postCharge(stay, { amount: 15, transdate: late });
 	});
 
 	it('counts none of the stay’s charges before the guest checks out', async () => {
-		expect(await line(stay.arrival, 'Total Sales and Charges')).toBe(0);
-		expect(await line(addDays(stay.arrival, 1), 'Total Sales and Charges')).toBe(0);
+		expect(await dcarLine(stay.arrival, 'Total Sales and Charges')).toBe(0);
+		expect(await dcarLine(addDays(stay.arrival, 1), 'Total Sales and Charges')).toBe(0);
 	});
 
 	it('counts them on the check-out day, where the day balances', async () => {
-		expect(await line(stay.departure, 'Total Sales and Charges')).toBe(320);
-		const summary = await rpc<{ upper_total: number; receipts_total: number; balance_owed: number }[]>(
-			'report_dcar_summary',
-			{ p_date: stay.departure }
-		);
-		expect(Number(summary[0].upper_total)).toBe(220);
-		expect(Number(summary[0].balance_owed)).toBe(0);
+		expect(await dcarLine(stay.departure, 'Total Sales and Charges')).toBe(320);
+		const day = await summary(stay.departure);
+		expect(Number(day.upper_total)).toBe(220);
+		expect(Number(day.balance_owed)).toBe(0);
 	});
 
 	it('takes as receipts only the money taken that day', async () => {
@@ -207,6 +174,6 @@ describe('print daily cash activity report — a stay counts on its check-out da
 	});
 
 	it('counts a charge posted after check-out on the day it is posted', async () => {
-		expect(await line(late, 'Total Sales and Charges')).toBe(15);
+		expect(await dcarLine(late, 'Total Sales and Charges')).toBe(15);
 	});
 });

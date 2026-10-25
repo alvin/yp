@@ -15,3 +15,4 @@ Feature: batch print the daily print run
     And Each kind of guest document is a group of its own on folio paper, since the lodge's folio paper is printed on the back for each kind: the waiver behind the check-in folio, arrival instructions behind the confirmation, nothing behind the check-out bill.
     And Each group shows how many pages it holds, and prints in one action on its own paper size with nothing from any other group, each item on its own page.
     And A document that fails to load is skipped without losing the rest of the batch.
+    And A guest document or daily report opened on its own prints on the same paper as it does in the batch.

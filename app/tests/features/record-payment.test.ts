@@ -1,62 +1,46 @@
 // Story: spec/features/record-payment.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
-
-interface LedgerRow {
-	line_source: string;
-	line_type: string;
-	amount: number;
-	balance_effect: number;
-}
+import { APP_URL, useAppPage } from '../helpers/app';
+import { ledger, makeReservation, pay, postRoomNights, rpc, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
 
+const page = useAppPage();
+const balance = async () => Number(await rpc('reservation_balance', { p_reservationid: fx.reservationid }));
+
 beforeAll(async () => {
 	fx = await makeReservation();
-	await rpc('post_room_nights', {
-		p_reservationguestid: fx.reservationguestid,
-		p_roomid: (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid,
-		p_occupancyin: fx.arrival,
-		p_occupancyout: fx.departure,
-		p_rate: 100,
-		p_transdate: fx.arrival
-	});
+	await postRoomNights(fx, 100); // $300 owing; historical dates carry no tax
 });
 
 describe('record payment', () => {
-	it('adds a payment to the reservation', async () => {
-		const id = await rpc<number>('record_payment', {
-			p_reservationguestid: fx.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'Visa',
-			p_amount: 120,
-			p_paymentdate: fx.arrival
-		});
-		expect(id).toBeGreaterThan(0);
+	it('adds a payment to the reservation and takes it off the balance', async () => {
+		const id = await pay(fx, 'Payment (Regular)', 120);
+		const line = (await ledger(fx.reservationid)).find(
+			(l) => l.line_source === 'payment' && l.line_id === id
+		);
+		expect([line?.line_type, line?.line_date.slice(0, 10), Number(line?.amount)]).toEqual([
+			'Payment (Regular)',
+			fx.arrival,
+			120
+		]);
+		expect(await balance()).toBe(180);
 	});
 
-	it('reduces the stay balance appropriately', async () => {
-		const before = await rpc<number>('reservation_balance', { p_reservationid: fx.reservationid });
-		await rpc('record_payment', {
-			p_reservationguestid: fx.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'Cash',
-			p_amount: 50,
-			p_paymentdate: fx.arrival
-		});
-		const after = await rpc<number>('reservation_balance', { p_reservationid: fx.reservationid });
-		expect(Number(after)).toBeCloseTo(Number(before) - 50, 2);
-	});
+	it('records a payment taken on the reservation screen, for review in its transactions', async () => {
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		const rows = page.locator('table tbody tr');
+		await expect.poll(() => rows.count(), { timeout: 15_000 }).toBe(2);
+		await page.getByRole('button', { name: 'Payment', exact: true }).click();
+		await page.fill('#p-amt', '50');
+		await page.fill('#p-date', fx.arrival);
+		await page.getByRole('button', { name: 'Record', exact: true }).click();
 
-	it('shows the payment in the reservation financial history', async () => {
-		const rows = await rpc<LedgerRow[]>('reservation_ledger', { p_reservationid: fx.reservationid });
-		const pay = rows.filter((r) => r.line_source === 'payment');
-		expect(pay.length).toBeGreaterThan(0);
-		expect(pay[0].balance_effect).toBeLessThan(0);
-	});
-
-	it('is reviewable after saving', async () => {
-		const rows = await rpc<LedgerRow[]>('reservation_ledger', { p_reservationid: fx.reservationid });
-		expect(rows.some((r) => r.line_type === 'Payment (Regular)')).toBe(true);
+		await expect.poll(() => rows.count(), { timeout: 15_000 }).toBe(3);
+		expect(await rows.filter({ hasText: '$50.00' }).count()).toBe(1);
+		await expect.poll(balance, { timeout: 10_000 }).toBe(130);
+		await expect
+			.poll(() => page.locator('text=Balance owing').locator('xpath=..').textContent())
+			.toContain('$130.00');
 	});
 });

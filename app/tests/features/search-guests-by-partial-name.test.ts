@@ -1,8 +1,7 @@
 // Story: spec/features/search-guests-by-partial-name.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import { rpc, uid } from '../helpers/db';
 
 interface NameRow {
@@ -15,7 +14,7 @@ function search(query: string): Promise<NameRow[]> {
 	return rpc<NameRow[]>('search_guests_by_name', { p_query: query });
 }
 
-let page: Page;
+const page = useAppPage();
 let u: string;
 // Guest last names are varchar(25), so the fixtures keep the distinctive
 // fragment the search is exercised with plus a short unique tail.
@@ -49,11 +48,6 @@ beforeAll(async () => {
 	const t = u.slice(-4);
 	doubleLast = `ZZDoe${t} ZZRoe${t}`;
 	doubleId = await rpc<number>('create_guest', { p_lastname: doubleLast, p_firstname: 'Sam' });
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
 });
 
 describe('search guests by partial name', () => {

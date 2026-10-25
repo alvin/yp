@@ -1,29 +1,19 @@
 // Story: spec/features/print-daily-operations-reports.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, todayISO, type Fixture } from '../helpers/db';
-
-let page: Page;
-
-beforeAll(async () => {
-	page = await openAppPage();
-	await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
-});
-
-afterAll(async () => {
-	await closeApp(page);
-});
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, printedDate, useAppPage } from '../helpers/app';
+import { addDays, makeReservation, roomDirectory, todayISO, type Fixture } from '../helpers/db';
 
 describe('print daily operations reports', () => {
-	it('lets staff choose a start date for the report run', async () => {
+	const page = useAppPage('/print');
+
+	it('opens each daily report in the print menu for the one date chosen', async () => {
 		const d = addDays(todayISO(), 3);
 		await page.fill('#print-date', d);
-		await expect
-			.poll(() => page.getAttribute('a[href*="/reports/housekeeping"]', 'href'), { timeout: 5_000 })
-			.toContain(`date=${d}`);
-		const inHouse = await page.getAttribute('a[href*="/reports/in-house"]', 'href');
-		expect(inHouse).toContain(`date=${d}`);
+		for (const report of ['housekeeping', 'in-house', 'requests', 'kitchen', 'manual-sales', 'cancellation-list']) {
+			await expect
+				.poll(() => page.getAttribute(`a[href^="/reports/${report}?"]`, 'href'), { timeout: 5_000 })
+				.toBe(`/reports/${report}?date=${d}`);
+		}
 	});
 
 	it('lets staff set an end date where a report supports a range', async () => {
@@ -51,31 +41,30 @@ describe('print daily operations reports', () => {
 });
 
 describe('print daily operations reports — the printed report', () => {
-	let reportPage: Page;
+	const reportPage = useAppPage();
 	let fx: Fixture;
 	let mid: string;
 
 	beforeAll(async () => {
 		fx = await makeReservation();
 		mid = addDays(fx.arrival, 1);
-		reportPage = await openAppPage();
 	});
 
-	afterAll(async () => {
-		await closeApp(reportPage);
-	});
-
-	it('renders the chosen date on the printed report', async () => {
+	it('prints the report for the date chosen', async () => {
 		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, {
 			waitUntil: 'networkidle'
 		});
-		const sheet = await reportPage.textContent('.report-page');
-		expect(sheet).toContain('Housekeeping Report');
-		expect(sheet).toContain(fx.lastname);
+		await expect.poll(() => reportPage.textContent('.report-page h3')).toBe(`for ${printedDate(mid)}`);
+		expect(await reportPage.textContent('.report-page')).toContain(fx.lastname);
 	});
 
-	it('re-dates the report from the report toolbar too', async () => {
-		expect(await reportPage.isVisible('#report-date')).toBe(true);
+	it('re-dates the report from the report screen', async () => {
+		const later = addDays(fx.departure, 1);
+		await reportPage.fill('#report-date', later);
+		await reportPage.waitForURL(`${APP_URL}/reports/housekeeping?date=${later}`, { timeout: 15_000 });
+		await expect.poll(() => reportPage.textContent('.report-page h3')).toBe(`for ${printedDate(later)}`);
+		expect(await reportPage.textContent('.report-page')).not.toContain(fx.lastname);
+		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, { waitUntil: 'networkidle' });
 	});
 
 	it('numbers the pages of a printed report, and not of a guest document', async () => {
@@ -91,20 +80,15 @@ describe('print daily operations reports — the printed report', () => {
 });
 
 describe('print daily operations reports — each line ruled and shaded', () => {
-	let reportPage: Page;
+	const reportPage = useAppPage();
 	let date: string;
 
 	beforeAll(async () => {
 		// Two rooms held the same night, so the reports have two lines.
-		const rooms = await rpc<{ roomid: number }[]>('room_directory');
+		const rooms = await roomDirectory();
 		const first = await makeReservation({ roomid: rooms[0].roomid });
 		await makeReservation({ arrival: first.arrival, roomid: rooms[1].roomid });
 		date = addDays(first.arrival, 1);
-		reportPage = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(reportPage);
 	});
 
 	it('rules off the lines of every daily report', async () => {
@@ -128,7 +112,7 @@ describe('print daily operations reports — each line ruled and shaded', () => 
 		await reportPage.emulateMedia({ media: 'print' });
 		try {
 			const rows = reportPage.locator('.report-page table.ruled tbody tr');
-			expect(await rows.count()).toBeGreaterThanOrEqual(2);
+			expect(await rows.count()).toBe(2);
 			const look = (i: number) =>
 				rows.nth(i).evaluate((el) => {
 					const s = getComputedStyle(el);

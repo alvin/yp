@@ -1,95 +1,92 @@
 // Story: spec/features/post-room-night-and-extra-charges.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, staffClient, todayISO, unwrap, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import {
+	ledger,
+	makeReservation,
+	postCharge,
+	postRoomNights,
+	pricedItem,
+	rpc,
+	staffClient,
+	todayISO,
+	unwrap,
+	type Fixture,
+	type Item
+} from '../helpers/db';
 import type { Room } from '../../src/lib/data/types';
 
 let fx: Fixture;
-let roomid: number;
-let invid: number;
+let item: Item;
+let wine: { inventoryid: number; invcode: string; invamount: number };
 
 beforeAll(async () => {
 	fx = await makeReservation();
-	roomid = (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid;
-	const client = await staffClient();
-	invid = (
-		unwrap(
-			await client
-				.from('inventory_items')
-				.select('inventoryid')
-				.eq('invarchive', false)
-				.gt('invamount', 0)
-				.limit(1)
-		) as { inventoryid: number }[]
-	)[0].inventoryid;
+	item = await pricedItem();
+	const db = await staffClient();
+	[wine] = unwrap(
+		await db
+			.from('inventory_items')
+			.select('inventoryid, invcode, invamount')
+			.eq('invarchive', false)
+			.eq('invtype', 'Red Wine')
+			.gt('invamount', 0)
+			.order('inventoryid')
+			.limit(1)
+	) as { inventoryid: number; invcode: string; invamount: number }[];
 });
 
+async function transtypeOf(transactionid: number): Promise<string> {
+	const db = await staffClient();
+	const [row] = unwrap(
+		await db.from('transactions').select('transtype').eq('transactionid', transactionid)
+	) as { transtype: string }[];
+	return row.transtype;
+}
+
+const lineOf = async (id: number) =>
+	(await ledger(fx.reservationid)).find((l) => l.line_source === 'transaction' && l.line_id === id);
+
 describe('post room-night and extra charges', () => {
-	it('adds room-night charges for the reservation', async () => {
-		const txid = await rpc<number>('post_room_nights', {
-			p_reservationguestid: fx.reservationguestid,
-			p_roomid: roomid,
-			p_occupancyin: fx.arrival,
-			p_occupancyout: fx.departure,
-			p_rate: 150,
-			p_transdate: fx.arrival
-		});
-		expect(txid).toBeGreaterThan(0);
+	it('adds room nights to the reservation, dated and counted', async () => {
+		const id = await postRoomNights(fx, 150);
+		const line = await lineOf(id);
+		expect([line?.line_type, line?.line_date.slice(0, 10), Number(line?.quantity), Number(line?.amount)]).toEqual([
+			'Room',
+			fx.arrival,
+			3,
+			450
+		]);
 	});
 
-	it('adds extra charges for the reservation', async () => {
-		const txid = await rpc<number>('post_charge', {
-			p_reservationguestid: fx.reservationguestid,
-			p_inventoryid: invid,
-			p_quantity: 1,
-			p_transdate: fx.arrival
-		});
-		expect(txid).toBeGreaterThan(0);
+	it('adds an extra charge to the reservation, dated and counted', async () => {
+		const id = await postCharge(fx, { inventoryid: item.inventoryid, quantity: 2 });
+		const line = await lineOf(id);
+		expect([line?.code, line?.line_date.slice(0, 10), Number(line?.quantity), Number(line?.amount)]).toEqual([
+			item.invcode,
+			fx.arrival,
+			2,
+			Math.round(item.invamount * 2 * 100) / 100
+		]);
 	});
 
-	it('records each charge line with a date and quantity', async () => {
-		const rows = await rpc<
-			{ line_source: string; line_date: string; quantity: number }[]
-		>('reservation_ledger', { p_reservationid: fx.reservationid });
-		const charges = rows.filter((r) => r.line_source === 'transaction');
-		expect(charges.length).toBeGreaterThanOrEqual(2);
-		for (const c of charges) {
-			expect(c.line_date).toBe(fx.arrival);
-			expect(Number(c.quantity)).toBeGreaterThan(0);
-		}
+	it('posts an extra charge to its daily cash category through the posting function', async () => {
+		const id = await postCharge(fx, { inventoryid: wine.inventoryid });
+		expect(await transtypeOf(id)).toBe('Liquor');
 	});
 
-	it('posts an extra charge to its daily cash category without being told it', async () => {
-		const client = await staffClient();
-		const [wine] = unwrap(
-			await client
-				.from('inventory_items')
-				.select('inventoryid')
-				.eq('invarchive', false)
-				.eq('invtype', 'Red Wine')
-				.limit(1)
-		) as { inventoryid: number }[];
-		const txid = await rpc<number>('post_charge', {
-			p_reservationguestid: fx.reservationguestid,
-			p_inventoryid: wine.inventoryid,
-			p_quantity: 1,
-			p_transdate: fx.arrival
-		});
-		const [line] = unwrap(
-			await client.from('transactions').select('transtype').eq('transactionid', txid)
-		) as { transtype: string }[];
-		expect(line.transtype).toBe('Liquor');
-	});
-
-	it('updates the reservation total to include posted lines', async () => {
-		const balance = await rpc<number>('reservation_balance', { p_reservationid: fx.reservationid });
-		expect(Number(balance)).toBeGreaterThan(0);
+	it('includes every posted line in the reservation total', async () => {
+		// Historical dates carry no tax, so the total is the lines alone.
+		const expected = 450 + Math.round(item.invamount * 2 * 100) / 100 + Number(wine.invamount);
+		expect(Number(await rpc('reservation_balance', { p_reservationid: fx.reservationid }))).toBeCloseTo(
+			expected,
+			2
+		);
 	});
 });
 
 describe('post room-night and extra charges — the room rate in the charge dialog', () => {
-	let page: Page;
+	const page = useAppPage();
 	let stay: Fixture;
 	// Two rooms that charge different rates today, so a change of room shows.
 	let rooms: { room: Room; rate: number }[];
@@ -123,14 +120,9 @@ describe('post room-night and extra charges — the room rate in the charge dial
 		}
 		rooms = priced;
 
-		page = await openAppPage();
 		await page.goto(`${APP_URL}/reservations/${stay.resnumber}`, { waitUntil: 'networkidle' });
 		await page.getByRole('button', { name: 'Charge', exact: true }).click();
 		await page.locator('#c-room').waitFor({ timeout: 15_000 });
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
 	});
 
 	it("shows the chosen room's rate before the charge is posted", async () => {
@@ -149,7 +141,7 @@ describe('post room-night and extra charges — the room rate in the charge dial
 				p_inventoryid: 1,
 				p_notes: 'x'
 			})
-		).rejects.toThrow(/function|post_charge/i);
+		).rejects.toThrow(/Could not find the function ypl\.post_charge\(.*p_notes/);
 	});
 
 	it('starts on the Double rate and follows the rate chosen', async () => {
@@ -201,5 +193,23 @@ describe('post room-night and extra charges — the room rate in the charge dial
 				{ timeout: 10_000 }
 			)
 			.toEqual([199]);
+	});
+
+	it('posts an extra charge added on screen to its daily cash category', async () => {
+		await page.getByRole('button', { name: 'Charge', exact: true }).click();
+		await page.getByRole('button', { name: 'Item / extra' }).click();
+		await page.click('#c-item');
+		await page.keyboard.type(wine.invcode);
+		await page.locator('[data-testid=combobox-list] [role=option]').first().click();
+		await page.getByRole('button', { name: 'Add charge' }).click();
+		await expect
+			.poll(
+				async () =>
+					(await ledger(stay.reservationid)).filter((l) => l.code === wine.invcode).map((l) => l.line_id),
+				{ timeout: 10_000 }
+			)
+			.toHaveLength(1);
+		const [line] = (await ledger(stay.reservationid)).filter((l) => l.code === wine.invcode);
+		expect(await transtypeOf(line.line_id)).toBe('Liquor');
 	});
 });

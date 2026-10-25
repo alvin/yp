@@ -70,19 +70,28 @@
 		if (allQuery.trim()) goto(`/query?q=${encodeURIComponent(allQuery.trim())}`);
 	}
 
+	// --- Primary actions ---
+	const ACTIONS = [
+		{
+			href: '/reservations/new',
+			icon: PlusIcon,
+			title: 'New reservation',
+			hint: 'Blank transaction screen'
+		},
+		{ href: '/print', icon: PrinterIcon, title: 'Print Center', hint: 'Folios & daily reports' },
+		{ href: '/reports/dcar', icon: CalculatorIcon, title: 'Daily Cash Report', hint: 'Balance the day' }
+	];
+
 	// --- Today at a glance ---
-	let arrivals = $state(0);
-	let departures = $state(0);
-	let inHouse = $state(0);
+	const GLANCE: { mode: DateMode; icon: typeof LogInIcon; label: string }[] = [
+		{ mode: 'arrivals', icon: LogInIcon, label: 'Arrivals' },
+		{ mode: 'departures', icon: LogOutIcon, label: 'Departures' },
+		{ mode: 'in_house', icon: BedIcon, label: 'In house' }
+	];
+	let counts = $state(GLANCE.map(() => 0));
 	onMount(async () => {
-		const [a, d, i] = await Promise.all([
-			searchByDate(TODAY, 'arrivals'),
-			searchByDate(TODAY, 'departures'),
-			searchByDate(TODAY, 'in_house')
-		]);
-		arrivals = a.length;
-		departures = d.length;
-		inHouse = i.length;
+		const found = await Promise.all(GLANCE.map((g) => searchByDate(TODAY, g.mode)));
+		counts = found.map((rows) => rows.length);
 	});
 </script>
 
@@ -202,42 +211,20 @@
 
 	<!-- Primary actions -->
 	<div class="mt-5 grid gap-3 sm:grid-cols-3">
-		<a
-			href="/reservations/new"
-			class="group bg-card hover:border-primary/40 flex items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors"
-		>
-			<span class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-				<PlusIcon class="size-5" />
-			</span>
-			<span>
-				<span class="block text-sm font-semibold">New reservation</span>
-				<span class="text-muted-foreground block text-xs">Blank transaction screen</span>
-			</span>
-		</a>
-		<a
-			href="/print"
-			class="group bg-card hover:border-primary/40 flex items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors"
-		>
-			<span class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-				<PrinterIcon class="size-5" />
-			</span>
-			<span>
-				<span class="block text-sm font-semibold">Print Center</span>
-				<span class="text-muted-foreground block text-xs">Folios & daily reports</span>
-			</span>
-		</a>
-		<a
-			href="/reports/dcar"
-			class="group bg-card hover:border-primary/40 flex items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors"
-		>
-			<span class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-				<CalculatorIcon class="size-5" />
-			</span>
-			<span>
-				<span class="block text-sm font-semibold">Daily Cash Report</span>
-				<span class="text-muted-foreground block text-xs">Balance the day</span>
-			</span>
-		</a>
+		{#each ACTIONS as a (a.href)}
+			<a
+				href={a.href}
+				class="group bg-card hover:border-primary/40 flex items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors"
+			>
+				<span class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+					<a.icon class="size-5" />
+				</span>
+				<span>
+					<span class="block text-sm font-semibold">{a.title}</span>
+					<span class="text-muted-foreground block text-xs">{a.hint}</span>
+				</span>
+			</a>
+		{/each}
 	</div>
 
 	<!-- Today at a glance -->
@@ -247,30 +234,16 @@
 			<span class="text-muted-foreground text-xs">{dateMed(TODAY)}</span>
 		</div>
 		<div class="grid grid-cols-3 gap-3">
-			<a
-				href="/date?date={TODAY}&mode=arrivals"
-				class="bg-card hover:border-primary/40 rounded-xl border p-4 text-center shadow-sm transition-colors"
-			>
-				<LogInIcon class="text-primary mx-auto size-5" />
-				<div class="mt-1 text-2xl font-semibold tabular-nums">{arrivals}</div>
-				<div class="text-muted-foreground text-xs">Arrivals</div>
-			</a>
-			<a
-				href="/date?date={TODAY}&mode=departures"
-				class="bg-card hover:border-primary/40 rounded-xl border p-4 text-center shadow-sm transition-colors"
-			>
-				<LogOutIcon class="text-primary mx-auto size-5" />
-				<div class="mt-1 text-2xl font-semibold tabular-nums">{departures}</div>
-				<div class="text-muted-foreground text-xs">Departures</div>
-			</a>
-			<a
-				href="/date?date={TODAY}&mode=in_house"
-				class="bg-card hover:border-primary/40 rounded-xl border p-4 text-center shadow-sm transition-colors"
-			>
-				<BedIcon class="text-primary mx-auto size-5" />
-				<div class="mt-1 text-2xl font-semibold tabular-nums">{inHouse}</div>
-				<div class="text-muted-foreground text-xs">In house</div>
-			</a>
+			{#each GLANCE as g, i (g.mode)}
+				<a
+					href="/date?date={TODAY}&mode={g.mode}"
+					class="bg-card hover:border-primary/40 rounded-xl border p-4 text-center shadow-sm transition-colors"
+				>
+					<g.icon class="text-primary mx-auto size-5" />
+					<div class="mt-1 text-2xl font-semibold tabular-nums">{counts[i]}</div>
+					<div class="text-muted-foreground text-xs">{g.label}</div>
+				</a>
+			{/each}
 		</div>
 	</div>
 </div>

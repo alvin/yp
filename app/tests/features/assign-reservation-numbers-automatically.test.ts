@@ -7,7 +7,7 @@ describe('assign reservation numbers automatically', () => {
 	it('assigns the next in-house number when none is supplied', async () => {
 		const a = await makeReservation();
 		const b = await makeReservation();
-		expect(a.resnumber).toBeGreaterThan(0);
+		expect(Number.isInteger(a.resnumber)).toBe(true);
 		expect(b.resnumber).toBeGreaterThan(a.resnumber);
 	});
 
@@ -18,18 +18,16 @@ describe('assign reservation numbers automatically', () => {
 	});
 
 	it('continues from the highest stored number', async () => {
-		const before = await makeReservation();
-		const after = await makeReservation();
 		const client = await staffClient();
-		const max = unwrap(
+		const [highest] = unwrap(
 			await client
 				.from('reservations')
 				.select('resnumber')
 				.order('resnumber', { ascending: false })
 				.limit(1)
 		) as { resnumber: number }[];
-		expect(after.resnumber).toBeGreaterThan(before.resnumber);
-		expect(max[0].resnumber).toBeGreaterThanOrEqual(after.resnumber);
+		const next = await makeReservation();
+		expect(next.resnumber).toBeGreaterThan(highest.resnumber);
 	});
 
 	it('keeps an explicitly supplied number', async () => {

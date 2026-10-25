@@ -4,11 +4,10 @@
 	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import { Combobox } from '$lib/components/ui/combobox/index.js';
 	import { TODAY } from '$lib/data/queries.js';
-	import { money } from '$lib/format.js';
+	import { MONTHS_LONG, money } from '$lib/format.js';
 
 	let { data } = $props();
 
-	const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 	const thisYear = Number(TODAY.slice(0, 4));
 	const years = Array.from({ length: 6 }, (_, i) => String(thisYear - i)).map((y) => ({
 		value: y,
@@ -49,7 +48,7 @@
 		<tbody>
 			{#each data.rows as row, i (row.month)}
 				<tr>
-					<td>{MONTHS[i]}</td>
+					<td>{MONTHS_LONG[i]}</td>
 					<td class="money">{row.deposits}</td>
 					<td class="money">{money(row.received)}</td>
 					<td class="money">{money(row.refunded)}</td>

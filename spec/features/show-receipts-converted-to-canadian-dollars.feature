@@ -9,7 +9,6 @@ Feature: show receipts converted to canadian dollars
     Given daily cash is being reviewed and a receipt includes U.S. funds
 
   Scenario: Acceptance criteria
-    Then The review view shows the original U.S. amount and the Canadian dollar equivalent for each applicable receipt.
-    And The conversion is visible during daily cash review without requiring the reviewer to leave the workflow.
-    And Amounts that are already in Canadian dollars are shown normally and are not marked as converted.
-    And The displayed conversion is consistent with the lodge’s current balancing practice.
+    Then The deposits received detail shows a receipt taken in U.S. funds at its U.S. amount, marked as U.S. funds, beside its Canadian value at the day's exchange rate.
+    And A receipt already in Canadian dollars shows the same amount on both sides, marked Canadian.
+    And The cashier detail and the cash sheet count every receipt at its Canadian value, and the cash sheet says that U.S. amounts are converted.

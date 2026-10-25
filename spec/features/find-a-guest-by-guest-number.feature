@@ -11,4 +11,3 @@ Feature: find a guest by guest number
   Scenario: Acceptance criteria
     Then Entering a guest number returns that guest, naming the guest number as the field that matched.
     And The guest number matches only when it is entered in full, so it does not crowd out the other matches.
-    And A reservation number still returns its reservation.

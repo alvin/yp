@@ -1,6 +1,7 @@
 // Story: spec/features/run-all-fields-search.feature
 
 import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import { makeReservation, rpc, uid, type Fixture } from '../helpers/db';
 
 interface AllFieldsRow {
@@ -22,12 +23,17 @@ let city: string;
 let firstname: string;
 let firmName: string;
 let firmGuestId: number;
+// An address of this run's own, so earlier runs' guests never match it.
+let lane: string;
+
+const page = useAppPage();
 
 beforeAll(async () => {
+	lane = `ZZUnique${uid()} Lane`;
 	guestid = await rpc<number>('create_guest', {
 		p_lastname: `ZZAll-${uid()}`,
 		p_primaryphone: '(250) 555-0199',
-		p_address: '42 Unique Test Lane'
+		p_address: `42 ${lane}`
 	});
 	fx = await makeReservation();
 
@@ -63,11 +69,11 @@ describe('run all-fields search', () => {
 	});
 
 	it('matches details beyond name or reservation number, such as the address', async () => {
-		const rows = await rpc<AllFieldsRow[]>('search_all_fields', { p_query: 'Unique Test Lane' });
+		const rows = await rpc<AllFieldsRow[]>('search_all_fields', { p_query: lane });
 		const hit = rows.find((r) => r.guestid === guestid);
 		expect(hit).toBeDefined();
 		expect(hit!.matched_on).toBe('address');
-		expect(hit!.detail).toContain('42 Unique Test Lane');
+		expect(hit!.detail).toContain(`42 ${lane}`);
 	});
 
 	it('returns only the records carrying every keyword entered', async () => {
@@ -107,7 +113,7 @@ describe('run all-fields search', () => {
 		// group on a reservation. A company filed against a guest is not one.
 		const rows = await rpc<AllFieldsRow[]>('search_all_fields', { p_query: firmName });
 		expect(rows.map((r) => r.guestid)).not.toContain(firmGuestId);
-		for (const q of ['Unique Test Lane', '555-0199', String(guestid)]) {
+		for (const q of [lane, String(guestid)]) {
 			const hit = (await rpc<AllFieldsRow[]>('search_all_fields', { p_query: q })).find(
 				(r) => r.guestid === guestid && r.resnumber == null
 			);
@@ -125,5 +131,13 @@ describe('run all-fields search', () => {
 		// The row carries the ids the screen needs to open the reservation.
 		expect(hit!.reservationid).toBe(fx.reservationid);
 		expect(hit!.guest_name).toContain(fx.lastname);
+	});
+
+	it('opens a matching guest from the results screen', async () => {
+		await page.goto(`${APP_URL}/query?q=${encodeURIComponent(lane)}`, {
+			waitUntil: 'networkidle'
+		});
+		await page.getByText(`42 ${lane}`).first().click();
+		await page.waitForURL(`${APP_URL}/guests/${guestid}`, { timeout: 15_000 });
 	});
 });

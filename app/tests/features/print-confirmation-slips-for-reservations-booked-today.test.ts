@@ -1,38 +1,63 @@
 // Story: spec/features/print-confirmation-slips-for-reservations-booked-today.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { addDays, rpc, todayISO, uid } from '../helpers/db';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { addDays, cancel, isolatedDate, makeReservation, rpc, todayISO, uid, type Fixture } from '../helpers/db';
 
-let resnumber: number;
-let reservationid: number;
+const slips = async (date: string) =>
+	(
+		await rpc<{ resnumber: number }[]>('report_guest_document_queue', {
+			p_document: 'confirmation',
+			p_date: date
+		})
+	).map((r) => r.resnumber);
+
+let bookedToday: { reservationid: number; resnumber: number };
+let cancelledToday: Fixture;
+let confirmed: Fixture; // confirmed on a day of its own
+let confirmedOn: string;
+
+const page = useAppPage();
 
 beforeAll(async () => {
-	// Booked right now → booking date is today.
+	// Every fixture is booked now; its booking date is today.
 	const guestid = await rpc<number>('create_guest', { p_lastname: `ZZBook-${uid()}` });
-	const created = await rpc<{ reservationid: number; resnumber: number }[]>('create_reservation', {
+	[bookedToday] = await rpc<{ reservationid: number; resnumber: number }[]>('create_reservation', {
 		p_guestid: guestid,
 		p_arrival: addDays(todayISO(), 90),
 		p_departure: addDays(todayISO(), 93),
 		p_bookedby: 'QA'
 	});
-	resnumber = created[0].resnumber;
-	reservationid = created[0].reservationid;
+	cancelledToday = await makeReservation({ roomid: null });
+	await cancel(cancelledToday, 'none', todayISO());
+	confirmed = await makeReservation({ roomid: null });
+	confirmedOn = isolatedDate();
+	await rpc('confirm_reservation', { p_reservationid: confirmed.reservationid, p_date: confirmedOn });
 });
 
 describe('print confirmation slips for reservations booked today', () => {
-	it('queues the confirmation for the booking day', async () => {
-		const rows = await rpc<{ resnumber: number }[]>('report_guest_document_queue', {
-			p_document: 'confirmation',
-			p_date: todayISO()
-		});
-		expect(rows.some((r) => r.resnumber === resnumber)).toBe(true);
+	it("lists today's slips by default in the Print Center", async () => {
+		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
+		expect(await page.inputValue('#print-date')).toBe(todayISO());
+		await page.getByRole('tab', { name: /^Confirmation/ }).click();
+		await page
+			.locator(`[role=tabpanel]:visible a[href="/reports/confirmation/${bookedToday.resnumber}"]`)
+			.waitFor({ timeout: 10_000 });
 	});
 
-	it('renders the slip data for printing', async () => {
-		const conf = await rpc<{ resnumber: number; date_printed: string }[]>(
-			'report_reservation_confirmation',
-			{ p_reservationid: reservationid }
+	it('includes only the stays booked or confirmed that day, and leaves cancelled ones out', async () => {
+		expect(await slips(todayISO())).toContain(bookedToday.resnumber);
+		expect(await slips(todayISO())).not.toContain(cancelledToday.resnumber);
+		expect(await slips(confirmedOn)).toEqual([confirmed.resnumber]);
+		expect(await slips(addDays(confirmedOn, 1))).toEqual([]);
+	});
+
+	it("prints the day's slips together in the batch's confirmation group", async () => {
+		await page.goto(`${APP_URL}/print/batch?date=${confirmedOn}`, { waitUntil: 'networkidle' });
+		const group = page.locator('[data-testid=group-confirmation]');
+		await group.waitFor({ timeout: 15_000 });
+		expect(await group.locator('.report-page').count()).toBe(1);
+		expect(await group.locator('.report-page').textContent()).toContain(
+			`Res. No. ${confirmed.resnumber}`
 		);
-		expect(conf[0].resnumber).toBe(resnumber);
-		expect(conf[0].date_printed).toBe(todayISO());
 	});
 });

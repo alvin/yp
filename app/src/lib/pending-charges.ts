@@ -9,7 +9,7 @@
 import { postCharge, recordPayment } from './data/mutations.js';
 import { round2 } from './charges.js';
 
-export interface PendingItemLine {
+interface PendingItemLine {
 	id: number;
 	kind: 'item';
 	inventoryid: number;
@@ -19,7 +19,7 @@ export interface PendingItemLine {
 	unit: number;
 }
 
-export interface PendingPaymentLine {
+interface PendingPaymentLine {
 	id: number;
 	kind: 'payment';
 	category: string;

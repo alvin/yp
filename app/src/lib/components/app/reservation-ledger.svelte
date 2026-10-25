@@ -4,33 +4,18 @@
     import CreditCardIcon from "@lucide/svelte/icons/credit-card";
     import TrashIcon from "@lucide/svelte/icons/trash-2";
     import PencilIcon from "@lucide/svelte/icons/pencil";
-    import { toast } from "svelte-sonner";
 
     import { Button } from "$lib/components/ui/button/index.js";
-    import { Input } from "$lib/components/ui/input/index.js";
-    import { Label } from "$lib/components/ui/label/index.js";
-    import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
-    import { addDays, dateShort, money } from "$lib/format.js";
-    import { effectiveRoomRate, reservationLedger } from "$lib/data/queries.js";
-    import {
-        archivePayment,
-        archiveTransaction,
-        changeChargeQuantity,
-        postCharge,
-        postRoomNights,
-        recordPayment,
-    } from "$lib/data/mutations.js";
+    import RowAction from "$lib/components/app/row-action.svelte";
+    import AddChargeDialog from "$lib/components/app/ledger/add-charge-dialog.svelte";
+    import RecordPaymentDialog from "$lib/components/app/ledger/record-payment-dialog.svelte";
+    import ChangeQuantityDialog from "$lib/components/app/ledger/change-quantity-dialog.svelte";
+    import RemoveLineDialog from "$lib/components/app/ledger/remove-line-dialog.svelte";
+    import { dateShort, money } from "$lib/format.js";
+    import { reservationLedger } from "$lib/data/queries.js";
     import { round2 } from "$lib/charges.js";
-    import { ROOMS, inventoryById, roomById } from "$lib/data/reference.js";
-    import {
-        itemOptions,
-        paymentCategoryOptions,
-        roomOptions,
-        tenderTypeOptions,
-    } from "$lib/options.js";
-    import type { LedgerRow, RoomRateType } from "$lib/data/types.js";
+    import type { LedgerRow } from "$lib/data/types.js";
 
     let {
         reservationid,
@@ -59,227 +44,25 @@
         lines.length ? lines[lines.length - 1].running_balance : 0,
     );
 
-    // ---- Add charge ----
+    async function reload() {
+        lines = await reservationLedger(reservationid);
+    }
+
     let chargeOpen = $state(false);
-    let chargeKind = $state<"room" | "item">("room");
-    let cRoom = $state(String(ROOMS[0].roomid));
-    let cRateType = $state<RoomRateType>("Regular");
-    let cItem = $state("");
-    let cQty = $state(1);
-    let cUnit = $state(0);
-    let cDate = $state("");
-
-    function openCharge() {
-        chargeKind = "room";
-        cRoom = String(ROOMS[0].roomid);
-        cRateType = "Regular";
-        cItem = "";
-        cQty = 1;
-        cUnit = 0;
-        cDate = today;
-        chargeOpen = true;
-    }
-
-    function onItemChange(id: string) {
-        cUnit = inventoryById(Number(id))?.invamount ?? 0;
-    }
-
-    // A room night is priced from the room's dated rate of the chosen type, as
-    // Access asked. Show that rate in Unit price rather than 0.00, so the clerk
-    // sees what will post and can still type over it. Picking another room,
-    // rate or date looks it up again; a slower earlier lookup never overwrites
-    // a newer one.
-    //
-    // The rate table keeps Access's names for the three rates; the desk calls
-    // them by who is in the room, as Access's own rate codes describe them:
-    // Regular is "Night for Two", Special "Night for One", Split "Split Rate".
-    // Which one a stay is charged, if any, is the clerk's choice.
-    const RATE_TYPES: { value: RoomRateType; label: string }[] = [
-        { value: "Regular", label: "Double" },
-        { value: "Special", label: "Single" },
-        { value: "Split", label: "Split" },
-    ];
-    let rateLookup = 0;
-    $effect(() => {
-        if (!chargeOpen || chargeKind !== "room") return;
-        const roomid = Number(cRoom);
-        const date = cDate;
-        const ratetype = cRateType;
-        if (!roomid || !date) return;
-        const lookup = ++rateLookup;
-        effectiveRoomRate(roomid, date, ratetype)
-            .then((rate) => {
-                if (lookup === rateLookup) cUnit = rate ?? 0;
-            })
-            .catch(() => {
-                // No rate shown; posting still prices from the room's rate.
-            });
-    });
-
-    const rooms = roomOptions();
-    const items = itemOptions();
-    const categories = paymentCategoryOptions();
-    const tenders = tenderTypeOptions();
-
-    async function saveCharge() {
-        const qty = Math.max(1, Number(cQty) || 1);
-        const unit = round2(Number(cUnit) || 0);
-        if (chargeKind === "item" && !cItem) {
-            toast.error("Choose an item to charge.");
-            return;
-        }
-        try {
-            let description: string;
-            if (chargeKind === "room") {
-                const room = roomById(Number(cRoom))!;
-                description =
-                    room.roomname +
-                    (room.roomnumber ? ` ${room.roomnumber}` : "");
-                await postRoomNights(
-                    reservationguestid,
-                    room.roomid,
-                    cDate,
-                    addDays(cDate, qty),
-                    unit > 0 ? unit : null,
-                    cDate,
-                    cRateType,
-                );
-            } else {
-                const inv = inventoryById(Number(cItem))!;
-                description = inv.invitemdescription ?? inv.invtype;
-                await postCharge(
-                    reservationguestid,
-                    inv.inventoryid,
-                    qty,
-                    cDate,
-                    round2(unit * qty),
-                );
-            }
-            lines = await reservationLedger(reservationid);
-            chargeOpen = false;
-            toast.success(`Added ${description}`);
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not add the charge.",
-            );
-        }
-    }
-
-    // ---- Add payment ----
     let payOpen = $state(false);
-    let pCategory = $state("Payment (Regular)");
-    let pType = $state("Visa");
-    let pAmount = $state(0);
-    let pDate = $state("");
-    let pNotes = $state("");
 
-    function openPayment() {
-        pCategory = "Payment (Regular)";
-        pType = "Visa";
-        pAmount = 0;
-        pDate = today;
-        pNotes = "";
-        payOpen = true;
-    }
-
-    async function savePayment() {
-        const amount = round2(Number(pAmount) || 0);
-        if (!amount) {
-            toast.error("Enter a payment amount.");
-            return;
-        }
-        try {
-            await recordPayment(
-                reservationguestid,
-                pCategory,
-                pType,
-                amount,
-                pDate,
-                pNotes.trim() || null,
-            );
-            lines = await reservationLedger(reservationid);
-            payOpen = false;
-            toast.success(
-                `Recorded ${pCategory} — ${money(amount)} ${pType}`,
-            );
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not record the payment.",
-            );
-        }
-    }
-
-    // ---- Remove a line entered in error ----
-    // Charges and receipts posted by mistake are taken off the reservation
-    // here. The database archives the row rather than deleting it, so it
-    // leaves the ledger, the balance, and every report while the correction
-    // stays on record.
+    // A line's pen changes its quantity; its bin removes it.
+    let qtyOpen = $state(false);
     let removeOpen = $state(false);
-    let removing = $state(false);
     let target = $state<LedgerRow | null>(null);
 
+    function askQuantity(line: LedgerRow) {
+        target = line;
+        qtyOpen = true;
+    }
     function askRemove(line: LedgerRow) {
         target = line;
         removeOpen = true;
-    }
-
-    async function confirmRemove() {
-        const line = target;
-        if (!line) return;
-        removing = true;
-        try {
-            if (line.line_source === "transaction")
-                await archiveTransaction(line.line_id);
-            else await archivePayment(line.line_id);
-            lines = await reservationLedger(reservationid);
-            removeOpen = false;
-            target = null;
-            toast.success(`Removed ${line.description}`);
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not remove the line.",
-            );
-        } finally {
-            removing = false;
-        }
-    }
-
-    // ---- Change a charge's quantity ----
-    // A guest's drinks over a stay kept on one line: the line keeps its price
-    // per unit and the database reprices it and its taxes. On a room line the
-    // quantity is nights.
-    let qtyOpen = $state(false);
-    let qtySaving = $state(false);
-    let qtyTarget = $state<LedgerRow | null>(null);
-    let newQty = $state(1);
-    const qtyValid = $derived(
-        Number.isInteger(Number(newQty)) && Number(newQty) >= 1,
-    );
-
-    function askQuantity(line: LedgerRow) {
-        qtyTarget = line;
-        newQty = line.quantity;
-        qtyOpen = true;
-    }
-
-    async function confirmQuantity() {
-        const line = qtyTarget;
-        if (!line || !qtyValid) return;
-        const qty = Number(newQty);
-        qtySaving = true;
-        try {
-            await changeChargeQuantity(line.line_id, qty);
-            lines = await reservationLedger(reservationid);
-            qtyOpen = false;
-            qtyTarget = null;
-            toast.success(`Changed ${line.description} to ${qty}`);
-        } catch (e) {
-            toast.error(
-                e instanceof Error ? e.message : "Could not change the quantity.",
-            );
-        } finally {
-            qtySaving = false;
-        }
     }
 </script>
 
@@ -289,10 +72,10 @@
             <ReceiptIcon class="size-4" /> Transactions
         </h2>
         <div class="flex gap-2">
-            <Button size="sm" variant="outline" onclick={openCharge}
+            <Button size="sm" variant="outline" onclick={() => (chargeOpen = true)}
                 ><PlusIcon /> Charge</Button
             >
-            <Button size="sm" variant="outline" onclick={openPayment}
+            <Button size="sm" variant="outline" onclick={() => (payOpen = true)}
                 ><CreditCardIcon /> Payment</Button
             >
         </div>
@@ -339,25 +122,20 @@
                         >
                         <td class="pr-2 text-right whitespace-nowrap">
                             {#if l.line_source === "transaction"}
-                                <button
-                                    type="button"
-                                    aria-label="Change quantity of {l.description}"
+                                <RowAction
+                                    icon={PencilIcon}
+                                    label="Change quantity of {l.description}"
                                     title="Change quantity"
                                     onclick={() => askQuantity(l)}
-                                    class="text-muted-foreground hover:text-foreground rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                >
-                                    <PencilIcon class="size-3.5" />
-                                </button>
+                                />
                             {/if}
-                            <button
-                                type="button"
-                                aria-label="Remove {l.description}"
+                            <RowAction
+                                icon={TrashIcon}
+                                label="Remove {l.description}"
                                 title="Remove this line"
+                                destructive
                                 onclick={() => askRemove(l)}
-                                class="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                            >
-                                <TrashIcon class="size-3.5" />
-                            </button>
+                            />
                         </td>
                     </tr>
                 {:else}
@@ -387,237 +165,17 @@
     </div>
 </div>
 
-<!-- Add charge dialog -->
-<Dialog.Root bind:open={chargeOpen}>
-    <Dialog.Content class="sm:max-w-md">
-        <Dialog.Header>
-            <Dialog.Title>Add charge</Dialog.Title>
-            <Dialog.Description
-                >Room nights and extras.</Dialog.Description
-            >
-        </Dialog.Header>
-        <div class="space-y-3">
-            <div class="bg-muted grid grid-cols-2 gap-1 rounded-lg p-1">
-                <button
-                    type="button"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {chargeKind ===
-                    'room'
-                        ? 'bg-field shadow-sm'
-                        : 'text-muted-foreground'}"
-                    onclick={() => (chargeKind = "room")}>Room night</button
-                >
-                <button
-                    type="button"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {chargeKind ===
-                    'item'
-                        ? 'bg-field shadow-sm'
-                        : 'text-muted-foreground'}"
-                    onclick={() => {
-                        chargeKind = "item";
-                        cUnit = inventoryById(Number(cItem))?.invamount ?? 0;
-                    }}>Item / extra</button
-                >
-            </div>
-
-            {#if chargeKind === "room"}
-                <div class="space-y-1.5">
-                    <Label for="c-room">Room</Label>
-                    <Combobox
-                        id="c-room"
-                        bind:value={cRoom}
-                        options={rooms}
-                        searchPlaceholder="Room name or number…"
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="c-rate">Rate</Label>
-                    <Combobox
-                        id="c-rate"
-                        bind:value={cRateType}
-                        options={RATE_TYPES}
-                    />
-                </div>
-            {:else}
-                <div class="space-y-1.5">
-                    <Label for="c-item">Item</Label>
-                    <Combobox
-                        id="c-item"
-                        bind:value={cItem}
-                        options={items}
-                        placeholder="Choose an item"
-                        searchPlaceholder="Item code or name…"
-                        onchange={onItemChange}
-                    />
-                </div>
-            {/if}
-
-            <div class="grid grid-cols-3 gap-3">
-                <div class="space-y-1.5">
-                    <Label for="c-qty"
-                        >{chargeKind === "room" ? "Nights" : "Qty"}</Label
-                    >
-                    <Input id="c-qty" type="number" min="1" bind:value={cQty} />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="c-unit">Unit price</Label>
-                    <Input
-                        id="c-unit"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        bind:value={cUnit}
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="c-date">Date</Label>
-                    <Input id="c-date" type="date" bind:value={cDate} />
-                </div>
-            </div>
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (chargeOpen = false)}
-                >Cancel</Button
-            >
-            <Button onclick={saveCharge}>Add charge</Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Add payment dialog -->
-<Dialog.Root bind:open={payOpen}>
-    <Dialog.Content class="sm:max-w-md">
-        <Dialog.Header>
-            <Dialog.Title>Record payment or deposit</Dialog.Title>
-            <Dialog.Description
-                >Deposits, payments, and refunds.</Dialog.Description
-            >
-        </Dialog.Header>
-        <div class="space-y-3">
-            <div class="space-y-1.5">
-                <Label for="p-cat">Category</Label>
-                <Combobox
-                    id="p-cat"
-                    bind:value={pCategory}
-                    options={categories}
-                />
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-                <div class="space-y-1.5">
-                    <Label for="p-type">Tender type</Label>
-                    <Combobox
-                        id="p-type"
-                        bind:value={pType}
-                        options={tenders}
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="p-amt">Amount</Label>
-                    <Input
-                        id="p-amt"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        bind:value={pAmount}
-                    />
-                </div>
-                <div class="space-y-1.5">
-                    <Label for="p-date">Date</Label>
-                    <Input id="p-date" type="date" bind:value={pDate} />
-                </div>
-            </div>
-
-            <div class="space-y-1.5">
-                <Label for="p-notes">Notes (optional)</Label>
-                <Input id="p-notes" bind:value={pNotes} />
-            </div>
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (payOpen = false)}
-                >Cancel</Button
-            >
-            <Button onclick={savePayment}>Record</Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Change a charge's quantity -->
-<Dialog.Root bind:open={qtyOpen}>
-    <Dialog.Content class="sm:max-w-sm">
-        <Dialog.Header>
-            <Dialog.Title>Change quantity</Dialog.Title>
-            {#if qtyTarget}
-                <Dialog.Description>
-                    {qtyTarget.description} · {dateShort(qtyTarget.line_date)}
-                </Dialog.Description>
-            {/if}
-        </Dialog.Header>
-        <div class="space-y-1.5">
-            <Label for="q-qty"
-                >{qtyTarget?.line_type === "Room" ? "Nights" : "Qty"}</Label
-            >
-            <Input
-                id="q-qty"
-                type="number"
-                min="1"
-                step="1"
-                bind:value={newQty}
-                aria-invalid={!qtyValid}
-            />
-        </div>
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (qtyOpen = false)}
-                >Cancel</Button
-            >
-            <Button
-                disabled={qtySaving ||
-                    !qtyValid ||
-                    Number(newQty) === qtyTarget?.quantity}
-                onclick={confirmQuantity}>Change quantity</Button
-            >
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Remove a line entered in error -->
-<Dialog.Root bind:open={removeOpen}>
-    <Dialog.Content class="sm:max-w-sm">
-        <Dialog.Header>
-            <Dialog.Title>
-                Remove this {target?.line_source === "payment"
-                    ? "payment"
-                    : "charge"}?
-            </Dialog.Title>
-            <Dialog.Description>
-                It comes off the balance and the reports.
-            </Dialog.Description>
-        </Dialog.Header>
-        {#if target}
-            <div class="bg-muted/40 rounded-lg border px-3 py-2 text-sm">
-                <div class="flex items-center justify-between gap-3">
-                    <span class="min-w-0 truncate font-medium"
-                        >{target.description}</span
-                    >
-                    <Money value={target.balance_effect} class="shrink-0" />
-                </div>
-                <div class="text-muted-foreground mt-0.5 text-xs">
-                    {dateShort(target.line_date)} · {target.code ??
-                        target.line_type}
-                    {#if target.tax_total > 0}
-                        · tax {money(target.tax_total)}{/if}
-                </div>
-            </div>
-        {/if}
-        <Dialog.Footer>
-            <Button variant="ghost" onclick={() => (removeOpen = false)}
-                >Keep it</Button
-            >
-            <Button
-                variant="destructive"
-                disabled={removing}
-                onclick={confirmRemove}
-            >
-                <TrashIcon /> Remove line
-            </Button>
-        </Dialog.Footer>
-    </Dialog.Content>
-</Dialog.Root>
+<AddChargeDialog
+    bind:open={chargeOpen}
+    {reservationguestid}
+    {today}
+    onsaved={reload}
+/>
+<RecordPaymentDialog
+    bind:open={payOpen}
+    {reservationguestid}
+    {today}
+    onsaved={reload}
+/>
+<ChangeQuantityDialog bind:open={qtyOpen} line={target} onsaved={reload} />
+<RemoveLineDialog bind:open={removeOpen} line={target} onsaved={reload} />

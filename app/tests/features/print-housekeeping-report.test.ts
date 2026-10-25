@@ -1,80 +1,65 @@
 // Story: spec/features/print-housekeeping-report.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { addDays, makeReservation, rpc, uid, type Fixture } from '../helpers/db';
+import { addDays, isolatedDate, makeReservation, roomDirectory, rpc, type Fixture, type RoomRow } from '../helpers/db';
 
-let fx: Fixture;
-let mid: string;
-let marker: string;
+interface HkRow {
+	status: string;
+	resnumber: number;
+	guest: string;
+	guest_count: number;
+	room: string;
+	in_date: string;
+	out_date: string;
+	note_date: string | null;
+	notes: string | null;
+}
+
+let day: string;
+let rooms: RoomRow[];
+let arriving: Fixture;
+let staying: Fixture;
+let leaving: Fixture;
+let rows: HkRow[];
 
 beforeAll(async () => {
-	fx = await makeReservation();
-	mid = addDays(fx.arrival, 1);
-	marker = `HK-${uid()}`;
-	await rpc('set_guest_notes', { p_guestid: fx.guestid, p_notes: `OFFICE-${marker}` });
-	await rpc('add_housekeeping_note', {
-		p_reservationguestid: fx.reservationguestid,
-		p_notes: `Print ${marker}`,
-		p_date: mid
-	});
+	// Booked out of room order: the report puts them back in it.
+	day = isolatedDate();
+	rooms = (await roomDirectory()).slice(0, 3);
+	leaving = await makeReservation({ arrival: addDays(day, -2), departure: day, roomid: rooms[2].roomid });
+	arriving = await makeReservation({ arrival: day, roomid: rooms[0].roomid });
+	staying = await makeReservation({ arrival: addDays(day, -1), departure: addDays(day, 1), roomid: rooms[1].roomid });
+	for (const [notes, date] of [
+		['Twin beds', addDays(day, -3)],
+		['Split beds', addDays(day, -1)]
+	])
+		await rpc('add_housekeeping_note', {
+			p_reservationguestid: staying.reservationguestid,
+			p_notes: notes,
+			p_date: date
+		});
+	rows = await rpc<HkRow[]>('report_housekeeping', { p_date: day });
 });
 
 describe('print housekeeping report', () => {
-	it('carries room status context for each row', async () => {
-		const rows = await rpc<{ resnumber: number; status: string }[]>('report_housekeeping', {
-			p_date: mid
+	it("lists the day's rooms in lodge order, each with its status", () => {
+		expect(rows.map((r) => [r.room, r.resnumber, r.status])).toEqual([
+			[rooms[0].room, arriving.resnumber, 'Arrive Today'],
+			[rooms[1].room, staying.resnumber, 'In House'],
+			[rooms[2].room, leaving.resnumber, 'Depart Today']
+		]);
+	});
+
+	it('lists each room with its guest, guest count and stay dates', () => {
+		expect(rows[1]).toMatchObject({
+			guest_count: 2,
+			in_date: staying.arrival,
+			out_date: staying.departure
 		});
-		// The day after arrival, mid-stay, in the one room.
-		expect(rows.find((r) => r.resnumber === fx.resnumber)?.status).toBe('In House');
+		expect(rows[1].guest.toUpperCase()).toContain(staying.lastname.toUpperCase());
 	});
 
-	it('prints only report-facing housekeeping instructions', async () => {
-		const rows = await rpc<Record<string, unknown>[]>('report_housekeeping', { p_date: mid });
-		const json = JSON.stringify(rows);
-		expect(json).toContain(`Print ${marker}`);
-		expect(json).not.toContain(`OFFICE-${marker}`);
-	});
-});
-
-describe('print housekeeping report — stay context and notes', () => {
-	interface HkRow {
-		status: string;
-		resnumber: number;
-		guest: string;
-		guest_count: number;
-		room: string;
-		in_date: string;
-		out_date: string;
-		note_date: string | null;
-		notes: string | null;
-	}
-
-	let hkFx: Fixture;
-	let hkMid: string;
-	let rows: HkRow[];
-
-	beforeAll(async () => {
-		hkFx = await makeReservation();
-		hkMid = addDays(hkFx.arrival, 1);
-		await rpc('add_housekeeping_note', {
-			p_reservationguestid: hkFx.reservationguestid,
-			p_notes: 'Twin beds made up',
-			p_date: hkMid
-		});
-		rows = await rpc('report_housekeeping', { p_date: hkMid });
-	});
-
-	it('lists each occupied room with its stay context', () => {
-		const mine = rows.find((r) => r.resnumber === hkFx.resnumber)!;
-		expect(mine.guest).toContain(hkFx.lastname);
-		expect(mine.room).toContain(':');
-		expect(mine.in_date).toBe(hkFx.arrival);
-		expect(mine.out_date).toBe(hkFx.departure);
-		expect(mine.guest_count).toBeGreaterThan(0);
-	});
-
-	it('shows the latest housekeeping note with its date', () => {
-		const mine = rows.find((r) => r.resnumber === hkFx.resnumber)!;
-		expect(mine.notes).toBe('Twin beds made up');
-		expect(mine.note_date).toBe(hkMid);
+	it('shows the latest housekeeping note with the date it was written', () => {
+		expect(rows[1]).toMatchObject({ notes: 'Split beds', note_date: addDays(day, -1) });
+		expect(rows[0]).toMatchObject({ notes: null, note_date: null });
 	});
 });

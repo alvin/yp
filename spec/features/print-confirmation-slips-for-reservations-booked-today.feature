@@ -12,4 +12,3 @@ Feature: print confirmation slips for reservations booked today
     Then The user can list confirmation slips for any chosen day, today by default.
     And Only reservations booked or confirmed on that day are included; cancelled reservations are left out.
     And The day's slips print together in the batch run's folio group.
-    And Each printed slip follows the lodge’s usual confirmation format.

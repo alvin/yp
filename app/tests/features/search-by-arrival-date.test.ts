@@ -1,118 +1,100 @@
 // Story: spec/features/search-by-arrival-date.feature
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { addDays, isolatedDate, makeReservation, rpc, uid, type Fixture } from '../helpers/db';
+import { APP_URL, screenDate, useAppPage } from '../helpers/app';
+import {
+	addDays,
+	cancel,
+	isolatedDate,
+	makeReservation,
+	pay,
+	roomDirectory,
+	searchByDate,
+	uid,
+	type Fixture,
+	type RoomRow
+} from '../helpers/db';
 
-interface DateRow {
-	reservationid: number;
-	resnumber: number;
-	guestlastname: string;
-	arrival_date: string;
-	departure_date: string;
-	match_type: string;
-}
+let date: string;
+let lastA: string;
+let lastB: string;
+let anna: Fixture; // lastA, Anna — in a room, a deposit partly applied and kept
+let zed: Fixture; // lastA, Zed — no room, no deposit
+let bo: Fixture; // lastB — cancelled
+let room: RoomRow;
 
-let fx: Fixture;
+const page = useAppPage();
+const rows = () => page.locator('tbody tr');
 
 beforeAll(async () => {
-	fx = await makeReservation();
+	date = isolatedDate();
+	const u = uid();
+	lastA = `ZZSortA-${u}`;
+	lastB = `ZZSortB-${u}`;
+	const rooms = await roomDirectory();
+	room = rooms[0];
+	// Booked out of alphabetical order, so the order on screen can only come
+	// from sorting.
+	bo = await makeReservation({ arrival: date, nights: 2, lastname: lastB, firstname: 'Bo', roomid: rooms[1].roomid });
+	zed = await makeReservation({ arrival: date, nights: 2, lastname: lastA, firstname: 'Zed', roomid: null });
+	anna = await makeReservation({ arrival: date, nights: 2, lastname: lastA, firstname: 'Anna', roomid: room.roomid });
+	await pay(anna, 'Deposit (Received)', 200);
+	await pay(anna, 'Deposit (Applied)', 50);
+	await pay(anna, 'Deposit (Kept)', 30);
+	await cancel(bo);
 });
 
 describe('search by arrival date', () => {
-	it('treats the selected date as an arrival-date search by default', async () => {
-		// No p_mode: the function's default mode applies.
-		const rows = await rpc<DateRow[]>('search_by_date', { p_date: fx.arrival });
-		const hit = rows.find((r) => r.resnumber === fx.resnumber);
-		expect(hit).toBeDefined();
-		expect(hit!.match_type).toBe('arrival');
+	it('searches arrivals when no mode is chosen', async () => {
+		expect((await searchByDate(date)).map((r) => r.match_type)).toEqual(['arrival', 'arrival', 'arrival']);
+		await page.goto(`${APP_URL}/date?date=${date}`, { waitUntil: 'networkidle' });
+		await expect.poll(() => page.textContent('h1')).toBe(`Arrivals · ${screenDate(date)}`);
 	});
 
-	it('shows reservations arriving on the chosen date', async () => {
-		const rows = await rpc<DateRow[]>('search_by_date', {
-			p_date: fx.arrival,
-			p_mode: 'arrivals'
-		});
-		const hit = rows.find((r) => r.resnumber === fx.resnumber);
-		expect(hit).toBeDefined();
-		expect(hit!.arrival_date).toBe(fx.arrival);
-		expect(hit!.guestlastname).toBe(fx.lastname);
+	it('shows the stays arriving that day and only those', async () => {
+		const later = await makeReservation({ arrival: addDays(date, 1), nights: 1, roomid: null });
+		const found = (await searchByDate(date)).map((r) => r.resnumber);
+		expect(found.sort()).toEqual([anna.resnumber, zed.resnumber, bo.resnumber].sort());
+		expect((await searchByDate(addDays(date, 1))).map((r) => r.resnumber)).toEqual([later.resnumber]);
 	});
 
-	it('is driven from a single selected date', async () => {
-		const rows = await rpc<DateRow[]>('search_by_date', {
-			p_date: addDays(fx.arrival, 1),
-			p_mode: 'arrivals'
-		});
-		expect(rows.some((r) => r.resnumber === fx.resnumber)).toBe(false);
+	it('runs the rows by last name, then first name', async () => {
+		await expect
+			.poll(async () => (await rows().locator('td:first-child').allTextContents()).map((t) => t.trim()))
+			.toEqual([
+				expect.stringMatching(new RegExp(`^${lastA}, Anna\\s*#${anna.resnumber}$`)),
+				expect.stringMatching(new RegExp(`^${lastA}, Zed\\s*#${zed.resnumber}$`)),
+				expect.stringMatching(new RegExp(`^${lastB}, Bo\\s*#${bo.resnumber}\\s*Cancelled$`))
+			]);
 	});
 
-	it('lets staff open a listed reservation from the results', async () => {
-		const rows = await rpc<DateRow[]>('search_by_date', {
-			p_date: fx.arrival,
-			p_mode: 'arrivals'
-		});
-		const hit = rows.find((r) => r.resnumber === fx.resnumber);
-		expect(hit).toBeDefined();
-		const res = await rpc<{ reservationid: number; resnumber: number }[]>('find_reservation', {
-			p_resnumber: hit!.resnumber
-		});
-		expect(res).toHaveLength(1);
-		expect(res[0].reservationid).toBe(fx.reservationid);
-	});
-});
-
-describe('search by arrival date — the arrivals list', () => {
-	let date: string;
-	let first: string;
-	let second: string;
-
-	beforeAll(async () => {
-		date = isolatedDate();
-		const tag = uid();
-		first = `ZZArrA-${tag}`;
-		second = `ZZArrB-${tag}`;
-		// Created in reverse order to prove the sort is alphabetical, not insertion.
-		await makeReservation({ lastname: second, arrival: date, nights: 2 });
-		await makeReservation({ lastname: first, arrival: date, nights: 2 });
+	it('shows the room, dates, nights, party and deposit still held on each row', async () => {
+		const cells = (await rows().nth(0).locator('td').allTextContents()).map((t) => t.trim());
+		expect(cells.slice(1, 8)).toEqual([
+			room.room,
+			screenDate(date),
+			screenDate(anna.departure),
+			'2',
+			'2',
+			'$120.00',
+			'Arrival'
+		]);
 	});
 
-	it('lists the guests arriving on the selected date', async () => {
-		const rows = await rpc<{ guestlastname: string; match_type: string }[]>('search_by_date', {
-			p_date: date,
-			p_mode: 'arrivals'
-		});
-		expect(rows.map((r) => r.guestlastname)).toEqual([first, second]);
-		expect(rows.every((r) => r.match_type === 'arrival')).toBe(true);
+	it('shows a dash where no room is assigned, and no deposit as awaited', async () => {
+		const cells = (await rows().nth(1).locator('td').allTextContents()).map((t) => t.trim());
+		expect(cells[1]).toBe('—');
+		expect(cells[6]).toBe('Awaiting');
 	});
 
-	it('shows stay context (dates, party, deposit state) per row', async () => {
-		const rows = await rpc<
-			{ arrival_date: string; departure_date: string; pax: number; deposit_cdn: number }[]
-		>('search_by_date', { p_date: date, p_mode: 'arrivals' });
-		expect(rows[0].arrival_date).toBe(date);
-		expect(rows[0].pax).toBeGreaterThan(0);
-		expect(Number(rows[0].deposit_cdn)).toBe(0);
+	it('lists a cancelled reservation, marked Cancelled', async () => {
+		expect(await rows().nth(2).locator('[data-slot=badge]').first().textContent()).toBe('Cancelled');
 	});
 
-	it('shows the deposit still held, net of any refunded, applied or kept', async () => {
-		const held = await makeReservation({ arrival: isolatedDate(), nights: 2 });
-		for (const [category, amount] of [
-			['Deposit (Received)', 200],
-			['Deposit (Applied)', 50],
-			['Deposit (Kept)', 30]
-		] as const) {
-			await rpc('record_payment', {
-				p_reservationguestid: held.reservationguestid,
-				p_paymentcategory: category,
-				p_paymenttype: 'Visa',
-				p_amount: amount,
-				p_paymentdate: held.arrival
-			});
-		}
-		const rows = await rpc<{ resnumber: number; deposit_cdn: number }[]>('search_by_date', {
-			p_date: held.arrival,
-			p_mode: 'arrivals'
-		});
-		expect(Number(rows.find((r) => r.resnumber === held.resnumber)?.deposit_cdn)).toBe(120);
+	it('opens the reservation on the row chosen', async () => {
+		await rows().nth(1).click();
+		await page.waitForURL(`${APP_URL}/reservations/${zed.resnumber}`, { timeout: 15_000 });
+		await expect.poll(() => page.textContent('h1')).toContain(`Reservation #${zed.resnumber}`);
+		expect(await page.textContent('body')).toContain(`${lastA}, Zed`);
 	});
 });

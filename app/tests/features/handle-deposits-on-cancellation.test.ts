@@ -140,9 +140,8 @@ describe('handle deposits on cancellation', () => {
 		});
 		// The fixture's isolated date contains only this activity: received +120,
 		// refunded −120 → both DCAR sections net to zero and agree.
-		const upper = await rpc<number>('report_dcar_total', { p_date: fx.arrival });
-		const lower = await rpc<number>('report_dcar_receipts_total', { p_date: fx.arrival });
-		expect(upper).toBe(lower);
+		expect(await rpc<number>('report_dcar_total', { p_date: fx.arrival })).toBe(0);
+		expect(await rpc<number>('report_dcar_receipts_total', { p_date: fx.arrival })).toBe(0);
 	});
 
 	it('keeps daily cash balanced when a deposit is kept, with no card or cash line moving', async () => {
@@ -170,19 +169,17 @@ describe('handle deposits on cancellation', () => {
 		await rpc('cancel_reservation', {
 			p_reservationid: fx.reservationid,
 			p_date: fx.arrival,
-			p_deposit_handling: 'none',
-			p_notes: 'QA cancellation'
+			p_deposit_handling: 'none'
 		});
 		const client = await staffClient();
 		const rows = unwrap(
 			await client
 				.from('reservations')
-				.select('rescancelled, resdatecancelled, resnotes')
+				.select('rescancelled, resdatecancelled')
 				.eq('reservationid', fx.reservationid)
-		) as { rescancelled: boolean; resdatecancelled: string; resnotes: string }[];
+		) as { rescancelled: boolean; resdatecancelled: string }[];
 		expect(rows[0].rescancelled).toBe(true);
 		expect(rows[0].resdatecancelled.slice(0, 10)).toBe(fx.arrival);
-		expect(rows[0].resnotes).toContain('QA cancellation');
 	});
 });
 

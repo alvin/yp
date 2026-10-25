@@ -2,7 +2,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import type { BadgeVariant } from '$lib/components/ui/badge/index.js';
 
-	let { status, class: className = '' }: { status: string; class?: string } = $props();
+	let { status }: { status: string } = $props();
 
 	const MAP: Record<string, { label: string; variant: BadgeVariant }> = {
 		'Arrive Today': { label: 'Arrive today', variant: 'success' },
@@ -26,4 +26,4 @@
 	const info = $derived(MAP[status] ?? { label: status, variant: 'secondary' as BadgeVariant });
 </script>
 
-<Badge variant={info.variant} class={className}>{info.label}</Badge>
+<Badge variant={info.variant}>{info.label}</Badge>

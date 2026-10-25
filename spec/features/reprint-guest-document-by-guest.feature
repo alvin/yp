@@ -1,7 +1,7 @@
-@persona:printing-coordinator @persona:front-desk-supervisor @status:done @priority:5 @printing @reprint @guest
+@persona:printing-coordinator @persona:front-desk-supervisor @persona:reservation-clerk @status:done @priority:5 @printing @reprint @guest
 Feature: reprint guest document by guest
 
-  As Printing coordinator, Front-desk supervisor
+  As Printing coordinator, Front-desk supervisor, Reservation clerk
   I want to reprint guest document by guest
   So that they can quickly generate the correct document again without rebuilding the whole batch
 
@@ -9,7 +9,9 @@ Feature: reprint guest document by guest
     Given a staff member needs to print a confirmation, folio, bill, or cancellation notice for one guest
 
   Scenario: Acceptance criteria
-    Then A staff member can select one guest and view that guest’s available documents for reprinting.
-    And A staff member can choose one document and send only that document to print.
-    And The reprint uses the same guest information and document content that was previously issued.
-    And The staff member can tell which guest and document were reprinted before leaving the screen.
+    Then In the Print Center a staff member can find one guest by name, see that guest's stays, and open the chosen document for one of them.
+    And A document can also be opened there by its reservation number.
+    And The reprint is the same document, built from the same stay, as any other print of it.
+    And The document opened names its guest and reservation number, and its tab is marked as the document showing.
+    And Each of the stay's other documents is a tab away; a cancellation notice only for a cancelled stay.
+    And The reservation screen opens each of its documents to print as well, a cancellation notice only for a cancelled stay.

@@ -1,93 +1,74 @@
 // Story: spec/features/show-room-availability-during-booking.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { addDays, cancel, makeReservation, roomDirectory, rpc, type RoomRow } from '../helpers/db';
 
-interface RoomRow {
+interface Availability {
 	roomid: number;
-	roomorder: number | null;
-	roomshorthand: string | null;
-	room: string;
 	is_available: boolean;
 }
 
-describe('show room availability during booking', () => {
-	it('lists rooms in the lodge’s own room order', async () => {
-		const rooms = await rpc<RoomRow[]>('room_directory');
-		const orders = rooms.map((r) => r.roomorder ?? Number.MAX_SAFE_INTEGER);
-		expect(orders).toEqual([...orders].sort((a, b) => a - b));
-	});
+const unavailable = async (from: string, to: string) =>
+	(await rpc<Availability[]>('room_directory', { p_in: from, p_out: to }))
+		.filter((r) => !r.is_available)
+		.map((r) => r.roomid);
 
-	it('carries the brief bed-layout description per room', async () => {
-		const rooms = await rpc<RoomRow[]>('room_directory');
-		expect(rooms.some((r) => r.roomshorthand && r.roomshorthand.trim().length > 0)).toBe(true);
-	});
+let rooms: RoomRow[];
 
-	it('flags rooms occupied for the stay window as unavailable', async () => {
-		const fx = await makeReservation();
-		const rooms = await rpc<RoomRow[]>('room_directory', { p_in: fx.arrival, p_out: fx.departure });
-		const booked = rooms.find((r) => !r.is_available);
-		expect(booked).toBeDefined();
-		// A different window on the same isolated date-block is free.
-		const free = await rpc<RoomRow[]>('room_directory', {
-			p_in: addDays(fx.departure, 10),
-			p_out: addDays(fx.departure, 12)
-		});
-		expect(free.every((r) => r.is_available)).toBe(true);
-	});
+const page = useAppPage('/reservations/new');
 
-	it('does not let cancelled reservations block availability', async () => {
-		const fx = await makeReservation();
-		await rpc('cancel_reservation', {
-			p_reservationid: fx.reservationid,
-			p_date: fx.arrival,
-			p_deposit_handling: 'none'
-		});
-		const rooms = await rpc<RoomRow[]>('room_directory', { p_in: fx.arrival, p_out: fx.departure });
-		expect(rooms.every((r) => r.is_available)).toBe(true);
-	});
+/** The room list's entries as shown. */
+async function roomList(): Promise<string[]> {
+	await page.click('#room');
+	const list = page.locator('[data-testid=combobox-list] [role=option]');
+	await list.first().waitFor({ timeout: 10_000 });
+	const shown = (await list.allTextContents()).map((t) => t.trim());
+	await page.keyboard.press('Escape');
+	return shown;
+}
+
+beforeAll(async () => {
+	rooms = await roomDirectory();
 });
 
-describe('show room availability during booking — on the booking screen', () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
+describe('show room availability during booking', () => {
+	it('lists the rooms in the lodge’s own order, each with its bed layout', async () => {
+		const orders = rooms.map((r) => r.roomorder ?? Number.MAX_SAFE_INTEGER);
+		expect(orders).toEqual([...orders].sort((a, b) => a - b));
+		const shown = await roomList();
+		expect(shown).toHaveLength(rooms.length);
+		shown.forEach((entry, i) => {
+			expect(entry.startsWith(rooms[i].room_compact), entry).toBe(true);
+			if (rooms[i].roomshorthand) expect(entry, entry).toContain(`— ${rooms[i].roomshorthand}`);
+		});
+		expect(rooms.filter((r) => r.roomshorthand).length).toBeGreaterThan(rooms.length / 2);
 	});
 
-	afterAll(async () => {
-		await closeApp(page);
+	it('counts a room held for any night of the stay as booked, and only that room', async () => {
+		const fx = await makeReservation({ roomid: rooms[0].roomid });
+		expect(await unavailable(fx.arrival, fx.departure)).toEqual([rooms[0].roomid]);
+		expect(await unavailable(addDays(fx.departure, -1), addDays(fx.departure, 2))).toEqual([rooms[0].roomid]);
+		expect(await unavailable(fx.departure, addDays(fx.departure, 2))).toEqual([]);
 	});
 
-	/** The room list's entries as shown, once it has settled. */
-	async function roomList(): Promise<string[]> {
-		await page.click('#room');
-		const list = page.locator('[data-testid=combobox-list] [role=option]');
-		await list.first().waitFor({ timeout: 10_000 });
-		const shown = await list.allTextContents();
-		await page.keyboard.press('Escape');
-		return shown;
-	}
+	it('does not let a cancelled reservation hold a room', async () => {
+		const fx = await makeReservation({ roomid: rooms[0].roomid });
+		await cancel(fx);
+		expect(await unavailable(fx.arrival, fx.departure)).toEqual([]);
+	});
 
-	it('marks the room another stay holds for those nights as Booked, and only that one', async () => {
-		const other = await makeReservation(); // holds the first room for its nights
-		const [first] = await rpc<{ room: string; roomname: string; roomnumber: string | null }[]>(
-			'room_directory'
-		);
-		const name = `${first.roomname} ${first.roomnumber ?? ''}`.trim();
-
-		await page.goto(`${APP_URL}/reservations/new`, { waitUntil: 'networkidle' });
+	it('marks the room another stay holds for those nights as Booked on screen, and only that one', async () => {
+		const other = await makeReservation({ roomid: rooms[0].roomid });
 		await page.fill('#arr', other.arrival);
 		await page.fill('#dep', other.departure);
 		await expect
 			.poll(async () => (await roomList()).filter((o) => o.includes('Booked')), { timeout: 10_000 })
-			.toEqual([expect.stringContaining(name)]);
+			.toEqual([expect.stringContaining(rooms[0].room_compact)]);
 
-		// Nights the other stay does not hold: nothing is marked.
-		await page.fill('#arr', addDays(other.departure, 10));
-		await page.fill('#dep', addDays(other.departure, 12));
+		// Nights just before it, which no stay holds: nothing is marked.
+		await page.fill('#arr', addDays(other.arrival, -4));
+		await page.fill('#dep', addDays(other.arrival, -2));
 		await expect
 			.poll(async () => (await roomList()).some((o) => o.includes('Booked')), { timeout: 10_000 })
 			.toBe(false);

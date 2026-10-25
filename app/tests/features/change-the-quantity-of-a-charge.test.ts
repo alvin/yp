@@ -1,10 +1,13 @@
 // Story: spec/features/change-the-quantity-of-a-charge.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import {
 	addDays,
 	makeReservation,
+	pay,
+	postCharge,
+	postRoomNights,
+	pricedItem,
 	rpc,
 	staffClient,
 	todayISO,
@@ -34,27 +37,11 @@ let itemId: number;
 
 beforeAll(async () => {
 	// An item that carries GST, so the tax can be seen to follow the quantity.
-	const db = await staffClient();
-	const [item] = unwrap(
-		await db
-			.from('inventory_items')
-			.select('inventoryid')
-			.eq('invarchive', false)
-			.eq('invgst', true)
-			.gt('invamount', 0)
-			.limit(1)
-	) as { inventoryid: number }[];
-	itemId = item.inventoryid;
+	itemId = (await pricedItem({ gst: true })).inventoryid;
 });
 
 function postItem(fx: Fixture, transdate: string): Promise<number> {
-	return rpc<number>('post_charge', {
-		p_reservationguestid: fx.reservationguestid,
-		p_inventoryid: itemId,
-		p_quantity: 1,
-		p_transdate: transdate,
-		p_amount: 6
-	});
+	return postCharge(fx, { inventoryid: itemId, transdate, amount: 6 });
 }
 
 describe('change the quantity of a charge', () => {
@@ -79,14 +66,7 @@ describe('change the quantity of a charge', () => {
 	});
 
 	it('changes the nights on a room line, and the nights it covers follow', async () => {
-		const id = await rpc<number>('post_room_nights', {
-			p_reservationguestid: fx.reservationguestid,
-			p_roomid: (await rpc<{ roomid: number }[]>('room_directory'))[0].roomid,
-			p_occupancyin: fx.arrival,
-			p_occupancyout: fx.departure,
-			p_rate: 100,
-			p_transdate: fx.arrival
-		});
+		const id = await postRoomNights(fx, 100);
 		await rpc('change_charge_quantity', { p_transactionid: id, p_quantity: 2 });
 		const line = await charge(id);
 		expect(line.transquantity).toBe(2);
@@ -126,15 +106,7 @@ describe('change the quantity of a charge', () => {
 });
 
 describe('change the quantity of a charge — the pen', () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
+	const page = useAppPage();
 
 	it('changes a charge line from the reservation’s transactions', async () => {
 		const stay = await makeReservation();
@@ -156,13 +128,7 @@ describe('change the quantity of a charge — the pen', () => {
 
 	it('has no pen on a payment line', async () => {
 		const stay = await makeReservation();
-		await rpc('record_payment', {
-			p_reservationguestid: stay.reservationguestid,
-			p_paymentcategory: 'Deposit (Received)',
-			p_paymenttype: 'Visa',
-			p_amount: 30,
-			p_paymentdate: stay.arrival
-		});
+		await pay(stay, 'Deposit (Received)', 30);
 		await page.goto(`${APP_URL}/reservations/${stay.resnumber}`, { waitUntil: 'networkidle' });
 		const rows = page.locator('table tbody tr');
 		await expect.poll(() => rows.count(), { timeout: 15_000 }).toBe(1);

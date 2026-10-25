@@ -34,6 +34,7 @@
     import { postPendingLines, type PendingLine } from "$lib/pending-charges.js";
     import { supabase } from "$lib/data/client.js";
     import { dateMed, nightsBetween } from "$lib/format.js";
+    import { errorMessage } from "$lib/utils.js";
     import type { GuestSearchRow } from "$lib/data/types.js";
 
     let { data } = $props();
@@ -81,11 +82,7 @@
             kitchenNotes = dietText(meal);
             guestQuery = "";
         } catch (e) {
-            toast.error(
-                e instanceof Error
-                    ? e.message
-                    : "Could not load that guest record.",
-            );
+            toast.error(errorMessage(e, "Could not load that guest record."));
         } finally {
             attaching = false;
         }
@@ -128,22 +125,24 @@
         src?.roomid ? String(src.roomid) : (allRooms[0]?.value ?? ""),
     );
     let booked = $state(new Set<number>());
-    let bookedLookup = 0;
     $effect(() => {
         const from = arrival;
         const to = departure;
-        const lookup = ++bookedLookup;
         if (!from || !to || to <= from) {
             booked = new Set();
             return;
         }
+        let alive = true;
         roomsBooked(from, to)
             .then((ids) => {
-                if (lookup === bookedLookup) booked = ids;
+                if (alive) booked = ids;
             })
             .catch(() => {
-                if (lookup === bookedLookup) booked = new Set();
+                if (alive) booked = new Set();
             });
+        return () => {
+            alive = false;
+        };
     });
     const rooms = $derived(
         allRooms.map((o) =>
@@ -220,9 +219,7 @@
                     );
                 } catch (e) {
                     problems.push(
-                        e instanceof Error
-                            ? e.message
-                            : "the charges and deposit did not post",
+                        errorMessage(e, "the charges and deposit did not post"),
                     );
                 }
             }
@@ -236,11 +233,7 @@
                         kitchenMealId,
                     );
                 } catch (e) {
-                    problems.push(
-                        e instanceof Error
-                            ? e.message
-                            : "the diet notes did not save",
-                    );
+                    problems.push(errorMessage(e, "the diet notes did not save"));
                 }
             }
             if (housekeepingNotes.trim()) {
@@ -252,9 +245,7 @@
                     );
                 } catch (e) {
                     problems.push(
-                        e instanceof Error
-                            ? e.message
-                            : "the housekeeping notes did not save",
+                        errorMessage(e, "the housekeeping notes did not save"),
                     );
                 }
             }
@@ -271,7 +262,7 @@
             }
             await goto(`/reservations/${created.resnumber}`);
         } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Could not save the reservation.");
+            toast.error(errorMessage(e, "Could not save the reservation."));
         } finally {
             saving = false;
         }

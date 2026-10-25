@@ -18,6 +18,13 @@ names stay in the database for the old records that carry them, but no screen
 asks for them. A diet type on file prints ahead of the notes, as it always has,
 so the screens show it in the notes, and saving them keeps it there as text.
 
+Each note on a stay prints where the lodge reads it. The Notes for reports tabs
+hold the diet, the housekeeping note, the guest's requests and each room's
+occupancy notes; the guest's notes and the reservation's own notes are for the
+office and print on nothing. The reservation's notes are Access's `ResNotes`,
+which the lodge kept as a record of the booking, while messages for the guest
+were always the occupancy notes, printed under the room on the confirmation.
+
 ## Setup
 
 1. Start (or connect to) the Supabase project. Locally:

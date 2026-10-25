@@ -15,7 +15,7 @@ const MONTHS_SHORT = [
   "Nov",
   "Dec",
 ];
-const MONTHS_LONG = [
+export const MONTHS_LONG = [
   "January",
   "February",
   "March",
@@ -132,4 +132,29 @@ export function nextSeason(d: string, notBefore?: string): string {
   let next = addDays(d, 364);
   while (notBefore && next < notBefore) next = addDays(next, 364);
   return next;
+}
+
+/** A guest's name as the desk reads it: "SMITH, JOHN". */
+export function guestName(g: { guestlastname: string | null; guestfirstname: string | null }): string {
+  return `${g.guestlastname ?? ''}${g.guestfirstname ? `, ${g.guestfirstname}` : ''}`;
+}
+
+/** The party on a booking: "2 adults", "2 adults, 1 child". */
+export function party(adults: number, children: number): string {
+  const a = `${adults} adult${adults === 1 ? '' : 's'}`;
+  return children ? `${a}, ${children} ${children === 1 ? 'child' : 'children'}` : a;
+}
+
+/** A room of a stay and its nights: "L04 · 3-Jun-26 → 6-Jun-26". */
+export function roomWindow(o: { room_compact: string; occupancyin: string; occupancyout: string }): string {
+  return `${o.room_compact} · ${dateShort(o.occupancyin)} → ${dateShort(o.occupancyout)}`;
+}
+
+/** A stay's nights: the count on file, else worked out from its dates. */
+export function stayNights(s: {
+  numnights?: number | null;
+  resarrivaldate: string;
+  resdeparturedate: string;
+}): number {
+  return s.numnights ?? nightsBetween(s.resarrivaldate, s.resdeparturedate);
 }

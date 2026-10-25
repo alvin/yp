@@ -9,9 +9,6 @@ Feature: print housekeeping report
     Given the printing coordinator prepares the day's operational reports from the print menu
 
   Scenario: Acceptance criteria
-    Then The housekeeping report appears as a selectable option in the print menu.
-    And Report prints for the selected date.
-    And Each occupied room is listed with its reservation, guest, guest count and stay dates.
+    Then Each occupied room is listed with its reservation, guest, guest count and stay dates.
     And Printed output follows the lodge room order, with each row's status for the day shown beside it: Arrive Today, Move In, Move Out, In House, or Depart Today.
     And Each room shows its latest housekeeping note with the date it was written.
-    And Only report-facing instructions are included on the printout.

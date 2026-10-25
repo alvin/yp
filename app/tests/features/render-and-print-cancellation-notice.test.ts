@@ -1,8 +1,8 @@
 // Story: spec/features/render-and-print-cancellation-notice.feature
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
+import { APP_URL, closeApp, openAppPage, printedDate } from '../helpers/app';
+import { makeReservation, rpc, todayISO, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
 let page: Page;
@@ -32,26 +32,33 @@ afterAll(async () => {
 });
 
 describe('render and print cancellation notice', () => {
-	it('renders the CANCELLATION heading with the guest block', async () => {
-		const sheet = await page.textContent('.report-page');
+	let sheet: string;
+
+	beforeAll(async () => {
+		sheet = (await page.textContent('.report-page')) ?? '';
+	});
+
+	it('states the cancellation, with the guest, the number and the date cancelled', () => {
 		expect(sheet).toContain('CANCELLATION');
-		expect(sheet?.toUpperCase()).toContain(fx.lastname.toUpperCase());
+		expect(sheet.toUpperCase()).toContain(fx.lastname.toUpperCase());
+		expect(sheet).toContain(`Res. No. ${fx.resnumber}`);
+		expect(sheet).toContain(`Date Cancelled: ${printedDate(fx.arrival)}`);
+		expect(sheet).toContain(`Date Printed: ${printedDate(todayISO())}`);
 	});
 
-	it('shows the cancelled stay dates and cancellation date', async () => {
-		const sheet = await page.textContent('.report-page');
-		expect(sheet).toContain('Date Cancelled:');
-		expect(sheet).toContain('Arrival:');
+	it('shows the stay that was cancelled', () => {
+		expect(sheet).toContain(`Arrival: ${printedDate(fx.arrival)}`);
+		expect(sheet).toContain(`Departure: ${printedDate(fx.departure)}`);
+		expect(sheet).toMatch(/# Guests\s*2\b/);
 	});
 
-	it('shows the deposit received and its outcome', async () => {
-		const sheet = await page.textContent('.report-page');
-		expect(sheet).toContain('Deposit (Received)');
-		expect(sheet).toContain('Deposit (Refund)');
+	it('shows the deposit received and what became of it', () => {
+		expect(sheet).toMatch(/Deposit \(Received\)\s*\$130\.00/);
+		expect(sheet).toMatch(/Deposit \(Refund\)\s*\(\$130\.00\)/);
 	});
 
-	it('offers the print action', async () => {
-		expect(await page.isVisible('button:has-text("Print")')).toBe(true);
+	it('prints from its own screen', async () => {
+		expect(await page.getByRole('button', { name: 'Print' }).isVisible()).toBe(true);
 	});
 });
 

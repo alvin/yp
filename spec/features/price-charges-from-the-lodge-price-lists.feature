@@ -10,6 +10,5 @@ Feature: price charges from the lodge price lists
 
   Scenario: Acceptance criteria
     Then An inventory charge defaults to the item's list price times the quantity.
-    And A room-night charge defaults to the room's rate effective for the date times the nights, at the rate chosen — Double unless Single or Split is asked for.
+    And A room-night charge defaults to the room's rate for the date and the rate type asked for, times the nights; Double when none is asked for.
     And A manually supplied amount always wins over the list price.
-    And Taxes are computed on whichever amount the line ends up with.

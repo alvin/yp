@@ -3,7 +3,17 @@
 // not through workflow RPCs — the triggers must keep everything consistent.
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { addDays, makeReservation, staffClient, todayISO, unwrap, type Fixture } from '../helpers/db';
+import {
+	addDays,
+	makeReservation,
+	pricedItem,
+	roomWindows,
+	rpc,
+	staffClient,
+	todayISO,
+	unwrap,
+	type Fixture
+} from '../helpers/db';
 
 describe('keep data consistent for direct database edits', () => {
 	let fx: Fixture;
@@ -14,15 +24,9 @@ describe('keep data consistent for direct database edits', () => {
 
 	it('completes amount and taxes for a raw transaction insert', async () => {
 		const client = await staffClient();
-		const items = unwrap(
-			await client
-				.from('inventory_items')
-				.select('inventoryid, invamount')
-				.eq('invarchive', false)
-				.eq('invgst', true)
-				.gt('invamount', 0)
-				.limit(1)
-		) as { inventoryid: number; invamount: number }[];
+		const item = await pricedItem({ gst: true });
+		const gst = Number(await rpc('effective_tax_rate', { p_taxratetype: 'GST', p_date: todayISO() }));
+		expect(gst).toBeGreaterThan(0);
 		const rows = unwrap(
 			await client
 				.from('transactions')
@@ -30,13 +34,14 @@ describe('keep data consistent for direct database edits', () => {
 					reservationguestid: fx.reservationguestid,
 					transdate: todayISO(),
 					transtype: 'Sundries',
-					inventoryid: items[0].inventoryid,
+					inventoryid: item.inventoryid,
 					transquantity: 2
 				})
 				.select('transamount, transgstamount')
 		) as { transamount: number; transgstamount: number }[];
-		expect(rows[0].transamount).toBe(Math.round(items[0].invamount * 2 * 100) / 100);
-		expect(rows[0].transgstamount).toBeGreaterThan(0);
+		const amount = Math.round(item.invamount * 2 * 100) / 100;
+		expect(Number(rows[0].transamount)).toBe(amount);
+		expect(Number(rows[0].transgstamount)).toBe(Math.round(amount * gst * 100) / 100);
 	});
 
 	it('completes code, date, and CDN amount for a raw payment insert', async () => {
@@ -131,15 +136,8 @@ describe('keep data consistent for direct database edits', () => {
 				.eq('reservationid', fresh.reservationid)
 				.select()
 		);
-		const rooms = unwrap(
-			await client
-				.from('room_assignments')
-				.select('occupancyin, occupancyout')
-				.eq('reservationguestid', fresh.reservationguestid)
-				.eq('occupancyarchive', false)
-		) as { occupancyin: string; occupancyout: string }[];
-		expect(rooms).toHaveLength(1);
-		expect(rooms[0].occupancyin.slice(0, 10)).toBe(fresh.arrival);
-		expect(rooms[0].occupancyout.slice(0, 10)).toBe(newDeparture);
+		expect(
+			(await roomWindows(fresh)).map((w) => [w.occupancyin, w.occupancyout])
+		).toEqual([[fresh.arrival, newDeparture]]);
 	});
 });

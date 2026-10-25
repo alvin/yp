@@ -113,6 +113,12 @@
             q: `date=${printDate}`,
         },
         {
+            label: "Requests",
+            href: "requests",
+            desc: "Guest requests",
+            q: `date=${printDate}`,
+        },
+        {
             label: "Kitchen / dietary",
             href: "kitchen",
             desc: "Allergies & diets",

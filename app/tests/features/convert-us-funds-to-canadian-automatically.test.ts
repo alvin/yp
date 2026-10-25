@@ -1,100 +1,89 @@
 // Story: spec/features/convert-us-funds-to-canadian-automatically.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, staffClient, todayISO, unwrap, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import {
+	isolatedDate,
+	makeReservation,
+	pay,
+	rpc,
+	staffClient,
+	todayISO,
+	unwrap,
+	type Fixture
+} from '../helpers/db';
 
-interface Pay {
-	paymentid: number;
+interface Payment {
 	paymentcode: string;
-	paymentamount: number;
 	paymentamountcdn: number;
 }
 
-async function getPay(id: number): Promise<Pay> {
-	const client = await staffClient();
-	const rows = unwrap(await client.from('payments').select('*').eq('paymentid', id)) as Pay[];
-	return rows[0];
+const today = todayISO();
+
+async function payment(id: number): Promise<Payment> {
+	const db = await staffClient();
+	const [row] = unwrap(
+		await db.from('payments').select('paymentcode, paymentamountcdn').eq('paymentid', id)
+	) as Payment[];
+	return { ...row, paymentamountcdn: Number(row.paymentamountcdn) };
 }
+
+async function update(id: number, values: Record<string, unknown>): Promise<void> {
+	const db = await staffClient();
+	unwrap(await db.from('payments').update(values).eq('paymentid', id).select('paymentid'));
+}
+
+const exchange = async (date: string) => Number(await rpc('effective_exchange_rate', { p_date: date }));
+const cdn = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100;
 
 describe('convert US funds to Canadian automatically', () => {
 	let fx: Fixture;
-	const today = todayISO();
+	let rate: number;
 
 	beforeAll(async () => {
 		fx = await makeReservation();
+		rate = await exchange(today);
+		// Today's rate is on file; a rate of 1 would let a missing conversion pass.
+		expect(rate).toBeGreaterThan(0);
+		expect(rate).not.toBe(1);
 	});
 
-	it('fills the CDN amount from the effective exchange rate for US payments', async () => {
-		const rate = await rpc<number>('effective_exchange_rate', { p_date: today });
-		const id = await rpc<number>('record_payment', {
-			p_reservationguestid: fx.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'U.S. Cash',
-			p_amount: 100,
-			p_currency: 'US',
-			p_paymentdate: today
-		});
-		const pay = await getPay(id);
-		expect(pay.paymentamountcdn).toBe(Math.round(100 * rate * 100) / 100);
+	it('fills the Canadian amount from the exchange rate on the payment date', async () => {
+		const id = await pay(fx, 'Payment (Regular)', 100, { type: 'U.S. Cash', currency: 'US', date: today });
+		expect((await payment(id)).paymentamountcdn).toBe(cdn(100, rate));
 	});
 
-	it('copies the amount for Canadian payments', async () => {
-		const id = await rpc<number>('record_payment', {
-			p_reservationguestid: fx.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'Cash',
-			p_amount: 88.5,
-			p_currency: 'Canadian',
-			p_paymentdate: today
-		});
-		expect((await getPay(id)).paymentamountcdn).toBe(88.5);
+	it('carries a Canadian payment’s own amount as its Canadian value', async () => {
+		const id = await pay(fx, 'Payment (Regular)', 88.5, { type: 'Cash', date: today });
+		expect((await payment(id)).paymentamountcdn).toBe(88.5);
 	});
 
-	it('recalculates the CDN value when amount or currency changes', async () => {
-		const id = await rpc<number>('record_payment', {
-			p_reservationguestid: fx.reservationguestid,
-			p_paymentcategory: 'Payment (Regular)',
-			p_paymenttype: 'Cash',
-			p_amount: 10,
-			p_currency: 'Canadian',
-			p_paymentdate: today
-		});
-		const client = await staffClient();
-		unwrap(await client.from('payments').update({ paymentamount: 40 }).eq('paymentid', id).select());
-		expect((await getPay(id)).paymentamountcdn).toBe(40);
+	it('recalculates the Canadian value when the amount, currency or date changes', async () => {
+		const id = await pay(fx, 'Payment (Regular)', 10, { type: 'Cash', date: today });
+		await update(id, { paymentamount: 40 });
+		expect((await payment(id)).paymentamountcdn).toBe(40);
 
-		const rate = await rpc<number>('effective_exchange_rate', { p_date: today });
-		unwrap(
-			await client.from('payments').update({ paymentcurrency: 'US' }).eq('paymentid', id).select()
-		);
-		expect((await getPay(id)).paymentamountcdn).toBe(Math.round(40 * rate * 100) / 100);
+		await update(id, { paymentcurrency: 'US' });
+		expect((await payment(id)).paymentamountcdn).toBe(cdn(40, rate));
+
+		const earlier = isolatedDate();
+		await update(id, { paymentdate: earlier });
+		expect((await payment(id)).paymentamountcdn).toBe(cdn(40, await exchange(earlier)));
+		expect((await payment(id)).paymentamountcdn).not.toBe(cdn(40, rate));
 	});
 
 	it('derives the payment code from the category', async () => {
-		const id = await rpc<number>('record_payment', {
-			p_reservationguestid: fx.reservationguestid,
-			p_paymentcategory: 'Deposit (Received)',
-			p_paymenttype: 'Visa',
-			p_amount: 55,
-			p_paymentdate: today
-		});
-		expect((await getPay(id)).paymentcode).toBe('D01');
+		const id = await pay(fx, 'Deposit (Received)', 55, { date: today });
+		expect((await payment(id)).paymentcode).toBe('D01');
 	});
 
 	describe('at the desk', () => {
-		let page: Page;
+		const page = useAppPage();
 
 		beforeAll(async () => {
-			page = await openAppPage();
 			await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
-			await page.click('text=Payment');
-			await page.waitForSelector('#p-amt');
-		});
-
-		afterAll(async () => {
-			await closeApp(page);
+			await page.getByRole('button', { name: 'Payment', exact: true }).click();
+			await page.locator('#p-amt').waitFor({ timeout: 10_000 });
 		});
 
 		it('offers no choice of funds when a receipt is taken', async () => {
@@ -106,20 +95,9 @@ describe('convert US funds to Canadian automatically', () => {
 
 		it('offers no US tender type', async () => {
 			await page.click('#p-type');
-			const tenders = await page.locator('[role=option]').allTextContents();
-			expect(tenders.length).toBeGreaterThan(0);
-			expect(tenders.some((t) => t.includes('U.S.'))).toBe(false);
-		});
-
-		it('records what the desk takes in Canadian funds', async () => {
-			const id = await rpc<number>('record_payment', {
-				p_reservationguestid: fx.reservationguestid,
-				p_paymentcategory: 'Payment (Regular)',
-				p_paymenttype: 'Visa',
-				p_amount: 25,
-				p_paymentdate: today
-			});
-			expect((await getPay(id)).paymentamountcdn).toBe(25);
+			const tenders = page.locator('[data-testid=combobox-list] [role=option]');
+			await expect.poll(() => tenders.count(), { timeout: 10_000 }).toBeGreaterThan(5);
+			expect((await tenders.allTextContents()).filter((t) => t.includes('U.S.'))).toEqual([]);
 		});
 	});
 });

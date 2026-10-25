@@ -2,13 +2,13 @@
 	import { goto } from '$app/navigation';
 	import ReportShell from '$lib/components/app/report-shell.svelte';
 	import ReportFooter from '$lib/components/app/report-footer.svelte';
+	import ReportDateInput from '$lib/components/app/report-date-input.svelte';
 	import { dateShort } from '$lib/format.js';
 	import { opsTabs } from '$lib/report-nav.js';
 
 	let { data } = $props();
 
 	function changeRange(from: string, to: string) {
-		if (!from || !to) return;
 		goto(`/reports/kitchen-filtered?from=${from}&to=${to}`);
 	}
 </script>
@@ -24,21 +24,17 @@
 	backLabel="Print Center"
 >
 	{#snippet toolbar()}
-		<label class="text-muted-foreground text-xs" for="kitchen-from">From</label>
-		<input
+		<ReportDateInput
 			id="kitchen-from"
-			type="date"
+			label="From"
 			value={data.from}
-			onchange={(e) => changeRange(e.currentTarget.value, data.to)}
-			class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
+			onchange={(from) => changeRange(from, data.to)}
 		/>
-		<label class="text-muted-foreground text-xs" for="kitchen-to">To</label>
-		<input
+		<ReportDateInput
 			id="kitchen-to"
-			type="date"
+			label="To"
 			value={data.to}
-			onchange={(e) => changeRange(data.from, e.currentTarget.value)}
-			class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
+			onchange={(to) => changeRange(data.from, to)}
 		/>
 	{/snippet}
 	<div class="blackbar">Yellow Point Lodge</div>

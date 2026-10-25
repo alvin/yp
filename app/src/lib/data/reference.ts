@@ -2,9 +2,9 @@
 // lookup, room and inventory tables. The database is the source
 // of truth: edits made in Supabase show up here on the next app load.
 
-import { supabase, unwrap } from './client';
-import { sortItemsByCode } from '../inventory';
-import type { InventoryItem, PaymentCategory, PaymentType, Room } from './types';
+import { supabase, unwrap } from './client.js';
+import { sortItemsByCode } from '../inventory.js';
+import type { InventoryItem, PaymentCategory, PaymentType, Room } from './types.js';
 
 /** The lodge's number, as the guest documents print it. */
 export const LODGE_PHONE = '(250) 245-7422';
@@ -89,9 +89,14 @@ export function roomById(roomid: number): Room | undefined {
 	return ROOMS.find((r) => r.roomid === roomid);
 }
 
+/** A room's name as staff say it: "Lodge 04". */
+export function roomName(r: Pick<Room, 'roomname' | 'roomnumber'>): string {
+	return r.roomname + (r.roomnumber ? ` ${r.roomnumber}` : '');
+}
+
 /** Room option label for pickers: "Lodge 04 — Q · Lodge Room". */
 export function roomOptionLabel(r: Room): string {
-	const head = r.roomname + (r.roomnumber ? ` ${r.roomnumber}` : '');
+	const head = roomName(r);
 	const bed = r.roomshorthand ? ` — ${r.roomshorthand}` : '';
 	return `${head}${bed} · ${r.roomtype}`;
 }

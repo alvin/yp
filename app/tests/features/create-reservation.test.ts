@@ -1,136 +1,131 @@
 // Story: spec/features/create-reservation.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, firstRoomId, isolatedDate, rpc, uid } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, field, useAppPage } from '../helpers/app';
+import {
+	addDays,
+	roomDirectory,
+	rpc,
+	staffClient,
+	todayISO,
+	uid,
+	unwrap,
+	type RoomRow
+} from '../helpers/db';
 
-interface ReservationSummary {
+interface Summary {
 	reservationid: number;
-	resnumber: number;
 	resarrivaldate: string;
 	resdeparturedate: string;
 	numnights: number;
 	numadults: number;
 	bedtype: string;
 	resbookedby: string;
-	rescancelled: boolean;
 	primary_guestid: number;
-	guestlastname: string;
 }
 
+const page = useAppPage('/');
+
+let lastname: string;
+let arrival: string;
+let room: RoomRow;
+let resnumber: number;
+
+beforeAll(async () => {
+	lastname = `ZZCreate${uid()}`;
+	arrival = addDays(todayISO(), 40);
+	room = (await roomDirectory())[0];
+});
+
 describe('create reservation', () => {
-	let guestid: number;
-	let lastname: string;
-	let arrival: string;
-	let departure: string;
-	let created: { reservationid: number; resnumber: number; reservationguestid: number };
-
-	beforeAll(async () => {
-		lastname = `ZZCreate-${uid()}`;
-		arrival = isolatedDate();
-		departure = addDays(arrival, 4);
-		guestid = await rpc<number>('create_guest', {
-			p_lastname: lastname,
-			p_firstname: 'Test',
-			p_city: 'Ladysmith',
-			p_region: 'BC'
-		});
-		const rows = await rpc<
-			{ reservationid: number; resnumber: number; reservationguestid: number }[]
-		>('create_reservation', {
-			p_guestid: guestid,
-			p_arrival: arrival,
-			p_departure: departure,
-			p_bookedby: 'QA',
-			p_numadults: 2,
-			p_bedtype: 'Twin',
-			p_roomid: await firstRoomId()
-		});
-		created = rows[0];
+	it("begins a new reservation from the lookup screen's New Reservation action", async () => {
+		await page.locator('a:has-text("New reservation")').first().click();
+		await page.waitForURL(`${APP_URL}/reservations/new`, { timeout: 15_000 });
+		await page.locator('#ln').waitFor({ timeout: 10_000 });
 	});
 
-	async function summary(): Promise<ReservationSummary> {
-		const rows = await rpc<ReservationSummary[]>('find_reservation', {
-			p_resnumber: created.resnumber
-		});
-		return rows[0];
-	}
-
-	it('begins a new reservation and returns its identifiers', () => {
-		expect(created.reservationid).toBeGreaterThan(0);
-		expect(created.resnumber).toBeGreaterThan(0);
-		expect(created.reservationguestid).toBeGreaterThan(0);
+	it('asks for the details the lodge writes to and calls, and nothing it does not use', async () => {
+		for (const id of ['#ln', '#fn', '#ad', '#ci', '#rg', '#pc', '#cn', '#ph', '#em']) {
+			expect(await page.locator(id).count(), id).toBe(1);
+		}
+		expect(await page.textContent('main')).not.toMatch(/Company/i);
 	});
 
-	it('captures the stay details needed to hold the booking', async () => {
-		const s = await summary();
-		expect(s.numadults).toBe(2);
-		expect(s.bedtype).toBe('Twin');
-		expect(s.resbookedby).toBe('QA');
-		expect(s.numnights).toBe(4);
+	it('takes the party as its number of adults, with no children or group fields', async () => {
+		expect(await page.getByLabel('Adults', { exact: true }).count()).toBe(1);
+		expect(await page.getByLabel('Children').count()).toBe(0);
+		expect(await page.getByLabel('Group').count()).toBe(0);
 	});
 
-	it('associates the reservation with the correct guest and dates', async () => {
-		const s = await summary();
-		expect(s.primary_guestid).toBe(guestid);
-		expect(s.guestlastname).toBe(lastname);
-		expect(s.resarrivaldate.slice(0, 10)).toBe(arrival);
-		expect(s.resdeparturedate.slice(0, 10)).toBe(departure);
+	it('offers the bed layout in the lodge’s own words rather than a bed count', async () => {
+		await page.click('#bed');
+		const options = page.locator('[data-testid=combobox-list] [role=option]');
+		await options.first().waitFor({ timeout: 10_000 });
+		expect((await options.allTextContents()).map((o) => o.trim())).toEqual(['Regular', 'Split']);
+		await options.filter({ hasText: 'Split' }).click();
 	});
 
-	it('lets the clerk review the reservation by its number before moving on', async () => {
-		const rows = await rpc<ReservationSummary[]>('find_reservation', {
-			p_resnumber: created.resnumber
-		});
-		expect(rows).toHaveLength(1);
-		expect(rows[0].reservationid).toBe(created.reservationid);
-		expect(rows[0].rescancelled).toBe(false);
+	it('puts a new guest on file and holds the stay under them, opening it for review', async () => {
+		await page.fill('#ln', lastname);
+		await page.fill('#fn', 'Uma');
+		await page.fill('#ad', '12 Shore Road');
+		await page.fill('#ci', 'Ladysmith');
+		await page.fill('#ph', '(250) 555-0808');
+		await page.fill('#em', 'uma@example.test');
+		await page.fill('#arr', arrival);
+		await page.fill('#dep', addDays(arrival, 4));
+		await page.fill('#ad2', '3');
+		await page.fill('#bb', 'QA');
+		await page.click('#room');
+		await page.keyboard.type(room.room_compact);
+		await page.locator('[data-testid=combobox-list] [role=option]').first().click();
+		await page.getByRole('button', { name: 'Save reservation' }).click();
+		await page.waitForURL(/\/reservations\/\d+$/, { timeout: 20_000 });
+		resnumber = Number(page.url().split('/').pop());
+
+		const db = await staffClient();
+		const guests = unwrap(
+			await db
+				.from('guests')
+				.select('guestid, guestfirstname, guestaddress, guestcity, guestprimaryphone, guestemailaddress')
+				.eq('guestlastname', lastname)
+		) as { guestid: number }[];
+		expect(guests).toEqual([
+			{
+				guestid: expect.any(Number),
+				guestfirstname: 'Uma',
+				guestaddress: '12 Shore Road',
+				guestcity: 'Ladysmith',
+				guestprimaryphone: '(250) 555-0808',
+				guestemailaddress: 'uma@example.test'
+			}
+		]);
+
+		const [stay] = await rpc<Summary[]>('find_reservation', { p_resnumber: resnumber });
+		const dates = {
+			resarrivaldate: stay.resarrivaldate.slice(0, 10),
+			resdeparturedate: stay.resdeparturedate.slice(0, 10)
+		};
+		expect({ ...stay, ...dates }).toEqual(
+			expect.objectContaining({
+				resarrivaldate: arrival,
+				resdeparturedate: addDays(arrival, 4),
+				numnights: 4,
+				numadults: 3,
+				bedtype: 'Twin',
+				resbookedby: 'QA',
+				primary_guestid: guests[0].guestid
+			})
+		);
+		const rooms = unwrap(
+			await db.from('v_occupancy_summary').select('roomid').eq('reservationid', stay.reservationid)
+		) as { roomid: number }[];
+		expect(rooms).toEqual([{ roomid: room.roomid }]);
 	});
 
-	describe('the party', () => {
-		let page: Page;
-
-		beforeAll(async () => {
-			page = await openAppPage();
-			await page.goto(`${APP_URL}/reservations/new`, { waitUntil: 'networkidle' });
-		});
-
-		afterAll(async () => {
-			await closeApp(page);
-		});
-
-		it('is entered as its number of adults, with no children or group fields', async () => {
-			expect(await page.getByLabel('Adults', { exact: true }).count()).toBe(1);
-			expect(await page.getByLabel('Children').count()).toBe(0);
-			expect(await page.getByLabel('Group').count()).toBe(0);
-		});
-	});
-
-	describe('bed layout', () => {
-		let page: Page;
-
-		beforeAll(async () => {
-			page = await openAppPage();
-			await page.goto(`${APP_URL}/reservations/new`, { waitUntil: 'networkidle' });
-			await page.click('#bed');
-		});
-
-		afterAll(async () => {
-			await closeApp(page);
-		});
-
-		it('offers the lodge\u2019s own words rather than a bed count', async () => {
-			const options = await page.locator('[role=option]').allTextContents();
-			expect(options.map((o) => o.trim())).toEqual(['Regular', 'Split']);
-		});
-
-		it('shows the same words back on the reservation', async () => {
-			await page.goto(`${APP_URL}/reservations/${created.resnumber}`, {
-				waitUntil: 'networkidle'
-			});
-			// The stay was booked with the stored 'Twin' vocabulary.
-			expect(await page.textContent('body')).toMatch(/Beds\s*Split/);
-		});
+	it('shows the booking back in the same words on the reservation', async () => {
+		await expect.poll(() => page.textContent('h1')).toContain(`Reservation #${resnumber}`);
+		expect(await field(page, 'Beds').textContent()).toBe('Split');
+		expect(await page.textContent('body')).toContain(room.room_compact);
 	});
 });

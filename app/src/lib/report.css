@@ -112,8 +112,7 @@
 	text-align: right;
 	white-space: nowrap;
 }
-.report-page .total td,
-.report-page tr.total td {
+.report-page .total td {
 	border-top: 2px solid #444;
 	font-weight: 700;
 }

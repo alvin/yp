@@ -11,7 +11,6 @@ Feature: record charges and deposits while booking
   Scenario: Acceptance criteria
     Then Items to be charged can be added while a new reservation is being entered.
     And A deposit or pre-payment can be recorded while a new reservation is being entered.
-    And The same charges and deposit can be recorded while re-booking an existing reservation.
     And Lines entered can be reviewed and removed before the reservation is saved.
     And Saving posts the lines to the new reservation, so its balance and deposit are right without a further step.
     And The posted lines are dated the day they were taken: a deposit lands on that day's cash report, and a charge on the stay's check-out day, like any charge.

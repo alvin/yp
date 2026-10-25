@@ -8,7 +8,6 @@ old payment-card fields, in the air-gapped local environment.
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 
@@ -22,36 +21,12 @@ from supabase.tools.access_table_map import (  # noqa: E402
     TARGET_SCHEMA,
     postgres_table_for_access,
     retired_lookup_sql,
-    rewrite_export_sql,
+    export_insert_sql,
     sequence_reset_sql,
 )
 
 DB = ROOT / "legacy-db" / "YPLogicCurrentConsolidated.accdb"
 OUTPUT = ROOT / "supabase" / "seed.sql"
-
-
-def export_insert_sql(access_table: str) -> str:
-    exported = subprocess.check_output(
-        [
-            "mdb-export",
-            "-I",
-            "postgres",
-            "-N",
-            TARGET_SCHEMA,
-            "-B",
-            "-D",
-            "%Y-%m-%d",
-            "-T",
-            "%Y-%m-%d %H:%M:%S",
-            "-b",
-            "strip",
-            str(DB),
-            access_table,
-        ],
-        text=True,
-        stderr=subprocess.STDOUT,
-    )
-    return rewrite_export_sql(exported)
 
 
 def main() -> None:
@@ -89,7 +64,7 @@ def main() -> None:
         parts.append(
             f"-- ---- {access_table} -> {TARGET_SCHEMA}.{postgres_table} ----\n"
         )
-        exported = export_insert_sql(access_table).strip()
+        exported = export_insert_sql(DB, access_table).strip()
         parts.append((exported if exported else "-- no rows") + "\n\n")
 
     parts.append("-- Lookup values the lodge has retired.\n" + retired_lookup_sql() + "\n\n")

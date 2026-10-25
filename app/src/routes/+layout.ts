@@ -4,9 +4,9 @@ export const ssr = false;
 export const prerender = false;
 
 import { redirect } from '@sveltejs/kit';
-import { supabase } from '$lib/data/client';
-import { loadReference } from '$lib/data/reference';
-import type { LayoutLoad } from './$types';
+import { supabase } from '$lib/data/client.js';
+import { loadReference } from '$lib/data/reference.js';
+import type { LayoutLoad } from './$types.js';
 
 export const load: LayoutLoad = async ({ url }) => {
 	const {

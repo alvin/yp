@@ -1,57 +1,61 @@
 // Story: spec/features/sell-gift-certificate.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { addDays, dcarLine, ledger, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 let fx: Fixture;
 let saleDay: string;
+let giftCode: string;
+
+const page = useAppPage();
 
 beforeAll(async () => {
 	// Sold at the desk on a daily sales account — a stay already checked out —
 	// so the sale is counted the day it is rung up.
 	fx = await makeReservation();
 	saleDay = addDays(fx.departure, 1);
-	await rpc('sell_gift_certificate', {
-		p_reservationguestid: fx.reservationguestid,
-		p_amount: 300,
-		p_paymenttype: 'Visa',
-		p_date: saleDay
-	});
+	const db = await staffClient();
+	[{ invcode: giftCode }] = unwrap(
+		await db
+			.from('inventory_items')
+			.select('invcode')
+			.eq('invarchive', false)
+			.eq('invtype', 'Gift Certificate')
+			.order('inventoryid')
+			.limit(1)
+	) as { invcode: string }[];
 });
 
 describe('sell gift certificate', () => {
-	it('records the sale from the transaction workspace RPC', async () => {
-		const client = await staffClient();
-		const tx = unwrap(
-			await client
-				.from('transactions')
-				.select('transtype, transamount')
-				.eq('reservationguestid', fx.reservationguestid)
-				.eq('transtype', 'Gift Certificate')
-		) as { transamount: number }[];
-		expect(tx).toHaveLength(1);
-		expect(Number(tx[0].transamount)).toBe(300);
+	it('rings up the sale from the reservation’s transactions: the certificate charged, the money taken', async () => {
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		await page.getByRole('button', { name: 'Charge', exact: true }).click();
+		await page.getByRole('button', { name: 'Item / extra' }).click();
+		await page.click('#c-item');
+		await page.keyboard.type(giftCode);
+		await page.locator('[data-testid=combobox-list] [role=option]').first().click();
+		await page.fill('#c-unit', '300');
+		await page.fill('#c-date', saleDay);
+		await page.getByRole('button', { name: 'Add charge' }).click();
+		await expect.poll(async () => (await ledger(fx.reservationid)).length, { timeout: 10_000 }).toBe(1);
+
+		await page.getByRole('button', { name: 'Payment', exact: true }).click();
+		await page.fill('#p-amt', '300');
+		await page.fill('#p-date', saleDay);
+		await page.getByRole('button', { name: 'Record', exact: true }).click();
+		await expect.poll(async () => (await ledger(fx.reservationid)).length, { timeout: 10_000 }).toBe(2);
+
+		const [charge] = (await ledger(fx.reservationid)).filter((l) => l.line_source === 'transaction');
+		expect([charge.line_type, Number(charge.amount)]).toEqual(['Gift Certificate', 300]);
 	});
 
-	it('treats the sale as charge-side activity', async () => {
-		const upper = await rpc<{ group_name: string; item: string; amount: number }[]>(
-			'report_dcar_upper',
-			{ p_date: saleDay }
-		);
-		const row = upper.find((r) => r.group_name === 'Revenue' && r.item === 'Gift Certificate');
-		expect(Number(row?.amount)).toBe(300);
+	it('counts the sale as a charge on the day it is sold', async () => {
+		expect(await dcarLine(saleDay, 'Gift Certificate', 'Revenue')).toBe(300);
+		expect(await dcarLine(saleDay, 'Total Sales and Charges')).toBe(300);
 	});
 
-	it('contributes to daily cash reporting on both sides', async () => {
-		const receipts = await rpc<number>('report_dcar_receipts_total', { p_date: saleDay });
-		expect(Number(receipts)).toBe(300);
-		const total = await rpc<number>('report_dcar_total', { p_date: saleDay });
-		expect(Number(total)).toBe(300);
-	});
-
-	it('remains part of the reservation office workflow (ledger)', async () => {
-		const rows = await rpc<{ line_type: string }[]>('reservation_ledger', {
-			p_reservationid: fx.reservationid
-		});
-		expect(rows.some((r) => r.line_type === 'Gift Certificate')).toBe(true);
+	it('takes the money into the day’s receipts, so the day balances', async () => {
+		expect(Number(await rpc('report_dcar_receipts_total', { p_date: saleDay }))).toBe(300);
+		expect(Number(await rpc('report_dcar_total', { p_date: saleDay }))).toBe(300);
 	});
 });

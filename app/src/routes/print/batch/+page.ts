@@ -7,58 +7,26 @@ import {
 	TODAY,
 	guestsInHouse,
 	reportCancellationNotice,
-	reportCheckInFolio,
-	reportCheckoutBillHeader,
-	reportCheckoutBillLines,
-	reportConfirmation,
-	reportFolioReceipts,
 	reportGuestDocumentQueue,
 	reportHousekeeping,
 	reportInHouse,
 	reportKitchenMeal,
-	reportManualSales,
-	reportStayRooms
+	reportManualSales
 } from '$lib/data/queries.js';
-import type {
-	CancellationReport,
-	CheckoutBillHeader,
-	CheckoutBillLine,
-	ConfirmationReport,
-	FolioReceipt,
-	FolioReport,
-	HousekeepingRow,
-	InHouseRow,
-	KitchenMealRow,
-	ManualSalesRow,
-	StayRoomRow
-} from '$lib/data/types.js';
+import { billDoc, confirmationDoc, folioDoc } from '$lib/data/guest-documents.js';
+import type { GuestDocument } from '$lib/data/types.js';
 import { addDays } from '$lib/format.js';
 import type { PageLoad } from './$types.js';
 
-export interface BatchReports {
-	housekeeping: HousekeepingRow[];
-	inHouse: InHouseRow[];
-	kitchenRows: KitchenMealRow[];
-	totalGuests: number;
-	manualSales: ManualSalesRow[];
-}
-
-export interface BatchBill {
-	header: CheckoutBillHeader;
-	lines: CheckoutBillLine[];
-}
-
-/** A confirmation slip with the rooms the stay runs through. */
-export interface BatchConfirmation {
-	report: ConfirmationReport;
-	rooms: StayRoomRow[];
-}
-
-/** A folio with the stay's rooms and the money already received for it. */
-export interface BatchFolio {
-	report: FolioReport;
-	rooms: StayRoomRow[];
-	receipts: FolioReceipt[];
+async function loadReports(date: string) {
+	const [housekeeping, inHouse, kitchenRows, totalGuests, manualSales] = await Promise.all([
+		reportHousekeeping(date),
+		reportInHouse(date),
+		reportKitchenMeal(date),
+		guestsInHouse(date),
+		reportManualSales(date)
+	]);
+	return { housekeeping, inHouse, kitchenRows, totalGuests, manualSales };
 }
 
 // One failed document must not sink the whole batch — the rest of the set
@@ -70,69 +38,15 @@ function orNull<T>(p: Promise<T>): Promise<T | null> {
 	});
 }
 
-async function loadReports(date: string): Promise<BatchReports> {
-	const [housekeeping, inHouse, kitchenRows, totalGuests, manualSales] = await Promise.all([
-		reportHousekeeping(date),
-		reportInHouse(date),
-		reportKitchenMeal(date),
-		guestsInHouse(date),
-		reportManualSales(date)
-	]);
-	return { housekeeping, inHouse, kitchenRows, totalGuests, manualSales };
-}
-
-async function loadConfirmations(date: string): Promise<BatchConfirmation[]> {
-	const queue = await reportGuestDocumentQueue('confirmation', date);
-	const docs = await Promise.all(
-		queue.map((q) =>
-			orNull(
-				Promise.all([
-					reportConfirmation(q.reservationid),
-					reportStayRooms(q.reservationid)
-				]).then(([report, rooms]) => (report ? { report, rooms } : null))
-			)
-		)
-	);
-	return docs.filter((r): r is BatchConfirmation => r != null);
-}
-
-async function loadFolios(date: string): Promise<BatchFolio[]> {
-	const queue = await reportGuestDocumentQueue('check_in_folio', date);
-	const docs = await Promise.all(
-		queue.map((q) =>
-			orNull(
-				Promise.all([
-					reportCheckInFolio(q.reservationid),
-					reportStayRooms(q.reservationid),
-					reportFolioReceipts(q.reservationid)
-				]).then(([report, rooms, receipts]) => (report ? { report, rooms, receipts } : null))
-			)
-		)
-	);
-	return docs.filter((r): r is BatchFolio => r != null);
-}
-
-async function loadBills(date: string): Promise<BatchBill[]> {
-	const queue = await reportGuestDocumentQueue('checkout_bill', date);
-	const docs = await Promise.all(
-		queue.map((q) =>
-			orNull(
-				Promise.all([
-					reportCheckoutBillHeader(q.reservationid),
-					reportCheckoutBillLines(q.reservationid)
-				]).then(([header, lines]) => (header ? { header, lines } : null))
-			)
-		)
-	);
-	return docs.filter((b): b is BatchBill => b != null);
-}
-
-async function loadCancellations(date: string): Promise<CancellationReport[]> {
-	const queue = await reportGuestDocumentQueue('cancellation_notice', date);
-	const docs = await Promise.all(
-		queue.map((q) => orNull(reportCancellationNotice(q.reservationid)))
-	);
-	return docs.filter((c): c is CancellationReport => c != null);
+/** Every document of one kind the queue holds for the date. */
+async function loadQueued<T>(
+	document: GuestDocument,
+	date: string,
+	loadDoc: (reservationid: number) => Promise<T | null>
+): Promise<T[]> {
+	const queue = await reportGuestDocumentQueue(document, date);
+	const docs = await Promise.all(queue.map((q) => orNull(loadDoc(q.reservationid))));
+	return docs.filter((doc) => doc != null) as T[];
 }
 
 export const load: PageLoad = async ({ url }) => {
@@ -141,10 +55,10 @@ export const load: PageLoad = async ({ url }) => {
 
 	const [reports, confirmations, folios, bills, cancellations] = await Promise.all([
 		loadReports(date),
-		loadConfirmations(date),
-		loadFolios(date),
-		loadBills(date),
-		loadCancellations(date)
+		loadQueued('confirmation', date, confirmationDoc),
+		loadQueued('check_in_folio', date, folioDoc),
+		loadQueued('checkout_bill', date, billDoc),
+		loadQueued('cancellation_notice', date, reportCancellationNotice)
 	]);
 
 	return { date, reports, confirmations, folios, bills, cancellations };

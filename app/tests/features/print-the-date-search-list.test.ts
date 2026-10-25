@@ -1,18 +1,18 @@
 // Story: spec/features/print-the-date-search-list.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, isolatedDate, makeReservation, rpc } from '../helpers/db';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { addDays, isolatedDate, makeReservation, roomDirectory } from '../helpers/db';
 
-let page: Page;
+const page = useAppPage();
 let date: string;
 
 beforeAll(async () => {
 	// One stay arriving, one departing, one mid-stay, each in its own room, so
 	// the list on this date holds all three kinds of match.
 	date = isolatedDate();
-	const rooms = await rpc<{ roomid: number }[]>('room_directory');
+	const rooms = await roomDirectory();
 	await makeReservation({ arrival: date, nights: 2, roomid: rooms[0].roomid });
 	await makeReservation({ arrival: addDays(date, -2), departure: date, roomid: rooms[1].roomid });
 	await makeReservation({
@@ -20,12 +20,7 @@ beforeAll(async () => {
 		departure: addDays(date, 1),
 		roomid: rooms[2].roomid
 	});
-	page = await openAppPage();
 	await page.goto(`${APP_URL}/date?date=${date}&mode=in_house`, { waitUntil: 'networkidle' });
-});
-
-afterAll(async () => {
-	await closeApp(page);
 });
 
 /** The @page rules the screen carries. */
@@ -65,7 +60,8 @@ describe('print the date search list', () => {
 			});
 		});
 		await page.emulateMedia({ media: 'screen' });
-		expect(fits.length).toBeGreaterThan(0);
+		// One table per section: arrivals, in house, departures.
+		expect(fits).toHaveLength(3);
 		for (const f of fits) {
 			expect(f.clipped).toBe(false);
 			expect(f.overflows).toBe(false);

@@ -1,81 +1,44 @@
 // Story: spec/features/show-quantity-per-item-in-items-cashed-out-appendix.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { firstRoomId, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { dcarLine, makeReservation, postCharge, postRoomNights, pricedItem, rpc, type Fixture, type Item } from '../helpers/db';
+
+interface CashedOut {
+	resnumber: number;
+	inv_code: string;
+	item: string;
+	guestlastname: string;
+	quantity: number;
+	total: number;
+}
 
 let fx: Fixture;
+let item: Item;
+
+const cashedOut = (date: string) => rpc<CashedOut[]>('report_items_cashed_out', { p_date: date });
 
 beforeAll(async () => {
 	fx = await makeReservation();
-	const client = await staffClient();
-	const inv = unwrap(
-		await client
-			.from('inventory_items')
-			.select('inventoryid')
-			.eq('invarchive', false)
-			.gt('invamount', 0)
-			.limit(1)
-	) as { inventoryid: number }[];
-	await rpc('post_charge', {
-		p_reservationguestid: fx.reservationguestid,
-		p_inventoryid: inv[0].inventoryid,
-		p_quantity: 3,
-		p_transdate: fx.arrival,
-		p_amount: 30
-	});
-	await rpc('post_room_nights', {
-		p_reservationguestid: fx.reservationguestid,
-		p_roomid: await firstRoomId(),
-		p_occupancyin: fx.arrival,
-		p_occupancyout: fx.departure,
-		p_rate: 100,
-		p_transdate: fx.arrival
-	});
+	item = await pricedItem();
+	await postCharge(fx, { inventoryid: item.inventoryid, quantity: 3, amount: 30 });
+	await postRoomNights(fx, 100);
 });
 
 describe('show quantity per item in items cashed out appendix', () => {
-	it('carries the quantity on each cashed-out line', async () => {
-		const rows = await rpc<{ resnumber: number; quantity: number; total: number }[]>(
-			'report_items_cashed_out',
-			{ p_date: fx.departure }
-		);
-		const mine = rows.find((r) => r.resnumber === fx.resnumber);
-		expect(mine?.quantity).toBe(3);
-		expect(Number(mine?.total)).toBe(30);
-	});
-
-	it('identifies the line by inventory code, reservation, and guest', async () => {
-		const rows = await rpc<
-			{ resnumber: number; inv_code: string; guestlastname: string; item: string }[]
-		>('report_items_cashed_out', { p_date: fx.departure });
-		const mine = rows.find((r) => r.resnumber === fx.resnumber)!;
-		expect(mine.inv_code).toBeTruthy();
-		expect(mine.guestlastname).toBe(fx.lastname);
-		expect(mine.item).toBeTruthy();
-	});
-
-	it('lists the items sold and not the room nights', async () => {
-		const rows = await rpc<{ resnumber: number; total: number }[]>('report_items_cashed_out', {
-			p_date: fx.departure
-		});
-		const mine = rows.filter((r) => r.resnumber === fx.resnumber);
-		expect(mine.map((r) => Number(r.total))).toEqual([30]);
+	it('lists the item sold with its quantity, code, reservation and guest — and not the room nights', async () => {
+		const rows = await cashedOut(fx.departure);
+		expect(
+			rows.map((r) => [r.resnumber, r.inv_code, r.item, r.guestlastname, r.quantity, Number(r.total)])
+		).toEqual([[fx.resnumber, item.invcode, item.invitemdescription, fx.lastname, 3, 30]]);
 	});
 
 	it('agrees with the daily cash report’s sales lines other than Room', async () => {
-		const [rows, upper] = await Promise.all([
-			rpc<{ total: number }[]>('report_items_cashed_out', { p_date: fx.departure }),
-			rpc<{ item: string; amount: number }[]>('report_dcar_upper', { p_date: fx.departure })
-		]);
-		const line = (item: string) => Number(upper.find((u) => u.item === item)?.amount ?? 0);
-		expect(line('Room')).toBe(300);
-		const items = rows.reduce((sum, r) => sum + Number(r.total), 0);
-		expect(items).toBeCloseTo(line('Total Sales and Charges') - line('Room') - line('Cancellation'), 2);
+		expect(await dcarLine(fx.departure, 'Room', 'Revenue')).toBe(300);
+		expect(await dcarLine(fx.departure, 'Total Sales and Charges')).toBe(330);
+		const items = (await cashedOut(fx.departure)).reduce((sum, r) => sum + Number(r.total), 0);
+		expect(items).toBe(330 - 300);
 	});
 
 	it('lists the item on its stay’s check-out day, not the day it was posted', async () => {
-		const posted = await rpc<{ resnumber: number }[]>('report_items_cashed_out', {
-			p_date: fx.arrival
-		});
-		expect(posted.some((r) => r.resnumber === fx.resnumber)).toBe(false);
+		expect(await cashedOut(fx.arrival)).toEqual([]);
 	});
 });

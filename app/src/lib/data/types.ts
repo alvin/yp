@@ -196,7 +196,7 @@ export interface ReservationSummary {
 	deposit_held: number;
 }
 
-export type HistoryBucket = 'future' | 'present' | 'past';
+type HistoryBucket = 'future' | 'present' | 'past';
 export interface GuestHistoryRow {
 	reservationid: number;
 	reservationguestid: number;
@@ -283,11 +283,12 @@ export interface ConfirmationReport {
 	in_date: string | null;
 	out_date: string | null;
 	guest_count: number;
-	reservation_notes: string | null;
+	occupancy_notes: string | null;
 	deposit_amount: number | null;
 	deposit_date: string | null;
 	diet_notes: string | null;
 	housekeeping_notes: string | null;
+	request_notes: string | null;
 }
 
 export interface FolioReport {
@@ -401,7 +402,7 @@ export interface CancellationReport {
 	deposit_outcome_category: string | null;
 	deposit_outcome_amount: number | null;
 	deposit_outcome_date: string | null;
-	cancellation_notes: string | null;
+	occupancy_notes: string | null;
 }
 
 export type GuestDocument =
@@ -442,6 +443,23 @@ export interface InHouseRow {
 	in_date: string;
 	out_date: string;
 	occupancy_notes: string | null;
+}
+
+export interface RequestRow {
+	resnumber: number;
+	guest: string;
+	rooms: string;
+	arrival_date: string;
+	departure_date: string;
+	request: string;
+}
+
+export interface GuestRequestRow {
+	resnumber: number;
+	arrival_date: string;
+	departure_date: string;
+	rooms: string | null;
+	request: string;
 }
 
 export interface KitchenMealRow {
@@ -511,9 +529,9 @@ export interface DepositReportRow {
 	guestlastname: string;
 	guestfirstname: string | null;
 	guest: string;
-	pymt_amount: number | null;
+	pymt_amount: number;
 	funds: string;
-	pymt_cdn: number | null;
+	pymt_cdn: number;
 }
 
 export interface CashierDetailRow {

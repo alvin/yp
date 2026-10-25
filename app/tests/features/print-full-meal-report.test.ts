@@ -1,82 +1,66 @@
 // Story: spec/features/print-full-meal-report.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, printedDate, useAppPage } from '../helpers/app';
+import { addDays, makeReservation, roomDirectory, rpc, type Fixture } from '../helpers/db';
 
-let fx: Fixture;
-let mid: string;
-let page: Page;
+// Typed the way the desk types: punctuation, capitals and asterisks included.
+const DIET = 'No red meat - Pork OK';
+const NOTES = 'PREFERS THE CORNER TABLE *extra crispy bacon*';
+const ALLERGY = 'Nut allergy';
+
+let dieting: Fixture; // a party of two with a diet and notes
+let allergic: Fixture; // a party of one whose diet is an allergy
+let noDiet: Fixture; // a party of two with nothing on file for the kitchen
+let day: string;
+
+const page = useAppPage();
+const rows = () => page.locator('.report-page tbody tr');
 
 beforeAll(async () => {
-	fx = await makeReservation();
-	mid = addDays(fx.arrival, 1);
-	await rpc('save_kitchen_meal', {
-		p_guestid: fx.guestid,
-		p_guestdiet: 'Vegetarian - Seafood OK',
-		p_notes: 'Prefers early dinner.'
-	});
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
+	const rooms = await roomDirectory();
+	dieting = await makeReservation({ roomid: rooms[0].roomid });
+	allergic = await makeReservation({ arrival: dieting.arrival, numadults: 1, roomid: rooms[1].roomid });
+	noDiet = await makeReservation({ arrival: dieting.arrival, roomid: rooms[2].roomid });
+	await rpc('save_kitchen_meal', { p_guestid: dieting.guestid, p_guestdiet: DIET, p_notes: NOTES });
+	await rpc('save_kitchen_meal', { p_guestid: allergic.guestid, p_guestdiet: ALLERGY });
+	day = addDays(dieting.arrival, 1);
 });
 
 describe('print full meal report', () => {
-	it('prints every in-house dietary need for the day', async () => {
-		const rows = await rpc<{ resnumber: number; diet_notes: string }[]>('report_kitchen_meal', {
-			p_date: mid
-		});
-		const mine = rows.find((r) => r.resnumber === fx.resnumber)!;
-		expect(mine.diet_notes).toContain('Vegetarian - Seafood OK');
+	it('opens from the print menu for the day chosen, the day in its heading', async () => {
+		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
+		await page.fill('#print-date', day);
+		await page.click('a[href^="/reports/kitchen?"]');
+		await page.waitForURL(`${APP_URL}/reports/kitchen?date=${day}`, { timeout: 15_000 });
+		await expect.poll(() => page.textContent('.report-page h3')).toBe(`for ${printedDate(day)}`);
 	});
 
-	it('totals the guests in house for the kitchen', async () => {
-		// The date is this test's alone: one party of two.
-		expect(await rpc<number>('guests_in_house', { p_date: mid })).toBe(2);
-		await page.goto(`${APP_URL}/reports/kitchen?date=${mid}`, { waitUntil: 'networkidle' });
-		expect(await page.textContent('.report-page')).toMatch(/Total Guests\D*2\b/);
+	it('lists each stay in house with a diet: number, guest, dates, and the diet with its notes word for word', async () => {
+		await expect.poll(() => rows().count(), { timeout: 10_000 }).toBe(2);
+		const cells = await rows()
+			.filter({ hasText: String(dieting.resnumber) })
+			.locator('td')
+			.allTextContents();
+		expect(cells.slice(0, 4)).toEqual([
+			String(dieting.resnumber),
+			`${dieting.lastname}, Test`,
+			printedDate(dieting.arrival),
+			printedDate(dieting.departure)
+		]);
+		expect(cells[4]).toContain(DIET);
+		expect(cells[4]).toContain(NOTES);
+		expect(await rows().filter({ hasText: String(noDiet.resnumber) }).count()).toBe(0);
 	});
 
-	it('prints under the lodge blackbar heading', async () => {
-		const sheet = await page.textContent('.report-page');
-		expect(sheet).toContain('Yellow Point Lodge');
-		expect(sheet).toContain('Kitchen/Meal Report');
-	});
-});
-
-describe('print full meal report — rows for the day', () => {
-	let rowFx: Fixture;
-	let rowMid: string;
-	let rows: { resnumber: number; guest: string; arrival_date: string; departure_date: string; diet_notes: string }[];
-
-	beforeAll(async () => {
-		rowFx = await makeReservation();
-		rowMid = addDays(rowFx.arrival, 1);
-		await rpc('save_kitchen_meal', {
-			p_guestid: rowFx.guestid,
-			p_guestdiet: 'Vegetarian',
-			p_notes: 'No mushrooms.'
-		});
-		rows = await rpc('report_kitchen_meal', { p_date: rowMid });
+	it("carries the day's Total Guests", async () => {
+		expect(await page.textContent('.report-page')).toMatch(/Total Guests\D*5\b/);
 	});
 
-	it('lists in-house guests with dietary needs for the day', () => {
-		const mine = rows.find((r) => r.resnumber === rowFx.resnumber);
-		expect(mine).toBeDefined();
-		expect(mine!.guest).toContain(rowFx.lastname);
-	});
-
-	it('carries the diet and meal notes together', () => {
-		const mine = rows.find((r) => r.resnumber === rowFx.resnumber)!;
-		expect(mine.diet_notes).toContain('Vegetarian');
-		expect(mine.diet_notes).toContain('No mushrooms.');
-	});
-
-	it('shows the stay dates for kitchen planning', () => {
-		const mine = rows.find((r) => r.resnumber === rowFx.resnumber)!;
-		expect(mine.arrival_date).toBe(rowFx.arrival);
-		expect(mine.departure_date).toBe(rowFx.departure);
+	it('narrows to the allergies on screen, without a Total Guests line', async () => {
+		await page.getByRole('button', { name: 'Allergy only' }).click();
+		await expect.poll(() => rows().allTextContents()).toEqual([
+			expect.stringContaining(String(allergic.resnumber))
+		]);
+		expect(await page.textContent('.report-page')).not.toContain('Total Guests');
 	});
 });

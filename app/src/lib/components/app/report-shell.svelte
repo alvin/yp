@@ -1,10 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PrinterIcon from '@lucide/svelte/icons/printer';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import ReportDateInput from '$lib/components/app/report-date-input.svelte';
 	import type { ReportTab } from '$lib/report-nav.js';
 	import { pageSize, type PaperStock } from '$lib/print-stock.js';
 	import '$lib/report.css';
@@ -33,14 +32,6 @@
 		children: Snippet;
 		toolbar?: Snippet;
 	} = $props();
-
-
-	function changeDate(d: string) {
-		if (!d) return;
-		const params = new URLSearchParams(page.url.searchParams);
-		params.set('date', d);
-		goto(`${page.url.pathname}?${params.toString()}`);
-	}
 </script>
 
 <svelte:head>
@@ -56,14 +47,7 @@
 			<span class="text-muted-foreground truncate text-sm font-medium">{title}</span>
 			<div class="ml-auto flex flex-wrap items-center gap-2">
 				{#if date !== undefined}
-					<label class="text-muted-foreground text-xs" for="report-date">Date</label>
-					<input
-						id="report-date"
-						type="date"
-						value={date}
-						onchange={(e) => changeDate(e.currentTarget.value)}
-						class="h-8 rounded-md border bg-field px-2 text-sm shadow-xs"
-					/>
+					<ReportDateInput id="report-date" value={date} />
 				{/if}
 				{#if toolbar}{@render toolbar()}{/if}
 				<Button size="sm" onclick={() => window.print()}>

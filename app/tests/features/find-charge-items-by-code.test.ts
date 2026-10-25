@@ -1,17 +1,20 @@
 // Story: spec/features/find-charge-items-by-code.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import { makeReservation, staffClient, unwrap, type Fixture } from '../helpers/db';
-import { itemLabel, sortItemsByCode } from '../../src/lib/inventory';
 import { filterOptions, type ComboboxOption } from '../../src/lib/components/ui/combobox/filter';
-import type { InventoryItem } from '../../src/lib/data/types';
 
-let page: Page;
+interface PriceListItem {
+	inventoryid: number;
+	invcode: string;
+	invitemdescription: string | null;
+	invamount: number | null;
+}
+
+const page = useAppPage();
 let fx: Fixture;
-let items: InventoryItem[];
-let options: ComboboxOption[];
+let items: PriceListItem[];
 
 /** The entries an open dropdown is offering, in the order it offers them. */
 async function shown(): Promise<string[]> {
@@ -25,46 +28,42 @@ async function openChargeDialog(): Promise<void> {
 	await page.locator('#c-item').waitFor({ timeout: 15_000 });
 }
 
-/** Opens a dropdown and types into its search box. */
+/** Opens a dropdown, waits for its entries, and types into its search box. */
 async function typeInto(trigger: string, text: string): Promise<void> {
 	await page.click(trigger);
-	await page.locator('[data-testid=combobox-list]').waitFor({ timeout: 10_000 });
+	await page.locator('[data-testid=combobox-list] [role=option]').first().waitFor({ timeout: 10_000 });
 	if (text) await page.keyboard.type(text);
-	await page.waitForTimeout(150);
 }
 
-beforeAll(async () => {
-	// The same price list the dropdown is built from: active items, code order.
-	const db = await staffClient();
-	items = sortItemsByCode(
-		unwrap(await db.from('inventory_items').select('*').eq('invarchive', false)) as InventoryItem[]
-	);
-	options = items.map((i) => ({ value: String(i.inventoryid), label: itemLabel(i) }));
-	fx = await makeReservation();
-	page = await openAppPage();
-});
+/** The code an entry in the item dropdown leads with. */
+const codeOf = (label: string) => label.trim().split(/\s/)[0].toUpperCase();
 
-afterAll(async () => {
-	await closeApp(page);
+beforeAll(async () => {
+	// The price list the dropdown is built from: every active item.
+	const db = await staffClient();
+	items = unwrap(
+		await db
+			.from('inventory_items')
+			.select('inventoryid, invcode, invitemdescription, invamount')
+			.eq('invarchive', false)
+	) as PriceListItem[];
+	fx = await makeReservation();
 });
 
 describe('find charge items by code', () => {
-	it('lists the items to be charged in item-code order', () => {
-		const codes = items.map((i) => i.invcode.toUpperCase());
-		// The code letters the price list is read by stay together and ascend.
+	it('lists the items to be charged in item-code order', async () => {
+		await openChargeDialog();
+		await typeInto('#c-item', '');
+		await expect.poll(async () => (await shown()).length, { timeout: 10_000 }).toBe(items.length);
+		const codes = (await shown()).map(codeOf);
+		// The code letters the price list is read by stay together and ascend…
 		const letters = codes.map((c) => c[0]);
 		expect(letters).toEqual([...letters].sort());
-		// And within a letter the numbers run in order.
-		const liquor = codes.filter((c) => c.startsWith('L'));
+		// …and within a letter the numbers run in order: L2 before L10.
+		const liquor = codes.filter((c) => c.startsWith('L')).map((c) => Number(c.slice(1)));
 		expect(liquor.length).toBeGreaterThan(1);
-		expect(liquor).toEqual([...liquor].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })));
-	});
-
-	it('narrows the list to entries containing what was typed', () => {
-		const matches = filterOptions(options, 'L0');
-		expect(matches.length).toBeGreaterThan(0);
-		expect(matches.length).toBeLessThan(options.length);
-		expect(matches.every((o) => o.label.toLowerCase().includes('l0'))).toBe(true);
+		expect(liquor).toEqual([...liquor].sort((x, y) => x - y));
+		await page.keyboard.press('Escape');
 	});
 
 	it('lists entries starting with what was typed first', () => {
@@ -76,19 +75,24 @@ describe('find charge items by code', () => {
 		expect(filterOptions(list, 'x99').map((o) => o.value)).toEqual(['1', '3', '2']);
 	});
 
-	it('finds items by their description when the code is not known', () => {
-		const wine = items.find((i) => (i.invitemdescription ?? '').toLowerCase().includes('wine'));
+	it('finds items by their description when the code is not known', async () => {
+		const wine = items.find((i) => /wine/i.test(i.invitemdescription ?? ''));
 		expect(wine, 'the price list has a wine item to search for').toBeDefined();
-		const matches = filterOptions(options, 'wine');
-		expect(matches.map((o) => o.value)).toContain(String(wine!.inventoryid));
+		await openChargeDialog();
+		await typeInto('#c-item', 'wine');
+		await expect
+			.poll(async () => (await shown()).some((o) => o.includes(wine!.invitemdescription!)), {
+				timeout: 10_000
+			})
+			.toBe(true);
+		await page.keyboard.press('Escape');
 	});
 
 	it('narrows the dropdown on screen as an item code is typed', async () => {
 		await openChargeDialog();
 		await typeInto('#c-item', '');
+		await expect.poll(async () => (await shown()).length, { timeout: 10_000 }).toBe(items.length);
 		const all = await shown();
-		expect(all).toHaveLength(items.length);
-		expect(all[0]).toContain(items[0].invcode);
 
 		await page.keyboard.type('L');
 		await expect

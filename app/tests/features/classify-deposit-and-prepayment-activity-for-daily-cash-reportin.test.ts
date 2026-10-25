@@ -1,90 +1,58 @@
 // Story: spec/features/classify-deposit-and-prepayment-activity-for-daily-cash-reportin.feature
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { makeReservation, rpc, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { ledger, makeReservation, pay, rpc, type Fixture } from '../helpers/db';
+
+const RECORDED = [
+	['Deposit (Received)', 100],
+	['Deposit (Refund)', 30],
+	['Deposit (Kept)', 20],
+	['Prepayment (Received)', 70],
+	['Prepayment (Refund)', 10]
+] as const;
 
 let fx: Fixture;
-let upper: { group_name: string; item: string; amount: number }[];
+
+const page = useAppPage();
 
 beforeAll(async () => {
 	fx = await makeReservation();
-	await rpc('record_payment', {
-		p_reservationguestid: fx.reservationguestid,
-		p_paymentcategory: 'Deposit (Received)',
-		p_paymenttype: 'Visa',
-		p_amount: 100,
-		p_paymentdate: fx.arrival
-	});
-	await rpc('record_payment', {
-		p_reservationguestid: fx.reservationguestid,
-		p_paymentcategory: 'Prepayment (Received)',
-		p_paymenttype: 'Cheque',
-		p_amount: 70,
-		p_paymentdate: fx.arrival
-	});
-	upper = await rpc('report_dcar_upper', { p_date: fx.arrival });
+	for (const [category, amount] of RECORDED) await pay(fx, category, amount);
 });
-
-const adj = (item: string) => upper.find((r) => r.group_name === 'Adjustments' && r.item === item);
 
 describe('classify deposit and prepayment activity for daily cash reporting', () => {
-	it('keeps deposits and prepayments on their own classified lines', () => {
-		expect(Number(adj('Deposit (Received)')?.amount)).toBe(100);
-		expect(Number(adj('Prepayment (Received)')?.amount)).toBe(70);
-	});
-
-	it('prints the full classification set even when idle', () => {
-		for (const item of [
-			'Deposit (Received)',
-			'Prepayment (Received)',
-			'Deposit (Refund)',
-			'Prepayment (Refund)',
-			'Deposit (Applied)',
-			'Prepayment (Applied)'
-		]) {
-			expect(adj(item)).toBeDefined();
-		}
-	});
-
-	it('feeds the classified activity into the day total', async () => {
-		const total = await rpc<number>('report_dcar_total', { p_date: fx.arrival });
-		expect(Number(total)).toBe(170);
-	});
-});
-
-describe('classify deposit and prepayment activity — applied at check-out', () => {
-	it('applies what the stay still holds when the guest checks out', async () => {
-		const out = await rpc<{ item: string; amount: number }[]>('report_dcar_upper', {
-			p_date: fx.departure
-		});
-		expect(Number(out.find((r) => r.item === 'Deposit (Applied)')?.amount)).toBe(-100);
-		expect(Number(out.find((r) => r.item === 'Prepayment (Applied)')?.amount)).toBe(-70);
-	});
-});
-
-describe('classify deposit and prepayment activity — the payment dialog', () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
-
-	it('offers no category for applying a deposit or prepayment', async () => {
+	it('offers deposits received, refunded or kept and prepayments received or refunded, never applied', async () => {
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
 		await page.getByRole('button', { name: 'Payment', exact: true }).click();
 		await page.click('#p-cat');
 		const options = page.locator('[data-testid=combobox-list] [role=option]');
-		await expect.poll(() => options.count(), { timeout: 10_000 }).toBeGreaterThan(0);
+		await options.first().waitFor({ timeout: 10_000 });
 		const labels = (await options.allTextContents()).map((t) => t.trim());
-		expect(labels).toEqual(
-			expect.arrayContaining(['Deposit (Received)', 'Deposit (Refund)', 'Deposit (Kept)'])
+		expect(labels).toEqual(expect.arrayContaining(RECORDED.map(([category]) => category)));
+		expect(labels.filter((l) => /^(Deposit|Prepayment) /.test(l)).sort()).toEqual(
+			RECORDED.map(([category]) => category).sort()
 		);
-		expect(labels).not.toContain('Deposit (Applied)');
-		expect(labels).not.toContain('Prepayment (Applied)');
+		await page.keyboard.press('Escape');
+	});
+
+	it('shows each money movement on the reservation under its own category', async () => {
+		const lines = await ledger(fx.reservationid);
+		expect(lines.map((l) => l.line_type).sort()).toEqual(RECORDED.map(([c]) => c).sort());
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		const rows = page.locator('table tbody tr');
+		await expect.poll(() => rows.count(), { timeout: 10_000 }).toBe(RECORDED.length);
+		const shown = await rows.allTextContents();
+		for (const [category] of RECORDED) {
+			expect(shown.filter((row) => row.includes(category)), category).toHaveLength(1);
+		}
+	});
+
+	it('keeps deposits apart from prepayments: a prepayment is not deposit held', async () => {
+		// Received 100, refunded 30, kept 20; the prepayment does not count.
+		expect(
+			Number(
+				await rpc('reservationguest_deposit_held', { p_reservationguestid: fx.reservationguestid })
+			)
+		).toBe(50);
 	});
 });

@@ -9,7 +9,5 @@ Feature: provide appendix drillback
     Given a daily cash summary is being checked and an appendix total needs support
 
   Scenario: Acceptance criteria
-    Then The daily cash summary provides a clear path to the related appendix detail.
-    And The path follows the same upper and lower structure used in the daily cash workflow.
-    And The reviewer can move from the summary to the supporting appendix information without losing the review context.
-    And The drillback supports audit traceability for the daily cash review process.
+    Then The Daily Cash Activity Report and its appendices — Deposits received, Deposits applied, Cashier detail and Items cashed out — sit side by side as tabs.
+    And Moving from the report to an appendix, and back, keeps the business date.

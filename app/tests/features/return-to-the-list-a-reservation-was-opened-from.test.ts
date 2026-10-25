@@ -1,11 +1,10 @@
 // Story: spec/features/return-to-the-list-a-reservation-was-opened-from.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
 import { makeReservation, type Fixture } from '../helpers/db';
 
-let page: Page;
+const page = useAppPage();
 let fx: Fixture;
 
 /** Opens the fixture's reservation from the list on screen and backs out. */
@@ -19,11 +18,6 @@ async function openAndBack(open: () => Promise<void>): Promise<string> {
 
 beforeAll(async () => {
 	fx = await makeReservation();
-	page = await openAppPage();
-});
-
-afterAll(async () => {
-	await closeApp(page);
 });
 
 describe('return to the list a reservation was opened from', () => {
@@ -32,7 +26,7 @@ describe('return to the list a reservation was opened from', () => {
 		await page.goto(list, { waitUntil: 'networkidle' });
 		const url = await openAndBack(() => page.click(`a[href="/reservations/${fx.resnumber}"]`));
 		expect(url).toBe(list);
-		expect(await page.textContent('body')).toContain(`#${fx.resnumber}`);
+		await expect.poll(() => page.textContent('body')).toContain(`#${fx.resnumber}`);
 	});
 
 	it('returns to date search results', async () => {

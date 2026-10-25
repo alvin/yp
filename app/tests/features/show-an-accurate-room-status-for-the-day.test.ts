@@ -1,9 +1,8 @@
 // Story: spec/features/show-an-accurate-room-status-for-the-day.feature
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
-import { APP_URL, closeApp, openAppPage } from '../helpers/app';
-import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { APP_URL, useAppPage } from '../helpers/app';
+import { addDays, firstOccupancyId, makeReservation, roomDirectory, rpc, type Fixture } from '../helpers/db';
 
 let fx: Fixture; // four nights, moving rooms on the third day
 let moveDate: string;
@@ -20,18 +19,11 @@ function status(roomIn: string, roomOut: string, day: string): Promise<string> {
 }
 
 beforeAll(async () => {
-	rooms = (await rpc<{ roomid: number }[]>('room_directory')).slice(0, 2).map((r) => r.roomid);
+	rooms = (await roomDirectory()).slice(0, 2).map((r) => r.roomid);
 	fx = await makeReservation({ nights: 4, numadults: 2, roomid: rooms[0] });
 	moveDate = addDays(fx.arrival, 2);
-	const db = await staffClient();
-	const [first] = unwrap(
-		await db
-			.from('room_assignments')
-			.select('occupancyid')
-			.eq('reservationguestid', fx.reservationguestid)
-	) as { occupancyid: number }[];
 	await rpc('record_room_move', {
-		p_occupancyid: first.occupancyid,
+		p_occupancyid: await firstOccupancyId(fx),
 		p_new_roomid: rooms[1],
 		p_move_date: moveDate
 	});
@@ -76,15 +68,7 @@ describe('show an accurate room status for the day', () => {
 });
 
 describe('show an accurate room status for the day — on screen and paper', () => {
-	let page: Page;
-
-	beforeAll(async () => {
-		page = await openAppPage();
-	});
-
-	afterAll(async () => {
-		await closeApp(page);
-	});
+	const page = useAppPage();
 
 	it('prints Move Out under its own heading and counts the moving party once', async () => {
 		await page.goto(`${APP_URL}/reports/in-house?date=${moveDate}`, { waitUntil: 'networkidle' });
@@ -105,7 +89,8 @@ describe('show an accurate room status for the day — on screen and paper', () 
 	it('shows a past stay\'s rooms as Past on the reservation screen', async () => {
 		// Fixture stays are historical, so both rooms were left long ago.
 		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
-		const card = page.locator('text=Rooms & moves').locator('xpath=ancestor::*[contains(@class,"rounded-xl")][1]');
+		const card = page.locator('[data-slot=card]', { hasText: 'Rooms & moves' });
+		await expect.poll(() => card.locator('[data-slot=badge]').count(), { timeout: 10_000 }).toBe(2);
 		const text = (await card.textContent()) ?? '';
 		expect(text.match(/Past/g)?.length).toBe(2);
 		expect(text).not.toContain('In house');

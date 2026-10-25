@@ -9,7 +9,6 @@ Feature: print check-in folios for a selected day
     Given the printing coordinator runs guest documents for arrivals
 
   Scenario: Acceptance criteria
-    Then The printout includes all arrivals for the selected day.
-    And Staff can generate the printout for tomorrow as well as any other chosen day.
-    And The folio output is ready for the existing print workflow to process.
-    And The output is suitable for front-desk use without extra manual reformatting.
+    Then The folios for a chosen day are the stays arriving that day, and no others; a cancelled stay has none.
+    And Tomorrow's folios are one click away in the Print Center, as are any other day's.
+    And Each folio prints the guest, the reservation number, the arrival and departure dates, and the room with its dates and party size.

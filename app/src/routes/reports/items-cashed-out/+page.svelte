@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ReportShell from '$lib/components/app/report-shell.svelte';
 	import ReportFooter from '$lib/components/app/report-footer.svelte';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import DailyCashTie from '$lib/components/app/daily-cash-tie.svelte';
 	import { dateLong, dateShort, money } from '$lib/format.js';
 	import { dailyCashTabs } from '$lib/report-nav.js';
 	import type { ItemsCashedOutRow } from '$lib/data/types.js';
@@ -52,8 +52,6 @@
 		for (const row of data.rows) add(sums, row);
 		return sums;
 	});
-	const difference = $derived(Math.abs(totals.total - data.dcar_item_sales));
-	const agrees = $derived(difference < 0.005);
 </script>
 
 <svelte:head><title>Items cashed out · {dateShort(data.date)}</title></svelte:head>
@@ -67,11 +65,7 @@
 	date={data.date}
 >
 	{#snippet toolbar()}
-		{#if agrees}
-			<Badge variant="success">Agrees with Daily Cash</Badge>
-		{:else}
-			<Badge variant="warning">Differs by {money(difference)}</Badge>
-		{/if}
+		<DailyCashTie total={totals.total} dcar={data.dcar_item_sales} />
 	{/snippet}
 	<div class="blackbar">Yellow Point Lodge</div>
 	<h1>Items Cashed Out</h1>
