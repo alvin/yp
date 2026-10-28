@@ -261,12 +261,14 @@ export async function postCharge(fx: Fixture, opts: ChargeOptions = {}): Promise
 export async function cancel(
 	fx: Fixture,
 	handling: 'none' | 'refund' | 'keep' = 'none',
-	date: string = fx.arrival
+	date: string = fx.arrival,
+	notes: string | null = null
 ): Promise<void> {
 	await rpc('cancel_reservation', {
 		p_reservationid: fx.reservationid,
 		p_date: date,
-		p_deposit_handling: handling
+		p_deposit_handling: handling,
+		p_notes: notes
 	});
 }
 

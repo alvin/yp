@@ -144,30 +144,34 @@ export async function cancelReservation(
 	reservationid: number,
 	date: string,
 	depositHandling: 'none' | 'refund' | 'keep',
-	notes?: string | null
+	notes?: string | null,
+	tender?: string | null
 ): Promise<void> {
 	unwrap(
 		await supabase.rpc('cancel_reservation', {
 			p_reservationid: reservationid,
 			p_date: date,
 			p_deposit_handling: depositHandling,
-			p_notes: notes ?? null
+			p_notes: notes ?? null,
+			p_paymenttype: tender ?? null
 		})
 	);
 }
 
-/** Refunds or keeps the deposit a stay still holds — for a cancellation whose
- * deposit was left to decide later. */
+/** Refunds (on the tender given) or keeps the deposit a stay still holds —
+ * for a cancellation whose deposit was left to decide later. */
 export async function settleDeposit(
 	reservationid: number,
 	date: string,
-	depositHandling: 'refund' | 'keep'
+	depositHandling: 'refund' | 'keep',
+	tender?: string | null
 ): Promise<void> {
 	unwrap(
 		await supabase.rpc('settle_deposit', {
 			p_reservationid: reservationid,
 			p_date: date,
-			p_deposit_handling: depositHandling
+			p_deposit_handling: depositHandling,
+			p_paymenttype: tender ?? null
 		})
 	);
 }

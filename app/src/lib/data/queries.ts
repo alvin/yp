@@ -122,6 +122,13 @@ export async function findReservation(resnumber: number): Promise<ReservationSum
 	return rows.length ? reservationSummaryRow(rows[0]) : null;
 }
 
+/** The tender the stay's deposit was taken on — offered first for its refund. */
+export async function depositTender(reservationid: number): Promise<string | null> {
+	return unwrap(
+		await supabase.rpc('reservation_deposit_tender', { p_reservationid: reservationid })
+	);
+}
+
 export async function searchByDate(date: string, mode: DateMode): Promise<DateSearchRow[]> {
 	const rows = unwrap(
 		await supabase.rpc('search_by_date', { p_date: date, p_mode: mode })
@@ -410,8 +417,12 @@ export async function reportManualSales(
 	);
 }
 
-export async function reportCancellationList(date: string): Promise<CancellationListRow[]> {
-	return unwrap(await supabase.rpc('report_cancellation_list', { p_date: date }));
+/** Stays cancelled from `from` to `to`, by the day cancelled. */
+export async function reportCancellationList(
+	from: string,
+	to: string
+): Promise<CancellationListRow[]> {
+	return unwrap(await supabase.rpc('report_cancellation_list', { p_from: from, p_to: to }));
 }
 
 // ---------------------------------------------------------------------------

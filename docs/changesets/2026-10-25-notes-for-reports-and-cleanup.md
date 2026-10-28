@@ -7,8 +7,9 @@ Occupancy button printing on the cancellation notice and the In House report; th
 Reservation note a copy of Guest Notes that prints on nothing. Alongside it, a full audit
 for dead code, duplication and duplicated tests, with no change to any feature.
 **State:** `npm run check` and `npm run build` clean, every feature test and
-`business_logic_smoke.sql` passing. `0026` applied to the local stack; not yet applied to
-the hosted project. Go-live rehearsed: an empty PostgreSQL 17 database, every migration,
+`business_logic_smoke.sql` passing. `0026` applied to the local stack and, on 2026-10-25, to
+the hosted project in one `begin … commit` (its functions checked against the local
+stack's), just after the app's push to `main` deployed. Go-live rehearsed: an empty PostgreSQL 17 database, every migration,
 then the full import from the `.accdb`. It loads, the smoke test passes on it, and #115732's
 confirmation carries its Access message.
 

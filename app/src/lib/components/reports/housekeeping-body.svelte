@@ -31,9 +31,9 @@
 				<td>{row.guest}</td>
 				<td>{row.guest_count ?? ''}</td>
 				<td>{row.room}</td>
-				<td>{dateShort(row.in_date)}</td>
-				<td>{dateShort(row.out_date)}</td>
-				<td>{dateShort(row.note_date)}</td>
+				<td class="date">{dateShort(row.in_date)}</td>
+				<td class="date">{dateShort(row.out_date)}</td>
+				<td class="date">{dateShort(row.note_date)}</td>
 				<td class="note">{row.notes ?? ''}</td>
 			</tr>
 		{/each}

@@ -11,4 +11,5 @@ Feature: print cancellation notices
   Scenario: Acceptance criteria
     Then The notices for a chosen day are the reservations cancelled that day, and no others.
     And Each notice carries the cancellation date, the deposit received and what became of it.
-    And The day's cancellations also list on the Cancellation report.
+    And The Cancellation report lists the stays cancelled across a chosen range of days, not one day, by the day each was cancelled, with the reservation's notes, where the note typed when cancelling goes.
+    And The note typed when cancelling prints on the Cancellation report only, never on the notice, which goes to the guest.

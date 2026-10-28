@@ -37,8 +37,8 @@
 					<td>{row.resnumber}</td>
 					<td>{row.guest}</td>
 					<td>{row.rooms}</td>
-					<td>{dateShort(row.arrival_date)}</td>
-					<td>{dateShort(row.departure_date)}</td>
+					<td class="date">{dateShort(row.arrival_date)}</td>
+					<td class="date">{dateShort(row.departure_date)}</td>
 					<td class="note">{row.request}</td>
 				</tr>
 			{/each}

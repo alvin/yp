@@ -28,7 +28,7 @@ describe('un-cancel a reservation', () => {
 	beforeAll(async () => {
 		fx = await makeReservation();
 		await pay(fx, 'Deposit (Received)', 35);
-		await cancel(fx);
+		await cancel(fx, 'none', fx.arrival, 'Guest unwell');
 	});
 
 	it('restores the booking as it was, back on the daily reports', async () => {
@@ -51,12 +51,25 @@ describe('un-cancel a reservation', () => {
 	it('clears the cancellation date: off the cancellation report, and no notice', async () => {
 		expect((await reservation(fx.reservationid)).resdatecancelled).toBeNull();
 		const list = await rpc<{ resnumber: number }[]>('report_cancellation_list', {
-			p_date: fx.arrival
+			p_from: fx.arrival,
+			p_to: fx.arrival
 		});
 		expect(list.some((r) => r.resnumber === fx.resnumber)).toBe(false);
 		expect(
 			await rpc<unknown[]>('report_cancellation_notice', { p_reservationid: fx.reservationid })
 		).toEqual([]);
+	});
+
+	it('keeps the note typed when cancelling in the reservation notes, off the rooms\' notes', async () => {
+		const db = await staffClient();
+		const [r] = unwrap(
+			await db.from('reservations').select('resnotes').eq('reservationid', fx.reservationid)
+		) as { resnotes: string | null }[];
+		expect(r.resnotes).toContain('Guest unwell');
+		const [slip] = await rpc<{ occupancy_notes: string | null }[]>('report_reservation_confirmation', {
+			p_reservationid: fx.reservationid
+		});
+		expect(slip.occupancy_notes ?? '').not.toContain('Guest unwell');
 	});
 
 	it('gives a deposit decided later back to the stay', async () => {
@@ -112,5 +125,17 @@ describe('un-cancel a reservation — on the reservation screen', () => {
 			.toBe(false);
 		await page.getByRole('button', { name: 'Cancel', exact: true }).waitFor({ timeout: 10_000 });
 		expect(await uncancel.count()).toBe(0);
+	});
+
+	it('offers to open the reservation notes once un-cancelled, where the cancellation note stays', async () => {
+		const fx = await makeReservation();
+		await cancel(fx, 'none', fx.arrival, 'Cancelled by phone');
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		await page.getByRole('button', { name: 'Un-cancel' }).click();
+		await page.getByRole('button', { name: 'Edit notes' }).click();
+		await expect
+			.poll(() => page.getByRole('dialog').locator('textarea').inputValue(), { timeout: 10_000 })
+			.toContain('Cancelled by phone');
+		await page.keyboard.press('Escape');
 	});
 });

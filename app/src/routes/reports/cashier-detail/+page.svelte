@@ -57,7 +57,7 @@
 					<tr>
 						<td>{row.payment_type}</td>
 						<td>{row.resnumber}</td>
-						<td>{dateShort(row.pymt_date)}</td>
+						<td class="date">{dateShort(row.pymt_date)}</td>
 						<td>{row.pymt_category}</td>
 						<td>{money(row.amount)}</td>
 						<td>{row.guest}</td>

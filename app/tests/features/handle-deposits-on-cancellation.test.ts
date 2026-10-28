@@ -10,10 +10,15 @@ async function paymentsFor(rgid: number) {
 	return unwrap(
 		await client
 			.from('payments')
-			.select('paymentcategory, paymentamount, paymentdate')
+			.select('paymentcategory, paymenttype, paymentamount, paymentdate')
 			.eq('reservationguestid', rgid)
 			.eq('paymentarchive', false)
-	) as { paymentcategory: string; paymentamount: number; paymentdate: string }[];
+	) as {
+		paymentcategory: string;
+		paymenttype: string;
+		paymentamount: number;
+		paymentdate: string;
+	}[];
 }
 
 describe('handle deposits on cancellation', () => {
@@ -111,6 +116,66 @@ describe('handle deposits on cancellation', () => {
 			expect(await rpc('reservationguest_deposit_held', { p_reservationguestid: fx.reservationguestid })).toBe(0);
 			expect(await rpc('reservation_balance', { p_reservationid: fx.reservationid })).toBe(0);
 		}
+	});
+
+	it('refunds on the tender chosen, or on the deposit\'s own without one', async () => {
+		for (const [tender, expected] of [
+			['Cheque', 'Cheque'],
+			[null, 'Visa']
+		] as const) {
+			const fx = await makeReservation();
+			await rpc('record_payment', {
+				p_reservationguestid: fx.reservationguestid,
+				p_paymentcategory: 'Deposit (Received)',
+				p_paymenttype: 'Visa',
+				p_amount: 70,
+				p_paymentdate: fx.arrival
+			});
+			expect(await rpc('reservation_deposit_tender', { p_reservationid: fx.reservationid })).toBe(
+				'Visa'
+			);
+			await rpc('cancel_reservation', {
+				p_reservationid: fx.reservationid,
+				p_date: fx.arrival,
+				p_deposit_handling: 'refund',
+				p_paymenttype: tender
+			});
+			const refund = (await paymentsFor(fx.reservationguestid)).find(
+				(p) => p.paymentcategory === 'Deposit (Refund)'
+			);
+			expect([refund?.paymenttype, Number(refund?.paymentamount)]).toEqual([expected, -70]);
+		}
+	});
+
+	it('never refunds a deposit twice, by hand or on cancelling', async () => {
+		const fx = await makeReservation();
+		const refundByHand = (amount: number) =>
+			rpc('record_payment', {
+				p_reservationguestid: fx.reservationguestid,
+				p_paymentcategory: 'Deposit (Refund)',
+				p_paymenttype: 'Cheque',
+				p_amount: amount,
+				p_paymentdate: fx.arrival
+			});
+		await rpc('record_payment', {
+			p_reservationguestid: fx.reservationguestid,
+			p_paymentcategory: 'Deposit (Received)',
+			p_paymenttype: 'Mastercard',
+			p_amount: 35,
+			p_paymentdate: fx.arrival
+		});
+		await expect(refundByHand(70)).rejects.toThrow(/deposit held is \$35\.00/i);
+		await refundByHand(35);
+		await rpc('cancel_reservation', {
+			p_reservationid: fx.reservationid,
+			p_date: fx.arrival,
+			p_deposit_handling: 'refund'
+		});
+		await expect(refundByHand(35)).rejects.toThrow(/deposit held is \$0\.00/i);
+		const refunds = (await paymentsFor(fx.reservationguestid)).filter(
+			(p) => p.paymentcategory === 'Deposit (Refund)'
+		);
+		expect(refunds.map((p) => Number(p.paymentamount))).toEqual([-35]);
 	});
 
 	it('refuses to settle when no deposit is held', async () => {
@@ -231,6 +296,60 @@ describe('handle deposits on cancellation — the cancel dialog', () => {
 		await expect
 			.poll(async () => (await options.allTextContents()).map((t) => t.trim()), { timeout: 10_000 })
 			.toEqual(['Refund the deposit', 'Keep the deposit', 'Decide later']);
+		await page.keyboard.press('Escape');
+	});
+
+	it('refunds on the tender chosen in the cancel dialog, first offering the deposit\'s own', async () => {
+		const fx = await makeReservation();
+		await rpc('record_payment', {
+			p_reservationguestid: fx.reservationguestid,
+			p_paymentcategory: 'Deposit (Received)',
+			p_paymenttype: 'Mastercard',
+			p_amount: 65,
+			p_paymentdate: fx.arrival
+		});
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+		const tender = page.locator('#cx-tender');
+		await expect.poll(() => tender.textContent(), { timeout: 10_000 }).toContain('Mastercard');
+		await tender.click();
+		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: /^\s*Cheque\s*$/ }).click();
+		await page.getByRole('button', { name: 'Cancel reservation' }).click();
+		await expect
+			.poll(
+				async () =>
+					(await paymentsFor(fx.reservationguestid))
+						.filter((p) => p.paymentcategory === 'Deposit (Refund)')
+						.map((p) => [p.paymenttype, Number(p.paymentamount)]),
+				{ timeout: 15_000 }
+			)
+			.toEqual([['Cheque', -65]]);
+	});
+
+	it('shows a deposit refunded moments before from the Payment dialog as no longer held', async () => {
+		const fx = await makeReservation();
+		await rpc('record_payment', {
+			p_reservationguestid: fx.reservationguestid,
+			p_paymentcategory: 'Deposit (Received)',
+			p_paymenttype: 'Visa',
+			p_amount: 70,
+			p_paymentdate: fx.arrival
+		});
+		await page.goto(`${APP_URL}/reservations/${fx.resnumber}`, { waitUntil: 'networkidle' });
+		await page.getByRole('button', { name: 'Payment', exact: true }).click();
+		await page.click('#p-cat');
+		await page.locator('[data-testid=combobox-list] [role=option]', { hasText: 'Deposit (Refund)' }).click();
+		await page.fill('#p-amt', '70');
+		await page.fill('#p-date', fx.arrival);
+		await page.getByRole('button', { name: 'Record', exact: true }).click();
+		await expect
+			.poll(() => page.getByRole('dialog').count(), { timeout: 15_000 })
+			.toBe(0);
+
+		await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+		const dialog = page.getByRole('dialog');
+		await expect.poll(() => dialog.textContent(), { timeout: 10_000 }).toContain('No deposit on file');
+		expect(await dialog.textContent()).not.toContain('Deposit on file');
 		await page.keyboard.press('Escape');
 	});
 

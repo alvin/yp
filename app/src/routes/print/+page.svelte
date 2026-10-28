@@ -34,7 +34,8 @@
     let printDate = $state(TODAY);
     const tomorrow = addDays(TODAY, 1);
 
-    // Optional range end for reports that support one (kitchen filtered).
+    // Optional range end for the reports that take one (kitchen filtered,
+    // cancellations).
     let endDate = $state("");
 
 
@@ -141,8 +142,10 @@
         {
             label: "Cancellation report",
             href: "cancellation-list",
-            desc: "Cancelled on this day",
-            q: `date=${printDate}`,
+            desc: "Cancelled in a date range",
+            q: endDate
+                ? `from=${printDate}&to=${endDate}`
+                : `from=${addDays(printDate, -6)}&to=${printDate}`,
         },
     ]);
 </script>

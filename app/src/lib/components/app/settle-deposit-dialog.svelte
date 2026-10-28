@@ -5,7 +5,7 @@
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
-    import { depositOutcomeOptions } from "$lib/options.js";
+    import { depositOutcomeOptions, tenderTypeOptions } from "$lib/options.js";
 
     // A cancelled stay's deposit left to decide later, refunded or kept once
     // the desk knows; dated the day it is settled, which is when the cash
@@ -14,28 +14,39 @@
         open = $bindable(false),
         resnumber,
         depositAmount,
+        depositTender = null,
         today,
         onconfirm,
     }: {
         open?: boolean;
         resnumber: number;
         depositAmount: number;
+        /** The tender the deposit was taken on, offered first for a refund. */
+        depositTender?: string | null;
         today: string;
-        onconfirm: (result: { date: string; outcome: string }) => void;
+        onconfirm: (result: {
+            date: string;
+            outcome: string;
+            tender: string;
+        }) => void;
     } = $props();
 
     const OUTCOMES = depositOutcomeOptions();
+    const TENDERS = tenderTypeOptions();
     let date = $state("");
     let outcome = $state(OUTCOMES[0].value);
+    let tender = $state("");
     $effect(() => {
         if (open) {
             date = today;
             outcome = OUTCOMES[0].value;
+            tender = depositTender ?? "";
         }
     });
+    const refunding = $derived(outcome === "Deposit (Refund)");
 
     function confirm() {
-        onconfirm({ date, outcome });
+        onconfirm({ date, outcome, tender });
         open = false;
     }
 </script>
@@ -70,13 +81,26 @@
                     options={OUTCOMES}
                 />
             </div>
+
+            {#if refunding}
+                <div class="space-y-1.5">
+                    <Label for="sd-tender">Tender type</Label>
+                    <Combobox
+                        id="sd-tender"
+                        bind:value={tender}
+                        options={TENDERS}
+                    />
+                </div>
+            {/if}
         </div>
 
         <Dialog.Footer>
             <Button variant="ghost" onclick={() => (open = false)}
                 >Cancel</Button
             >
-            <Button onclick={confirm} disabled={!date}>Settle deposit</Button>
+            <Button onclick={confirm} disabled={!date || (refunding && !tender)}
+                >Settle deposit</Button
+            >
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

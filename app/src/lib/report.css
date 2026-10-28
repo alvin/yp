@@ -112,6 +112,18 @@
 	text-align: right;
 	white-space: nowrap;
 }
+/* A date reads as one piece; the lodge asked that "27-Oct-26" never break at
+   its hyphens. */
+.report-page .date {
+	white-space: nowrap;
+}
+/* The reports (each opens on the black bar) set their lines a size smaller
+   than the guest documents, at the lodge's request, so long notes take fewer
+   lines and a row stays on one. The guest documents keep the originals'
+   sizes. */
+.report-page:has(.blackbar) table {
+	font-size: 14px;
+}
 .report-page .total td {
 	border-top: 2px solid #444;
 	font-weight: 700;

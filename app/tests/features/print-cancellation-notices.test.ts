@@ -18,7 +18,7 @@ beforeAll(async () => {
 	await pay(fx, 'Deposit (Received)', 110, { date: addDays(fx.arrival, -3) });
 	// Cancelled ahead of the stay: the notice belongs to that day, not the arrival.
 	cancelledOn = addDays(fx.arrival, -2);
-	await cancel(fx, 'refund', cancelledOn);
+	await cancel(fx, 'refund', cancelledOn, 'Called to cancel — family conflict');
 });
 
 describe('print cancellation notices', () => {
@@ -37,10 +37,19 @@ describe('print cancellation notices', () => {
 		expect(notice.deposit_outcome_category).toBe('Deposit (Refund)');
 	});
 
-	it("lists the day's cancellations on the Cancellation report", async () => {
-		const rows = await rpc<{ resnumber: number }[]>('report_cancellation_list', {
-			p_date: cancelledOn
-		});
-		expect(rows.map((r) => r.resnumber)).toEqual([fx.resnumber]);
+	it('lists the stays cancelled across a range of days on the Cancellation report, with the note typed', async () => {
+		const list = (from: string, to: string) =>
+			rpc<{ resnumber: number; date_cancelled: string; notes: string | null }[]>(
+				'report_cancellation_list',
+				{ p_from: from, p_to: to }
+			).then((rows) => rows.filter((r) => r.resnumber === fx.resnumber));
+		expect(await list(addDays(cancelledOn, -3), addDays(cancelledOn, 3))).toEqual([
+			{
+				...(await list(cancelledOn, cancelledOn))[0],
+				date_cancelled: cancelledOn,
+				notes: 'Called to cancel — family conflict'
+			}
+		]);
+		expect(await list(addDays(cancelledOn, 1), addDays(cancelledOn, 5))).toEqual([]);
 	});
 });

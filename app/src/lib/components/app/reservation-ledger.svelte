@@ -12,27 +12,25 @@
     import RecordPaymentDialog from "$lib/components/app/ledger/record-payment-dialog.svelte";
     import ChangeQuantityDialog from "$lib/components/app/ledger/change-quantity-dialog.svelte";
     import RemoveLineDialog from "$lib/components/app/ledger/remove-line-dialog.svelte";
+    import { invalidateAll } from "$app/navigation";
     import { dateShort, money } from "$lib/format.js";
-    import { reservationLedger } from "$lib/data/queries.js";
     import { round2 } from "$lib/charges.js";
     import type { LedgerRow } from "$lib/data/types.js";
 
     let {
-        reservationid,
         reservationguestid,
         initialLines,
         today,
     }: {
-        reservationid: number;
         /** The stay's guest, whom every charge and payment is posted to. */
         reservationguestid: number;
         initialLines: LedgerRow[];
         today: string;
     } = $props();
 
-    // The database orders the lines and carries the running balance. The
-    // page's data seeds them, and they follow it when the page reloads it.
-    let lines = $derived<LedgerRow[]>(initialLines);
+    // The database orders the lines and carries the running balance. They
+    // come with the page's data.
+    const lines = $derived<LedgerRow[]>(initialLines);
 
     const charges = $derived(
         lines.filter((l) => l.line_source === "transaction"),
@@ -44,8 +42,10 @@
         lines.length ? lines[lines.length - 1].running_balance : 0,
     );
 
+    // A charge or payment reloads the whole page, not only these lines: the
+    // deposit held, which the cancel dialog offers to refund, moves with them.
     async function reload() {
-        lines = await reservationLedger(reservationid);
+        await invalidateAll();
     }
 
     let chargeOpen = $state(false);

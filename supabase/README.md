@@ -70,13 +70,13 @@ empty string clears it, a field left null is kept), `set_guest_notes`
 Reservations: `create_reservation` (header + its guest + optional room in
 one call), `update_reservation` (the number of guests among the rest),
 `confirm_reservation`, `set_reservation_notes` (office-only notes on the
-stay; they print on nothing),
+stay; they print only on the Cancellation List),
 `cancel_reservation(p_deposit_handling => none|refund|keep)` (with none the
-deposit stays held to decide later; a cancellation note joins the first room's
-occupancy notes, which the notice prints), `settle_deposit` (refunds or keeps the
+deposit stays held to decide later; a cancellation note joins the reservation
+notes, which the Cancellation List prints), `settle_deposit` (refunds or keeps the
 deposit a stay still holds, dated the day it is settled),
 `uncancel_reservation` (the booking stands again as it was; a deposit refunded
-or kept on cancelling stays as recorded). Re-booking is not an RPC: next season's stay is written by `create_reservation` like any
+or kept on cancelling, and the cancellation note, stay as recorded). Re-booking is not an RPC: next season's stay is written by `create_reservation` like any
 other, and the screen carries the party, room and dates forward.
 The guest on a stay: `update_reservation_guest` (notes, vehicle, times). A
 reservation holds one guest; a room two parties share is two reservations.

@@ -125,6 +125,7 @@
     async function onCancelled(r: {
         date: string;
         outcome: string;
+        tender: string;
         notes: string;
     }) {
         const handling = r.outcome.includes("Refund")
@@ -138,6 +139,7 @@
                 r.date,
                 handling,
                 r.notes || null,
+                handling === "refund" ? r.tender : null,
             );
             toast.success(`Reservation #${s.resnumber} cancelled`, {
                 description: r.outcome !== "none" ? r.outcome : undefined,
@@ -149,13 +151,25 @@
     }
 
     // Un-cancel: the booking stands again as it was — same number, dates and
-    // rooms. A deposit refunded or kept on cancelling stays as recorded.
+    // rooms. A deposit refunded or kept on cancelling stays as recorded, and so
+    // does the note typed when cancelling, in the reservation notes; the toast
+    // opens them, should the desk want it gone.
     let uncancelling = $state(false);
     async function doUncancel() {
         uncancelling = true;
         try {
             await uncancelReservation(s.reservationid);
-            toast.success(`Reservation #${s.resnumber} un-cancelled`);
+            toast.success(`Reservation #${s.resnumber} un-cancelled`, {
+                description: s.resnotes
+                    ? "Reservation notes unchanged."
+                    : undefined,
+                action: s.resnotes
+                    ? {
+                          label: "Edit notes",
+                          onClick: () => (reservationNotesOpen = true),
+                      }
+                    : undefined,
+            });
             await invalidateAll();
         } catch (e) {
             toast.error(errorMessage(e, "Could not un-cancel the reservation."));
@@ -166,13 +180,19 @@
 
     // A deposit left to decide later on cancelling is refunded or kept here.
     let settleOpen = $state(false);
-    async function onSettled(r: { date: string; outcome: string }) {
+    async function onSettled(r: {
+        date: string;
+        outcome: string;
+        tender: string;
+    }) {
         const amount = deposit ?? 0;
+        const refund = r.outcome.includes("Refund");
         try {
             await settleDeposit(
                 s.reservationid,
                 r.date,
-                r.outcome.includes("Refund") ? "refund" : "keep",
+                refund ? "refund" : "keep",
+                refund ? r.tender : null,
             );
             toast.success(`Recorded ${r.outcome} — ${money(amount)}`);
             await invalidateAll();
@@ -461,7 +481,6 @@
     <!-- Right: ledger + print -->
     <div class="space-y-5 lg:sticky lg:top-20">
         <ReservationLedger
-            reservationid={s.reservationid}
             reservationguestid={s.primary_reservationguestid}
             initialLines={data.ledger}
             {today}
@@ -514,6 +533,7 @@
     bind:open={cancelOpen}
     resnumber={s.resnumber}
     depositAmount={deposit}
+    depositTender={data.depositTender}
     {today}
     onconfirm={onCancelled}
 />
@@ -523,6 +543,7 @@
         bind:open={settleOpen}
         resnumber={s.resnumber}
         depositAmount={deposit}
+        depositTender={data.depositTender}
         {today}
         onconfirm={onSettled}
     />

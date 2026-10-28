@@ -54,8 +54,8 @@
 					<td>{row.arrival ?? ''}</td>
 					<td>{row.guest_count ?? ''}</td>
 					<td>{row.room}</td>
-					<td>{dateShort(row.in_date)}</td>
-					<td>{dateShort(row.out_date)}</td>
+					<td class="date">{dateShort(row.in_date)}</td>
+					<td class="date">{dateShort(row.out_date)}</td>
 					<td class="note">{row.occupancy_notes ?? ''}</td>
 				</tr>
 			{/each}

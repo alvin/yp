@@ -275,7 +275,8 @@ begin
      and p.paymentcategory = 'Deposit (Refund)' and p.paymentamount = -150.00;
   assert v_count = 1, 'deposit refund row missing';
   assert ypl.reservationguest_deposit_held(v_res2.reservationguestid) = 0, 'deposit still held after refund';
-  assert (select count(*) from ypl.report_cancellation_list(current_date)) >= 1, 'cancellation list empty';
+  assert (select count(*) from ypl.report_cancellation_list(current_date, current_date)) >= 1, 'cancellation list empty';
+  assert (select l.notes from ypl.report_cancellation_list(current_date, current_date) l where l.resnumber = v_res2.resnumber) = 'Smoke cancellation', 'cancellation note not on the list';
 
   ------------------------------------------------------------------
   -- Kept, decided later, settled, un-cancelled

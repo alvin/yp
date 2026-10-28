@@ -6,22 +6,26 @@
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { Combobox } from "$lib/components/ui/combobox/index.js";
     import Money from "$lib/components/app/money.svelte";
-    import { depositOutcomeOptions } from "$lib/options.js";
+    import { depositOutcomeOptions, tenderTypeOptions } from "$lib/options.js";
 
     let {
         open = $bindable(false),
         resnumber,
         depositAmount = null,
+        depositTender = null,
         today,
         onconfirm,
     }: {
         open?: boolean;
         resnumber: number;
         depositAmount?: number | null;
+        /** The tender the deposit was taken on, offered first for a refund. */
+        depositTender?: string | null;
         today: string;
         onconfirm: (result: {
             date: string;
             outcome: string;
+            tender: string;
             notes: string;
         }) => void;
     } = $props();
@@ -44,11 +48,18 @@
             : [{ value: "none", label: "No deposit on file" }],
     );
     let outcome = $state("none");
+    // A refund goes back on whatever tender the desk uses, not necessarily
+    // the one the deposit came in on (a card deposit returned by cheque).
+    const TENDERS = tenderTypeOptions();
+    let tender = $state("");
     $effect(() => {
-        if (open) outcome = depositAmount ? "Deposit (Refund)" : "none";
+        if (open) {
+            outcome = depositAmount ? "Deposit (Refund)" : "none";
+            tender = depositTender ?? "";
+        }
     });
     function confirm() {
-        onconfirm({ date, outcome, notes });
+        onconfirm({ date, outcome, tender, notes });
         open = false;
     }
 </script>
@@ -86,9 +97,20 @@
                 />
             </div>
 
+            {#if outcome === "Deposit (Refund)"}
+                <div class="space-y-1.5">
+                    <Label for="cx-tender">Tender type</Label>
+                    <Combobox
+                        id="cx-tender"
+                        bind:value={tender}
+                        options={TENDERS}
+                    />
+                </div>
+            {/if}
+
             <div class="space-y-1.5">
                 <Label for="cx-notes"
-                    >Cancellation note (prints on the notice)</Label
+                    >Cancellation note (prints on the cancellation report)</Label
                 >
                 <Textarea
                     id="cx-notes"
@@ -103,7 +125,10 @@
             <Button variant="ghost" onclick={() => (open = false)}
                 >Keep reservation</Button
             >
-            <Button variant="destructive" onclick={confirm}
+            <Button
+                variant="destructive"
+                onclick={confirm}
+                disabled={outcome === "Deposit (Refund)" && !tender}
                 >Cancel reservation</Button
             >
         </Dialog.Footer>

@@ -60,7 +60,7 @@
                 ><NotebookIcon class="size-4" /> {title}</Dialog.Title
             >
             <Dialog.Description class="flex items-center gap-1.5">
-                <EyeOffIcon class="size-3.5" /> Office only — never printed.
+                <EyeOffIcon class="size-3.5" /> Office only.
             </Dialog.Description>
         </Dialog.Header>
         <Textarea bind:value={text} rows={6} {placeholder} />

@@ -34,8 +34,7 @@ export function opsTabs(date: string, current: string): ReportTab[] {
 		{ label: 'Requests', slug: 'requests' },
 		{ label: 'Kitchen / meals', slug: 'kitchen' },
 		{ label: 'Kitchen (filtered)', slug: 'kitchen-filtered' },
-		{ label: 'Manual sales', slug: 'manual-sales' },
-		{ label: 'Cancellations', slug: 'cancellation-list' }
+		{ label: 'Manual sales', slug: 'manual-sales' }
 	].map((t) => ({
 		label: t.label,
 		href: t.slug === 'kitchen-filtered' ? `/reports/${t.slug}?from=${date}` : `/reports/${t.slug}?date=${date}`,

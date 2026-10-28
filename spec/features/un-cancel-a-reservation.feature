@@ -11,6 +11,7 @@ Feature: un-cancel a reservation
   Scenario: Acceptance criteria
     Then A cancelled reservation has Un-cancel where Cancel was.
     And Un-cancelling restores the booking as it was: the same number, dates, rooms and guests, back on the daily reports.
-    And The cancellation date is cleared, so the stay leaves the day's cancellation report and has no cancellation notice.
+    And The cancellation date is cleared, so the stay leaves the cancellation report and has no cancellation notice.
+    And The note typed when cancelling stays in the reservation notes for staff to edit; the confirmation of un-cancelling offers to open them.
     And A deposit refunded or kept on cancelling stays as recorded; one decided later is the stay's deposit again.
     And A reservation that is not cancelled cannot be un-cancelled.

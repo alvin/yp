@@ -69,7 +69,7 @@ describe('keep office notes private — on screen', () => {
 		await page.goto(`${APP_URL}/guests/${fx.guestid}`, { waitUntil: 'networkidle' });
 		await openNotes('Guest notes');
 		expect(await dialog().locator('textarea').inputValue()).toBe(`${marker} guest`);
-		expect(await dialog().textContent()).toContain('Office only — never printed.');
+		expect(await dialog().textContent()).toContain('Office only.');
 		await saveNotes(`${marker} guest, revised`, 'Guest notes saved');
 		const guest = unwrap(
 			await (await staffClient()).from('guests').select('guestnotes').eq('guestid', fx.guestid)
@@ -83,7 +83,7 @@ describe('keep office notes private — on screen', () => {
 		expect(await button.locator('span.rounded-full').count()).toBe(1);
 		await openNotes('Reservation notes');
 		expect(await dialog().locator('textarea').inputValue()).toBe(`${marker} stay`);
-		expect(await dialog().textContent()).toContain('Office only — never printed.');
+		expect(await dialog().textContent()).toContain('Office only.');
 		await saveNotes('', 'Reservation notes saved');
 		await expect.poll(() => button.locator('span.rounded-full').count(), { timeout: 10_000 }).toBe(0);
 		const stay = unwrap(

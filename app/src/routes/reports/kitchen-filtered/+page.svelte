@@ -60,8 +60,8 @@
 					<td>{row.guestfirstname ?? ''}</td>
 					<td class="note">{row.guestdiet ?? ''}</td>
 					<td class="note">{row.kitchenmealnotes ?? ''}</td>
-					<td>{dateShort(row.arrival_date)}</td>
-					<td>{dateShort(row.departure_date)}</td>
+					<td class="date">{dateShort(row.arrival_date)}</td>
+					<td class="date">{dateShort(row.departure_date)}</td>
 				</tr>
 			{/each}
 		</tbody>

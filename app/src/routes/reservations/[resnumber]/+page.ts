@@ -1,5 +1,6 @@
 import { error } from "@sveltejs/kit";
 import {
+  depositTender,
   findReservation,
   getGuest,
   occupancySummaries,
@@ -16,13 +17,14 @@ export const load: PageLoad = async ({ params }) => {
   const summary = await findReservation(resnumber);
   if (!summary) error(404, `Reservation #${params.resnumber} not found`);
 
-  const [notes, occupancy, ledger, guest, shared, moves] = await Promise.all([
+  const [notes, occupancy, ledger, guest, shared, moves, tender] = await Promise.all([
     reservationNotes(summary.reservationid),
     occupancySummaries(summary.reservationid),
     reservationLedger(summary.reservationid),
     getGuest(summary.primary_guestid),
     sharedRoomOccupancies(summary.reservationid),
     roomMoves(summary.reservationid),
+    depositTender(summary.reservationid),
   ]);
   return {
     summary,
@@ -31,6 +33,7 @@ export const load: PageLoad = async ({ params }) => {
     shared,
     moves,
     ledger,
+    depositTender: tender,
     guestNotes: guest?.guestnotes ?? null,
     today: TODAY,
   };

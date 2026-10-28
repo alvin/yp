@@ -9,7 +9,7 @@ describe('print daily operations reports', () => {
 	it('opens each daily report in the print menu for the one date chosen', async () => {
 		const d = addDays(todayISO(), 3);
 		await page.fill('#print-date', d);
-		for (const report of ['housekeeping', 'in-house', 'requests', 'kitchen', 'manual-sales', 'cancellation-list']) {
+		for (const report of ['housekeeping', 'in-house', 'requests', 'kitchen', 'manual-sales']) {
 			await expect
 				.poll(() => page.getAttribute(`a[href^="/reports/${report}?"]`, 'href'), { timeout: 5_000 })
 				.toBe(`/reports/${report}?date=${d}`);
@@ -26,6 +26,13 @@ describe('print daily operations reports', () => {
 				timeout: 5_000
 			})
 			.toBe(`/reports/kitchen-filtered?from=${from}&to=${to}`);
+		await expect
+			.poll(() => page.getAttribute('a[href*="/reports/cancellation-list"]', 'href'))
+			.toBe(`/reports/cancellation-list?from=${from}&to=${to}`);
+		await page.fill('#print-end-date', '');
+		await expect
+			.poll(() => page.getAttribute('a[href*="/reports/cancellation-list"]', 'href'))
+			.toBe(`/reports/cancellation-list?from=${addDays(from, -6)}&to=${from}`);
 	});
 
 	it('runs the 7-day kitchen report seven days from the report date when no end date is set', async () => {
@@ -77,6 +84,33 @@ describe('print daily operations reports — the printed report', () => {
 		});
 		expect(await pageName()).not.toBe('numbered');
 	});
+
+	it('sets report lines a size smaller than a guest document, and keeps each date on one line', async () => {
+		const tableSize = () =>
+			reportPage.locator('.report-page table').first().evaluate((el) => getComputedStyle(el).fontSize);
+		expect(await tableSize()).toBe('16px'); // the confirmation, from the test before
+		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, { waitUntil: 'networkidle' });
+		expect(await tableSize()).toBe('14px');
+		const dates = await reportPage
+			.locator('.report-page td.date')
+			.evaluateAll((els) => els.map((e) => getComputedStyle(e).whiteSpace));
+		expect(dates.length).toBeGreaterThan(0);
+		expect(new Set(dates)).toEqual(new Set(['nowrap']));
+	});
+
+	it('gives the Cancellation report its own range of days, apart from the daily reports', async () => {
+		const from = addDays(mid, -3);
+		await reportPage.goto(`${APP_URL}/reports/cancellation-list?from=${from}&to=${mid}`, {
+			waitUntil: 'networkidle'
+		});
+		expect(await reportPage.inputValue('#cancellations-from')).toBe(from);
+		expect(await reportPage.inputValue('#cancellations-to')).toBe(mid);
+		await expect
+			.poll(() => reportPage.textContent('.report-page h3'))
+			.toBe(`Cancelled between ${printedDate(from)} and ${printedDate(mid)}`);
+		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, { waitUntil: 'networkidle' });
+		expect(await reportPage.locator('a[href*="/reports/cancellation-list"]').count()).toBe(0);
+	});
 });
 
 describe('print daily operations reports — each line ruled and shaded', () => {
@@ -98,7 +132,7 @@ describe('print daily operations reports — each line ruled and shaded', () => 
 			`kitchen?date=${date}`,
 			`kitchen-filtered?from=${date}`,
 			`manual-sales?date=${date}`,
-			`cancellation-list?date=${date}`
+			`cancellation-list?from=${date}&to=${date}`
 		]) {
 			await reportPage.goto(`${APP_URL}/reports/${report}`, { waitUntil: 'networkidle' });
 			expect(await reportPage.locator('.report-page table.ruled').count(), report).toBeGreaterThan(0);

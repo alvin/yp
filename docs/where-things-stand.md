@@ -2,12 +2,58 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 13 October 2026, except
-the notes changes of 25 October, which go live with the next deploy.
+Everything below is live on the hosted system as of 28 October 2026.
 
 ---
 
 ## What the lodge asked for
+
+**The cancellation note goes back into the reservation notes.** Since 25
+October, the note typed when cancelling had been added to the room's notes (the
+occupancy notes). Those also print on the confirmation and the In House report,
+and they stayed on the room after an un-cancel, so a reason for cancelling
+could end up on the guest's next confirmation. It also never reached the
+Cancellation List, which prints the reservation notes. The note is now added to
+the office-only reservation notes again, as before 25 October. Access's desk
+kept the reason there too ("12/23/25 res cxl'd as per Woodward…"). It now
+prints on the Cancellation List. Access printed those notes on the
+cancellation notice instead; it had no list that printed them. The cancellation notice prints the
+room's notes as it did. Un-cancelling leaves the note in place. The message
+after un-cancelling has an **Edit notes** button that opens the reservation
+notes, in case the desk wants to take it out. In the cancel dialog the note's
+label now reads "Cancellation note (prints on the cancellation report)",
+because it no longer prints on the notice.
+
+**The Cancellation List covers a range of days.** It now has From and To dates,
+like the 7-day kitchen report, and a column for the day each stay was
+cancelled. It's no longer among the daily report tabs. From the Print Center it takes the report date and the
+optional end date, or the week ending on the report date when there's no end
+date.
+
+**Smaller report text, dates on one line.** The reports print their lines a
+size smaller, and a date like 27-Oct-26 no longer breaks across two lines. The
+guest documents (confirmation, folios, bill, cancellation notice) keep their
+sizes.
+
+**A deposit refund, on any tender, from the cancel dialog.** The lodge found a
+deposit refunded twice. Staff refunded it by hand from the Payment dialog, which
+was the only way to refund on a different tender, and then cancelled with
+"Refund the deposit". In every booking we checked, the system never wrote the
+second refund: cancelling refunds only what is still held. The problem was the
+screen. The Payment dialog refreshed the list of transactions but not the
+deposit figure the Cancel dialog reads, so the dialog still showed "Deposit on
+file $70" with "Refund the deposit", and the message after cancelling said
+"Deposit (Refund)". Opening the reservation again loaded fresh figures, which is
+why the refund wasn't offered on a later visit. Separately, nothing stopped a
+refund entered by hand from being more than the deposit. One test booking had a
+$70 refund against a $35 deposit. Three changes:
+
+- The Cancel dialog, and Settle deposit, now ask for the **Tender type** when
+  refunding, starting on the tender the deposit was taken on.
+- Recording a charge or payment now refreshes the whole reservation, so every
+  figure on the screen agrees.
+- The system refuses a deposit refund larger than the deposit still held, from
+  any screen. A deposit can no longer be refunded twice.
 
 **Notes for reports, as on Richard's chart.** Kitchen and Housekeeping are as
 they were. The other three:
@@ -25,9 +71,9 @@ they were. The other three:
   report, the cancellation notice and, as Access did, under the room on the
   confirmation. Those notes are the lodge's messages to the guest: "Please let
   us know who will be joining you", "ONE YEAR ONLY". The lodge's own sample
-  confirmation prints one, and it now prints exactly as the sample does. A note
-  typed when cancelling joins them, so it still prints on the cancellation
-  notice.
+  confirmation prints one, and it now prints exactly as the sample does. (A note
+  typed when cancelling joined them until 28 October; it now goes into the
+  reservation notes, as described above.)
 - **Reservation notes** are now office-only, like Guest notes: a button on the
   Reservation details card, marked "Office only — never printed." They used to
   print on the confirmation and the cancellation notice. That was a real leak:
@@ -249,14 +295,28 @@ app does.
 
 ## Decisions made
 
+- **Notes already added to rooms when cancelling stay there.** Nothing marks
+  which lines came from cancelling, and on the test system they're all test
+  bookings, which the go-live import replaces. One can be deleted from Notes
+  for reports → Occupancy.
+- **Reservation notes now print in one place,** the Cancellation List, an
+  office report, so the notes dialogs now read "Office only." rather than
+  "Office only — never printed."
+- **The Cancellation List's date range uses From and To dates,** as the
+  kitchen range report does, not a list of preset ranges.
+
+- **Deposit (Refund) stays in the Payment dialog,** now capped at the deposit
+  held, for the rare partial refund on a booking that isn't cancelled (a handful in
+  all of Access's history). Cancelling is the usual way to refund. Removing it
+  from the dialog is a one-line change.
+- **A kept deposit stays on the tender it came in on,** since no money moves.
+  The Tender type appears only for a refund.
+
 - **Occupancy notes print on the confirmation too,** under the room, as Access
   printed them, though the chart listed only the cancellation notice and In
   House (you, 25 October). The request reports leave out cancelled stays, and
   the day's report isn't added to the batch print run; either is a small change
   if the lodge wants it.
-- **A cancellation note goes with the first room's occupancy notes,** the room
-  the notice names, so it still prints on the notice now that reservation notes
-  don't.
 - **Diet types, child counts and group names stay in the database** for the
   old records that carry them; only the screens stop asking. Nothing in the
   data changes and everything prints as before. A diet type on file shows in

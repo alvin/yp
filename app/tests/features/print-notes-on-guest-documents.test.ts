@@ -127,7 +127,7 @@ describe('print notes on guest documents', () => {
 		expect((await confirmation(stay)).occupancy_notes).toBe('one bill\njoining Leslie');
 	});
 
-	it('prints the occupancy notes on the cancellation notice, with the note typed when cancelling', async () => {
+	it('prints the occupancy notes on the cancellation notice, and the note typed when cancelling on no guest document', async () => {
 		const stay = await makeReservation();
 		await setOccupancyNotes(await firstOccupancyId(stay), 'ONE YEAR ONLY');
 		await rpc('cancel_reservation', {
@@ -136,7 +136,17 @@ describe('print notes on guest documents', () => {
 			p_deposit_handling: 'none',
 			p_notes: 'Cancelled by phone'
 		});
-		expect((await notice(stay)).occupancy_notes).toBe('ONE YEAR ONLY\nCancelled by phone');
+		expect((await notice(stay)).occupancy_notes).toBe('ONE YEAR ONLY');
+
+		await rpc('uncancel_reservation', { p_reservationid: stay.reservationid });
+		expect((await confirmation(stay)).occupancy_notes).toBe('ONE YEAR ONLY');
+		const inHouse = await rpc<{ resnumber: number; occupancy_notes: string | null }[]>(
+			'report_in_house',
+			{ p_date: stay.arrival }
+		);
+		expect(JSON.stringify(inHouse.filter((r) => r.resnumber === stay.resnumber))).not.toContain(
+			'Cancelled by phone'
+		);
 	});
 });
 
@@ -166,14 +176,18 @@ describe('print notes on guest documents — on paper', () => {
 		}
 	});
 
-	it('prints the occupancy notes on the cancellation notice', async () => {
+	it('prints the occupancy notes on the cancellation notice, and not the note typed when cancelling', async () => {
 		const stay = await makeReservation();
+		const reason = `Cancelled by phone ${uid()}`;
 		await setOccupancyNotes(await firstOccupancyId(stay), message);
 		await rpc('cancel_reservation', {
 			p_reservationid: stay.reservationid,
 			p_date: stay.arrival,
-			p_deposit_handling: 'none'
+			p_deposit_handling: 'none',
+			p_notes: reason
 		});
-		expect(await sheet(`/reports/cancellation/${stay.resnumber}`)).toContain(message);
+		const text = await sheet(`/reports/cancellation/${stay.resnumber}`);
+		expect(text).toContain(message);
+		expect(text).not.toContain(reason);
 	});
 });
