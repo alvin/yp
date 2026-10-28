@@ -14,4 +14,5 @@ Feature: print in-house occupancy report
     And A row is not labelled with its section a second time, the heading it sits under says which it is.
     And A section with nothing in it is left out rather than printed empty.
     And Each row shows the reservation, guest, arrival time, guest count, room, and its in and out dates.
+    And Each row prints its room's occupancy notes, as Access did, and not the guest's requests, which have their own Requests report.
     And The summary line shows the Arrive Today, Depart Today and In House counts and Total Guests, as on the lodge's established report.

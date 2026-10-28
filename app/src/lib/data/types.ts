@@ -402,7 +402,6 @@ export interface CancellationReport {
 	deposit_outcome_category: string | null;
 	deposit_outcome_amount: number | null;
 	deposit_outcome_date: string | null;
-	occupancy_notes: string | null;
 }
 
 export type GuestDocument =

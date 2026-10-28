@@ -11,7 +11,7 @@ Feature: print notes on guest documents
   Scenario: Acceptance criteria
     Then The confirmation prints the diet, the housekeeping note and the requests, and the occupancy notes under the rooms, as Access printed them.
     And The check-in folio prints the same diet and housekeeping note.
-    And The cancellation notice prints the occupancy notes.
+    And The cancellation notice prints no notes: not the occupancy notes, which are messages for a guest who is coming, and not the reservation notes.
     And The note typed when cancelling joins the office-only reservation notes, never the occupancy notes, so it prints on no guest document and not on the In House report.
     And The diet reads as on the kitchen report, and the housekeeping note as on the housekeeping report: only the latest one, where it has been revised.
     And A stay with several rooms prints each different occupancy note once, in room order.

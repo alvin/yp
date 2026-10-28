@@ -127,7 +127,7 @@ describe('print notes on guest documents', () => {
 		expect((await confirmation(stay)).occupancy_notes).toBe('one bill\njoining Leslie');
 	});
 
-	it('prints the occupancy notes on the cancellation notice, and the note typed when cancelling on no guest document', async () => {
+	it('prints no notes on the cancellation notice, and the note typed when cancelling on no guest document', async () => {
 		const stay = await makeReservation();
 		await setOccupancyNotes(await firstOccupancyId(stay), 'ONE YEAR ONLY');
 		await rpc('cancel_reservation', {
@@ -136,7 +136,7 @@ describe('print notes on guest documents', () => {
 			p_deposit_handling: 'none',
 			p_notes: 'Cancelled by phone'
 		});
-		expect((await notice(stay)).occupancy_notes).toBe('ONE YEAR ONLY');
+		expect(Object.keys(await notice(stay))).not.toContain('occupancy_notes');
 
 		await rpc('uncancel_reservation', { p_reservationid: stay.reservationid });
 		expect((await confirmation(stay)).occupancy_notes).toBe('ONE YEAR ONLY');
@@ -176,7 +176,7 @@ describe('print notes on guest documents — on paper', () => {
 		}
 	});
 
-	it('prints the occupancy notes on the cancellation notice, and not the note typed when cancelling', async () => {
+	it('prints neither the occupancy notes nor the note typed when cancelling on the cancellation notice', async () => {
 		const stay = await makeReservation();
 		const reason = `Cancelled by phone ${uid()}`;
 		await setOccupancyNotes(await firstOccupancyId(stay), message);
@@ -187,7 +187,9 @@ describe('print notes on guest documents — on paper', () => {
 			p_notes: reason
 		});
 		const text = await sheet(`/reports/cancellation/${stay.resnumber}`);
-		expect(text).toContain(message);
+		expect(text).toContain('CANCELLATION');
+		expect(text).not.toContain(message);
 		expect(text).not.toContain(reason);
+		expect(await page.locator('.report-page p.note').count()).toBe(0);
 	});
 });

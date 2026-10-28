@@ -89,7 +89,7 @@ names the one to go back to), `update_room_assignment` (how a stay's room is
 changed outright, as Access did it, and how a room held side by side with
 another gets its own number of guests), `room_directory(p_in,
 p_out)` for room selection, `set_occupancy_notes` (one room's notes: the In House
-report, the confirmation and the cancellation notice print them) — the booking screen marks a room another stay holds
+report and the confirmation print them) — the booking screen marks a room another stay holds
 for any of the nights as Booked.
 Charges: `post_room_nights` (priced at the rate type chosen, Regular unless
 Special or Split is given — the desk reads them as Double, Single and Split),
@@ -109,7 +109,8 @@ does not exist or is already removed, rather than silently doing nothing.
 Notes: `set_housekeeping_note` (the note in force: new text is added to the
 dated history, the same text changes nothing, an empty note clears it),
 `add_housekeeping_note`, `save_kitchen_meal` (a blank diet and notes clear the
-diet). The guest's requests are `rgnotes`, written by `update_reservation_guest`.
+diet). The guest's requests are `rgnotes`, written by `update_reservation_guest`; they print on the
+confirmation and the requests reports, not the In House report (0030).
 
 ### Read helpers worth knowing
 
@@ -167,7 +168,7 @@ print them.
 `stay_occupancy_notes(p_reservationid)` / `stay_request_notes(p_reservationid)`
 (0026) — a stay's occupancy notes, each different note once in room order, and
 the guest's requests. The confirmation prints both; the cancellation notice
-prints the occupancy notes. `report_requests(p_date)` lists the requests of
+prints neither (0029). `report_requests(p_date)` lists the requests of
 everyone at the lodge on a day (the `rooms_held` set) and
 `report_guest_requests(p_guestid)` one guest's, stay by stay; cancelled stays
 are left out of both.

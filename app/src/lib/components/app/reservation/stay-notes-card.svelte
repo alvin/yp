@@ -151,7 +151,7 @@
                     placeholder="In-house requests"
                 />
                 <p class="text-muted-foreground text-xs">
-                    Prints on the in-house and requests reports and the confirmation.
+                    Prints on the requests reports and the confirmation.
                 </p>
                 <Button size="sm" variant="secondary" onclick={saveRequests}>Save</Button>
             </Tabs.Content>
@@ -172,7 +172,7 @@
                     />
                 {/each}
                 <p class="text-muted-foreground text-xs">
-                    Prints on the in-house report, confirmation and cancellation notice.
+                    Prints on the in-house report and the confirmation.
                 </p>
                 <Button size="sm" variant="secondary" onclick={saveOccupancy}
                     >Save</Button

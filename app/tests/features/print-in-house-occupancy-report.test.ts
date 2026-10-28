@@ -1,7 +1,16 @@
 // Story: spec/features/print-in-house-occupancy-report.feature
 import { beforeAll, describe, expect, it } from 'vitest';
 import { APP_URL, useAppPage } from '../helpers/app';
-import { addDays, isolatedDate, makeReservation, roomDirectory, rpc, type Fixture, type RoomRow } from '../helpers/db';
+import {
+	addDays,
+	firstOccupancyId,
+	isolatedDate,
+	makeReservation,
+	roomDirectory,
+	rpc,
+	type Fixture,
+	type RoomRow
+} from '../helpers/db';
 
 interface InHouseRow {
 	section: string;
@@ -11,6 +20,7 @@ interface InHouseRow {
 	room: string;
 	in_date: string;
 	out_date: string;
+	occupancy_notes: string | null;
 }
 
 let date: string;
@@ -35,6 +45,19 @@ beforeAll(async () => {
 });
 
 describe('print in-house occupancy report', () => {
+	it("prints the room's occupancy notes and not the guest's requests", async () => {
+		await rpc('set_occupancy_notes', {
+			p_occupancyid: await firstOccupancyId(staying),
+			p_notes: 'Joining Laura'
+		});
+		await rpc('update_reservation_guest', {
+			p_reservationguestid: staying.reservationguestid,
+			p_rgnotes: 'Late checkout please'
+		});
+		const rows = await rpc<InHouseRow[]>('report_in_house', { p_date: date });
+		expect(rows.find((r) => r.resnumber === staying.resnumber)?.occupancy_notes).toBe('Joining Laura');
+	});
+
 	it('lists each row in its section, in the order the day runs, with its stay context', async () => {
 		const rows = await rpc<InHouseRow[]>('report_in_house', { p_date: date });
 		expect(rows.map((r) => [r.section, r.resnumber, r.arrival, r.guest_count, r.room, r.in_date, r.out_date])).toEqual([

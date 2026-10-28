@@ -10,7 +10,7 @@ Feature: edit the notes for reports
 
   Scenario: Acceptance criteria
     Then Notes for reports has a tab each for Kitchen, Housekeeping, Requests and Occupancy.
-    And The kitchen notes print on the kitchen report, the housekeeping note on the housekeeping report, and the requests and occupancy notes on the In House report.
+    And The kitchen notes print on the kitchen report, the housekeeping note on the housekeeping report, the occupancy notes on the In House report, and the requests on the Requests reports, not the In House report.
     And Each room of the stay has its own occupancy notes; a stay with more than one room shows a box for each, named by the room and its dates.
     And What's in a box is what prints: saving changes only that note, and emptying it and saving clears it so it no longer prints.
     And The diet notes show as they print, a diet type recorded in Access included; saving them again revises the same diet rather than filing a second.

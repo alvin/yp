@@ -22,6 +22,13 @@ async function inHouseNotes(fx: Fixture): Promise<string | null> {
 	return rows.find((r) => r.resnumber === fx.resnumber)?.occupancy_notes ?? null;
 }
 
+async function requestsReport(fx: Fixture): Promise<string | null> {
+	const rows = await rpc<{ resnumber: number; request: string | null }[]>('report_requests', {
+		p_date: addDays(fx.arrival, 1)
+	});
+	return rows.find((r) => r.resnumber === fx.resnumber)?.request ?? null;
+}
+
 async function occupancyNotes(fx: Fixture): Promise<(string | null)[]> {
 	const db = await staffClient();
 	const rows = unwrap(
@@ -83,8 +90,9 @@ describe('edit the notes for reports — the daily reports', () => {
 		expect(rows.find((r) => r.resnumber === fx.resnumber)?.diet_notes).toBe(`KM ${marker}`);
 	});
 
-	it('prints the occupancy notes and the requests on the In House report', async () => {
-		expect(await inHouseNotes(fx)).toBe(`OCC ${marker} RG ${marker}`);
+	it('prints the occupancy notes on the In House report, and the requests on the Requests report only', async () => {
+		expect(await inHouseNotes(fx)).toBe(`OCC ${marker}`);
+		expect(await requestsReport(fx)).toBe(`RG ${marker}`);
 	});
 });
 
@@ -117,11 +125,12 @@ describe('edit the notes for reports — the tabs', () => {
 		]);
 	});
 
-	it('saves the requests, which print on the In House report', async () => {
+	it('saves the requests, which print on the Requests report and not the In House report', async () => {
 		await openTab('Requests');
 		await panel().locator('textarea').fill('Late checkout please');
 		await saveTab('Request notes saved');
-		await expect.poll(() => inHouseNotes(fx), { timeout: 10_000 }).toBe('Late checkout please');
+		await expect.poll(() => requestsReport(fx), { timeout: 10_000 }).toBe('Late checkout please');
+		expect(await inHouseNotes(fx)).toBeNull();
 	});
 
 	it("saves a one-room stay's occupancy notes from a single box, changing only that note", async () => {
@@ -132,7 +141,7 @@ describe('edit the notes for reports — the tabs', () => {
 		await saveTab('Occupancy notes saved');
 		await expect
 			.poll(() => inHouseNotes(fx), { timeout: 10_000 })
-			.toBe('Joining Laura Late checkout please');
+			.toBe('Joining Laura');
 	});
 
 	it('clears the occupancy notes when the box is emptied', async () => {

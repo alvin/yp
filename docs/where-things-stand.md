@@ -8,6 +8,13 @@ Everything below is live on the hosted system as of 28 October 2026.
 
 ## What the lodge asked for
 
+**Requests are off the In House list, and room notes off the cancellation
+notice.** The In House list's notes column printed the room's notes and the
+guest's requests together; it now prints the room's notes alone, as Access's
+In House report did. Requests have their own Requests report for the day, and
+still print on the confirmation. The cancellation notice now prints no notes
+at all; the room's notes are messages for a guest who is coming.
+
 **The cancellation note goes back into the reservation notes.** Since 25
 October, the note typed when cancelling had been added to the room's notes (the
 occupancy notes). Those also print on the confirmation and the In House report,
@@ -17,8 +24,9 @@ Cancellation List, which prints the reservation notes. The note is now added to
 the office-only reservation notes again, as before 25 October. Access's desk
 kept the reason there too ("12/23/25 res cxl'd as per Woodward…"). It now
 prints on the Cancellation List. Access printed those notes on the
-cancellation notice instead; it had no list that printed them. The cancellation notice prints the
-room's notes as it did. Un-cancelling leaves the note in place. The message
+cancellation notice instead; it had no list that printed them. The
+cancellation notice prints no notes at all, not even the room's notes, which
+are messages for a guest who is coming. Un-cancelling leaves the note in place. The message
 after un-cancelling has an **Edit notes** button that opens the reservation
 notes, in case the desk wants to take it out. In the cancel dialog the note's
 label now reads "Cancellation note (prints on the cancellation report)",
@@ -68,8 +76,9 @@ they were. The other three:
 - **Occupancy** is a new tab. It edits the note each room of a stay carries,
   which Access called the occupancy notes and the In House report has always
   printed, though until now no screen could edit it. It prints on the In House
-  report, the cancellation notice and, as Access did, under the room on the
-  confirmation. Those notes are the lodge's messages to the guest: "Please let
+  report and, as Access did, under the room on the confirmation. (It also
+  printed on the cancellation notice, as the chart asked, until 28 October,
+  when the lodge asked for it off.) Those notes are the lodge's messages to the guest: "Please let
   us know who will be joining you", "ONE YEAR ONLY". The lodge's own sample
   confirmation prints one, and it now prints exactly as the sample does. (A note
   typed when cancelling joined them until 28 October; it now goes into the
@@ -314,7 +323,8 @@ app does.
 
 - **Occupancy notes print on the confirmation too,** under the room, as Access
   printed them, though the chart listed only the cancellation notice and In
-  House (you, 25 October). The request reports leave out cancelled stays, and
+  House (you, 25 October). They came off the cancellation notice on 28
+  October. The request reports leave out cancelled stays, and
   the day's report isn't added to the batch print run; either is a small change
   if the lodge wants it.
 - **Diet types, child counts and group names stay in the database** for the

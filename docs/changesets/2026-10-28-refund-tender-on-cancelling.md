@@ -9,11 +9,14 @@ cancel dialog's Deposit handling, so the workaround isn't needed.
 Then, from Alvin and Richard's marked-up Cancellation List: the note typed when cancelling
 must not mix with the occupancy notes (on un-cancelling, #114808's "the bad thing happened"
 stayed on its room) and belongs in the reservation notes, the list printed the wrong notes, it should cover a range of days rather
-than one, and reports should set smaller text with dates that don't wrap (§5–7).
+than one, and reports should set smaller text with dates that don't wrap (§5–7). Last,
+occupancy notes off the cancellation notice (§8), and the client's "could you remove the
+'requests' notes from the 'In House' list" (§9).
 **State:** `npm run check` and `npm run build` clean, every feature test and
 `business_logic_smoke.sql` passing. `0027` and `0028` applied to the local stack and, on
 2026-10-28, to the hosted project in one `begin … commit` (its functions checked against the
-local stack's by `md5(prosrc)`), just before the app's push to `main`.
+local stack's by `md5(prosrc)`), just before the app's push to `main` (`1103d83`). `0029` and
+`0030` followed the same way later that day, before the second push.
 
 ---
 
@@ -101,7 +104,8 @@ the hosted project.
 **Shipped.** `0028_cancellation_notes_and_list.sql`: `cancel_reservation` adds the typed
 note to `resnotes` on a line of its own (`concat_ws`), for every stay, and no longer touches
 occupancy notes. The Cancellation List prints `resnotes`, so it carries the note. The notice
-is unchanged from `0026`: occupancy notes only, never the reservation's notes. Un-cancel
+is unchanged from `0026`: occupancy notes only, never the reservation's notes (and from
+`0029`, no notes at all; §8). Un-cancel
 leaves `resnotes` alone. Its toast reads "Reservation notes unchanged." with an **Edit
 notes** action that opens the Reservation notes dialog, shown only when the stay has notes.
 
@@ -161,6 +165,37 @@ hyphens in "27-Oct-26". Richard's "year in bold" is struck through on the sheet,
 done.
 
 **To back out:** remove the `.date` and `:has(.blackbar) table` rules from `report.css`.
+
+## 8. No occupancy notes on the cancellation notice
+
+> *"Do the occupancy notes go onto the cancellation folio? They shouldn't."* (Alvin, 28 Oct,
+> after the office tried the deploy)
+
+**Shipped.** `0029_no_notes_on_the_cancellation_notice.sql` recreates
+`report_cancellation_notice` without `occupancy_notes`. The notice prints the booking, its
+dates, room and party, and the deposit, and no notes at all. The notice body drops the
+paragraph, and the Occupancy tab's helper line now reads "Prints on the in-house report and
+the confirmation." This reverses the 25 Oct chart's "print to the Cancellation folio" for
+Occupancy. Those notes are messages for a guest who is coming.
+
+**To back out:** restore `report_cancellation_notice` from `0026`, the paragraph in
+`cancellation-notice-body.svelte`, the `occupancy_notes` field on `CancellationReport`, and
+the helper line.
+
+## 9. Requests off the In House list
+
+> *"could you remove the 'requests' notes from the 'In House' list"*
+
+**Shipped.** `0030_in_house_without_requests.sql` recreates `report_in_house` with
+`occupancy_notes` as the room's occupancy notes alone. Since `0014` it had joined them with
+the guest's requests (`rgnotes`). The column was already headed "Occupancy Notes:". Requests
+still print on the confirmation and the two Requests reports. The Requests tab's helper line
+now reads "Prints on the requests reports and the confirmation."
+
+**Against Access.** `qryReportInHouseOccupancy2` reads `OccupancyNotes` and no `RGNotes`, so
+this matches Access again.
+
+**To back out:** restore `report_in_house` from `0014` and the helper line.
 
 ## Back out §5–6
 
