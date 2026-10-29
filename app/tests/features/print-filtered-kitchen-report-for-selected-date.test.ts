@@ -32,7 +32,7 @@ describe('print filtered kitchen report for selected date', () => {
 		expect(await page.textContent('.report-page h1')).toBe('Weekly Kitchen Report');
 	});
 
-	it('gives each guest arriving in the range one row, without the reservation number, the diet and notes together as entered', async () => {
+	it('gives each guest arriving in the range one row, without the reservation number or Guest Diet, the notes as entered', async () => {
 		// The dates are this test's alone, so its stay is the only row.
 		const rows = page.locator('.report-page tbody tr');
 		expect(await rows.count()).toBe(1);
@@ -46,7 +46,7 @@ describe('print filtered kitchen report for selected date', () => {
 		expect(await rows.first().locator('td').allTextContents()).toEqual([
 			inside.lastname,
 			'Avery',
-			`${DIET} ${NOTES}`,
+			NOTES,
 			printedDay(inside.arrival),
 			printedDay(inside.departure)
 		]);

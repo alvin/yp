@@ -8,11 +8,12 @@ accordingly as needed"*, and *"Remove the year from the date output to save spac
 dates are only on one line (just month and day as these are daily reports)"*. Then, report
 by report: Housekeeping without Res #, with Room first; In House with the moves *"folded
 right into the other 'In House' section"*; Kitchen/Meal without Res #, titled Daily; the
-Kitchen Report without Res #, titled Weekly. Alvin then asked for the four reports to be
+Kitchen Report without Res #, titled Weekly; then the Weekly Kitchen Report without its Guest
+Diet column. Alvin then asked for the four reports to be
 reconciled closely with how Access built them, since the lodge is anchored on it (§6).
 **State:** `npm run check` and `npm run build` clean, every feature test and
 `business_logic_smoke.sql` passing. `0032` applied to the local stack, then to the hosted
-project just before the push (`4261232`). `0033` (§7) applied to the local stack.
+project just before the push.
 
 ---
 
@@ -92,8 +93,9 @@ on the day, the room taken is In on the day. Access printed them the same way.
 ## 5. The kitchen reports: titled Daily and Weekly, no Res #
 
 **Shipped.** "Daily Kitchen/Meal Report": Guest, Arrival Date, Departure Date, the diet and
-notes. "Weekly Kitchen Report": Last Name, First Name, Guest Diet, Kitchen/Meal Notes,
-Arrive, Depart. The title bar above each report and the batch's caption use the new titles.
+notes. "Weekly Kitchen Report": Last Name, First Name, Kitchen/Meal Notes, Arrive, Depart;
+the Guest Diet column is gone too. Which stays the report lists is unchanged. The title bar
+above each report and the batch's caption use the new titles.
 
 **Judgement calls.**
 - **"Daily" and "Weekly" go in front** of the existing titles.
@@ -101,7 +103,7 @@ Arrive, Depart. The title bar above each report and the batch's caption use the 
   "Kitchen — 7-day range", "Kitchen / meals", "Kitchen (filtered)").
 
 **To back out:** restore the two `<h1>`s, the two shell titles and the batch caption, and the
-Res # columns.
+Res # and Guest Diet columns.
 
 ## 6. Reconciled against Access
 
@@ -152,11 +154,8 @@ blank, as KERLIN's shows), so it was filled in after printing.
   reports could disagree. Since 9 Oct the number-of-guests pen keeps the two in step.
 - **The Kitchen/Meal Total Guests isn't Access's.** Access's footer is
   `=DSum([NumAdults],"qryReportKitchenMealOccupancy2")`, with the field not quoted, so Access
-  takes the last line's party size (STOTHART, 2) and adds it once per booking. It printed 88
-  on the sample, 2 × 44 bookings, when about 70 guests were at the lodge. The March Access
-  copy has 45 bookings on that day; the 45th, #117131, was entered on 15 March 2026 with an
-  arrival of 24 Apr 2024 (surely 2026) and holds no room, so it touches none of our
-  figures. Ours keeps
+  takes the last line's party size (2) and adds it once per booking. It printed 88 on the
+  sample, 2 × 44 bookings, when about 70 guests were at the lodge. Ours keeps
   `guests_in_house`: everyone at the lodge that day, departing guests included, which is what
   the query behind Access's figure selects.
 - **A housekeeping note prints on its own stay's line.** On the sample, #108681's note
@@ -167,34 +166,10 @@ blank, as KERLIN's shows), so it was filled in after printing.
 the In House body and loaders to `guests_in_house` and line counts; drop the housekeeping
 Total Guests line.
 
-Test bookings played no part in any comparison: none touches 23-Dec-25 on the local stack,
-and the hosted project holds none (the suite clears the previous run's `ZZ` fixtures at the
-start of each run, on the stack it runs against). #108703's room count is 1 in the March
-Access file itself, so that one-guest difference is Access's own later edit, not the import.
-
-## 7. Weekly Kitchen Report: no Guest Diet column
-
-> *"remove Guest Diet: from the weekly kitchen report too"*
-
-**Shipped.** `0033_weekly_kitchen_diet_with_notes.sql` recreates
-`report_kitchen_meal_filtered` returning `diet_notes` (`v_kitchen_diets.diet_text`, the diet
-type and its notes as one line) in place of `guestdiet` and `kitchenmealnotes`; the returned
-columns change, so it is dropped and recreated. The report's columns are Last Name, First
-Name, Kitchen/Meal Notes, Arrive, Depart.
-
-**Judgement call — the diet type isn't dropped with its column.** A type still on file from
-the old pick list prints ahead of the notes, as on the Daily Kitchen/Meal Report and the
-guest documents, so nothing on file goes missing from the kitchen's sheet. The header keeps
-its words, "Kitchen/Meal Notes:".
-
-**To back out:** restore `report_kitchen_meal_filtered` from `0014` (drop the new one
-first), the Guest Diet column and the two cells.
-
 ## Stories
 
 `print-housekeeping-report`, `print-in-house-occupancy-report`, `print-full-meal-report`,
-`print-filtered-kitchen-report-for-selected-date` (also without the Guest Diet column) and
-`print-daily-operations-reports` take
+`print-filtered-kitchen-report-for-selected-date` and `print-daily-operations-reports` take
 the new criteria, and their tests assert them. `show-an-accurate-room-status-for-the-day`
 loses "The In House report prints Move Out beside Move In"; the In House story now covers
 where a move prints, so the two stories don't both describe it.

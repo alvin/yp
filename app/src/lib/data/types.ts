@@ -481,7 +481,8 @@ export interface KitchenFilteredRow {
 	resnumber: number;
 	guestlastname: string;
 	guestfirstname: string | null;
-	diet_notes: string | null;
+	guestdiet: string | null;
+	kitchenmealnotes: string | null;
 	arrival_date: string;
 	departure_date: string;
 }
