@@ -1,5 +1,4 @@
 <script lang="ts">
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import type { KitchenMealRow } from '$lib/data/types.js';
 	import { dateShort } from '$lib/format.js';
 
@@ -49,4 +48,3 @@
 {#if !allergyOnly}
 	<p><b>Total Guests</b>&nbsp;&nbsp; {totalGuests}</p>
 {/if}
-<ReportFooter />

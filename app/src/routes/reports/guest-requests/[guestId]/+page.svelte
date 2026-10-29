@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ReportShell from '$lib/components/app/report-shell.svelte';
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import { dateShort, guestName } from '$lib/format.js';
 
 	let { data } = $props();
@@ -40,5 +39,4 @@
 			{/each}
 		</tbody>
 	</table>
-	<ReportFooter />
 </ReportShell>

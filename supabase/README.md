@@ -118,7 +118,8 @@ confirmation and the requests reports, not the In House report (0030).
 which room windows are touched on a day or across a range: arriving, staying,
 moving or leaving, with removed rooms, removed guest names and archived stays
 never counted. The housekeeping, In House and manual sales reports, the guest
-total and both date searches read it. Room availability and room sharing ask a
+total and both date searches read it (the manual sales list leaves off the
+rooms checking out that day, 0031). Room availability and room sharing ask a
 different question — who holds a room *overnight* — and keep their own night
 rule, so a room left on the 5th is free for an arrival on the 5th.
 

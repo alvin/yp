@@ -10,13 +10,15 @@ Then, from Alvin and Richard's marked-up Cancellation List: the note typed when 
 must not mix with the occupancy notes (on un-cancelling, #114808's "the bad thing happened"
 stayed on its room) and belongs in the reservation notes, the list printed the wrong notes, it should cover a range of days rather
 than one, and reports should set smaller text with dates that don't wrap (§5–7). Last,
-occupancy notes off the cancellation notice (§8), and the client's "could you remove the
-'requests' notes from the 'In House' list" (§9).
+occupancy notes off the cancellation notice (§8), the client's "could you remove the
+'requests' notes from the 'In House' list" (§9), the Manual Sales List as a sheet to
+write on (§10), and no footers or page numbers on any report (§11).
 **State:** `npm run check` and `npm run build` clean, every feature test and
 `business_logic_smoke.sql` passing. `0027` and `0028` applied to the local stack and, on
 2026-10-28, to the hosted project in one `begin … commit` (its functions checked against the
 local stack's by `md5(prosrc)`), just before the app's push to `main` (`1103d83`). `0029` and
-`0030` followed the same way later that day, before the second push.
+`0030` followed the same way later that day, before the second push (`cf65222`). `0031`
+followed before the third push.
 
 ---
 
@@ -196,6 +198,53 @@ now reads "Prints on the requests reports and the confirmation."
 this matches Access again.
 
 **To back out:** restore `report_in_house` from `0014` and the helper line.
+
+## 10. The Manual Sales List, a sheet to write on
+
+> *"it's a template for staff to use at peak times for offline sales recording, and later
+> data entry"*: smaller text; res # small under the room; no room number column; no
+> check-outs; a big blank Items column.
+
+**Shipped.**
+- `0031_manual_sales_without_check_outs.sql`: `report_manual_sales` drops the rooms whose
+  window ends on the day (`occupancyout > p_date`). That includes the room a moving party
+  leaves, since they're listed in the room they move into. Access's
+  `qrySubreportManualSalesListRoom` took `StartDate Between OccupancyIn And OccupancyOut-1`,
+  so this matches it again. Since `0014` we had listed departures.
+- `manual-sales-body.svelte`: the columns are **Room**, with the reservation number and
+  its cancelled box in 11px type underneath, **Guest**, and **Items**. Items is blank,
+  takes the rest of the width and is ruled off from Guest (1px #777, header included, like
+  the row rules; a lighter #999 line vanished in Chrome's scaled print preview), and each
+  line is 52px tall to write in. The Room Order and separate Res # columns are gone.
+- The printed line "Checkbox beside Res # is visual check for Cancelled Reservations…"
+  stays. Access printed it (`Label119` in the report's `PageHeaderSection`, found in the
+  `.accdb`). Alvin removed it, questioned it, and then put it back.
+- Text size: the table is already 14px, from the reports rule in §7. Nothing else changed.
+
+**Judgement calls.**
+- "Room number column" is read as the **Room Order** column (1, 4, 5 …), the only number
+  column besides Res #. The room's name stays as the first column, with the reservation
+  number moved under it.
+- The function still returns `room_order` for sorting. The sheet just doesn't print it.
+
+**To back out:** restore `report_manual_sales` from `0014` and
+`manual-sales-body.svelte` from `cf65222`.
+
+## 11. No footers or page numbers on the reports
+
+> *"they want no footers/page numbers on any of the reports either"*
+
+**Shipped.** `report-footer.svelte` (the printed date and time) is gone from every report,
+and with it `footerTimestamp`. The `@page numbered` rule that printed "Page N of M" in the
+margin is gone from `report.css`. So is the batch print's override, which had kept the
+footer from repeating and left batch reports unnumbered. The print padding no longer leaves
+0.9in at the bottom for a footer. This also fixes the date printing over the last row of a
+multi-page report, as the Manual Sales List's preview showed. The guest documents never had
+either. The story's "Printed reports number their pages" becomes "carry no footer and no
+page numbers", and its test checks that nothing prints them.
+
+**To back out:** restore `report-footer.svelte`, its uses and `footerTimestamp` from
+`cf65222`, and the `.footer`, `@page numbered` and print rules in `report.css`.
 
 ## Back out §5–6
 

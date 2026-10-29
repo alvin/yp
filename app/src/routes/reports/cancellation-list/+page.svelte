@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import ReportShell from '$lib/components/app/report-shell.svelte';
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import ReportDateInput from '$lib/components/app/report-date-input.svelte';
 	import { dateShort } from '$lib/format.js';
 
@@ -66,5 +65,4 @@
 			{/each}
 		</tbody>
 	</table>
-	<ReportFooter />
 </ReportShell>

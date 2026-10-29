@@ -143,16 +143,6 @@
 .report-page table.ruled tbody tr:nth-child(even) {
 	background: #e4e4e4;
 }
-.report-page .footer {
-	position: absolute;
-	left: 56px;
-	right: 56px;
-	bottom: 32px;
-	display: flex;
-	justify-content: space-between;
-	font-size: 14px;
-	color: #222;
-}
 .report-page .standoff {
 	margin-top: calc(var(--standoff, 0px) * var(--gap));
 }
@@ -182,19 +172,7 @@
 	font-weight: 700;
 }
 
-/* Printed reports number their pages, as the originals did ("Page 2 of 4").
-   The browser fills the numbers into the page margin, so a report that runs
-   long is numbered however many pages it takes. */
-.report-page:has(.footer) {
-	page: numbered;
-}
-@page numbered {
-	@bottom-right {
-		content: 'Page ' counter(page) ' of ' counter(pages);
-		font: 14px Arial, Helvetica, sans-serif;
-		color: #222;
-	}
-}
+/* Reports print with no footer and no page numbers (the lodge, 28 Oct). */
 
 @media print {
 	.no-print {
@@ -207,7 +185,7 @@
 		width: auto;
 		min-height: 0;
 		margin: 0;
-		padding: 0.25in 0.35in 0.9in;
+		padding: 0.25in 0.35in;
 		box-shadow: none;
 	}
 	.report-page.landscape {
@@ -223,11 +201,5 @@
 	.report-page.a5 {
 		zoom: 0.6;
 		--gap: 0.45;
-	}
-	.report-page .footer {
-		position: fixed;
-		left: 0.35in;
-		right: 0.35in;
-		bottom: 0.3in;
 	}
 }

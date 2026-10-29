@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ReportShell from '$lib/components/app/report-shell.svelte';
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import DailyCashTie from '$lib/components/app/daily-cash-tie.svelte';
 	import { dateLong, dateShort, moneyAcct as money } from '$lib/format.js';
 	import { dailyCashTabs } from '$lib/report-nav.js';
@@ -86,5 +85,4 @@
 			{/if}
 		</tbody>
 	</table>
-	<ReportFooter />
 </ReportShell>

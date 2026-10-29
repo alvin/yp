@@ -82,15 +82,12 @@
 <svelte:head>
 	<title>Batch print · {dateMed(data.date)}</title>
 	<!-- One @page per print action: per-page orientation is unreliable across
-	     browsers, so landscape reports reflow into portrait. Footers must also
-	     leave print's fixed positioning, or every report's footer would repeat
-	     on every sheet of the batch. -->
+	     browsers, so landscape reports reflow into portrait. -->
 	{@html `<style>
 		@page { size: ${printing && group(printing).stock === 'a5' ? 'A5' : 'letter'}; margin: 0.5in; }
 		@media print {
 			.report-page { page-break-after: always; }
 			.report-page:last-child { page-break-after: auto; }
-			.report-page .footer { position: static; margin-top: 24px; }
 			${printing ? `.batch-group:not([data-group="${printing}"]) { display: none !important; }` : ''}
 		}
 	</style>`}
@@ -209,11 +206,6 @@
 </div>
 
 <style>
-	/* The batch is one print job, so its page count would run across every
-	   report in it; reports printed here are left unnumbered instead. */
-	.batch-group .report-page {
-		page: batch;
-	}
 	.batch-caption {
 		width: 980px;
 		margin: 28px auto -24px;

@@ -8,6 +8,20 @@ Everything below is live on the hosted system as of 28 October 2026.
 
 ## What the lodge asked for
 
+**The Manual Sales List is a sheet to write on.** It's what the desk fills in
+by hand at busy times, such as drinks before dinner, to enter later. Each line
+now shows the room with its reservation number in small type underneath, then
+the guest, then a wide, blank **Items** column with lines tall enough to write
+in. The Room Order and separate Res # columns are gone. Rooms checking out that
+day are left off, since they only mattered on the days before; Access's list
+did the same. The text is a size smaller, like every report since the
+Cancellation List changes. The line explaining the checkbox stays, as Access
+printed it.
+
+**No footers or page numbers on the reports.** The printed date and time at
+the foot of each report, and the "Page 2 of 4" numbering, are gone. That also
+stops the date printing over the last line of a long report.
+
 **Requests are off the In House list, and room notes off the cancellation
 notice.** The In House list's notes column printed the room's notes and the
 guest's requests together; it now prints the room's notes alone, as Access's
@@ -277,7 +291,8 @@ The Daily Cash report gives every payment type and charge category its own
 line, so the lines always add up to the total (one day in 2024 was $1,066.78
 short).
 
-**Printed reports** number their pages ("Page 2 of 4") as the originals did.
+**Printed reports** carry no footer and no page numbers (the lodge, 28
+October).
 
 **Year-end deposits.** A **Next Year's Deposits** report (Print Center → Year
 end) totals the deposits taken from January 1 to December 31 for stays after

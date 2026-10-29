@@ -74,15 +74,28 @@ describe('print daily operations reports — the printed report', () => {
 		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, { waitUntil: 'networkidle' });
 	});
 
-	it('numbers the pages of a printed report, and not of a guest document', async () => {
-		// The browser prints "Page N of M" in the margin of pages set as `numbered`.
-		const pageName = () =>
-			reportPage.locator('.report-page').first().evaluate((el) => getComputedStyle(el).page);
-		expect(await pageName()).toBe('numbered');
+	it('prints a report with no footer and no page numbers', async () => {
+		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, { waitUntil: 'networkidle' });
+		expect(await reportPage.locator('.report-page .footer').count()).toBe(0);
+		// Page numbers would be a named page with a margin rule; there is none.
+		const pageName = await reportPage
+			.locator('.report-page')
+			.first()
+			.evaluate((el) => getComputedStyle(el).page);
+		expect(pageName).toBe('auto');
+		const marginRules = await reportPage.evaluate(() =>
+			[...document.styleSheets].flatMap((sheet) => {
+				try {
+					return [...sheet.cssRules].map((r) => r.cssText).filter((t) => t.includes('counter(page'));
+				} catch {
+					return [];
+				}
+			})
+		);
+		expect(marginRules).toEqual([]);
 		await reportPage.goto(`${APP_URL}/reports/confirmation/${fx.resnumber}`, {
 			waitUntil: 'networkidle'
 		});
-		expect(await pageName()).not.toBe('numbered');
 	});
 
 	it('sets report lines a size smaller than a guest document, and keeps each date on one line', async () => {

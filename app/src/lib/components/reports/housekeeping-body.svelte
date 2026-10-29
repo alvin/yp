@@ -1,5 +1,4 @@
 <script lang="ts">
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import type { HousekeepingRow } from '$lib/data/types.js';
 	import { dateShort } from '$lib/format.js';
 
@@ -39,4 +38,3 @@
 		{/each}
 	</tbody>
 </table>
-<ReportFooter />

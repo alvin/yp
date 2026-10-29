@@ -81,16 +81,6 @@ export function moneyAcct(n: number | null | undefined): string {
   return v < 0 ? `($${abs})` : `$${abs}`;
 }
 
-/** "December 24, 2025  05:08 PM" — printed report footer style. */
-export function footerTimestamp(now: Date = new Date()): string {
-  const h24 = now.getHours();
-  const suffix = h24 >= 12 ? "PM" : "AM";
-  const h = h24 % 12 === 0 ? 12 : h24 % 12;
-  const hh = String(h).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  return `${dateLong(now)}  ${hh}:${mm} ${suffix}`;
-}
-
 export function addDays(d: string, days: number): string {
   const dt = parse(d)!;
   dt.setDate(dt.getDate() + days);

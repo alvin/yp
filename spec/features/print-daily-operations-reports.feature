@@ -13,7 +13,7 @@ Feature: print daily operations reports
     And The printed report is for the chosen date, and can be re-dated from the report screen.
     And An optional end date feeds the reports that take a range: the 7-day kitchen report, which without one runs seven days from the report date, and the Cancellation report, which without one covers the week ending on it.
     And The Cancellation report is not a daily report: it is not among the daily reports' tabs, and picks its own range of days.
-    And Printed reports number their pages, as the lodge's originals did.
+    And Printed reports carry no footer and no page numbers.
     And The reports set their lines a size smaller than the guest documents, and a date never breaks across two lines.
     And Each room or guest on a daily report is ruled off from the next and every other one is shaded, so a line reads straight across the sheet; the shading prints.
     And The print output matches the lodge’s standard report formatting and naming.

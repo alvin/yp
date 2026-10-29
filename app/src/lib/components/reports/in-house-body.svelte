@@ -1,5 +1,4 @@
 <script lang="ts">
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import type { InHouseRow } from '$lib/data/types.js';
 	import { dateShort } from '$lib/format.js';
 
@@ -62,7 +61,6 @@
 		</tbody>
 	</table>
 {/each}
-<ReportFooter />
 
 <style>
 	.section {

@@ -1,6 +1,5 @@
 <script lang="ts">
     import ReportShell from "$lib/components/app/report-shell.svelte";
-    import ReportFooter from "$lib/components/app/report-footer.svelte";
     import { Badge } from "$lib/components/ui/badge/index.js";
     import { dateLong, dateShort, money } from "$lib/format.js";
     import { dailyCashTabs } from "$lib/report-nav.js";
@@ -108,5 +107,4 @@
             </tr>
         </tbody>
     </table>
-    <ReportFooter />
 </ReportShell>

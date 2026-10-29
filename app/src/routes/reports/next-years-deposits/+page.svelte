@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import ReportShell from '$lib/components/app/report-shell.svelte';
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import { Combobox } from '$lib/components/ui/combobox/index.js';
 	import { TODAY } from '$lib/data/queries.js';
 	import { MONTHS_LONG, money } from '$lib/format.js';
@@ -69,5 +68,4 @@
 	<p class="right">
 		<b>Held at December 31, {data.year}:</b>&nbsp;&nbsp; <b>{money(sum('held'))}</b>
 	</p>
-	<ReportFooter />
 </ReportShell>

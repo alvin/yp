@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ReportShell from '$lib/components/app/report-shell.svelte';
-	import ReportFooter from '$lib/components/app/report-footer.svelte';
 	import { dateShort } from '$lib/format.js';
 	import { opsTabs } from '$lib/report-nav.js';
 
@@ -44,5 +43,4 @@
 			{/each}
 		</tbody>
 	</table>
-	<ReportFooter />
 </ReportShell>

@@ -7,13 +7,20 @@ let day: string;
 let early: Fixture; // in the first room in the lodge's order
 let late: Fixture; // in a room further down it, booked first
 let cancelled: Fixture;
+let leaving: Fixture; // checks out on the day
 let rooms: RoomRow[];
 
 const page = useAppPage();
 const rows = () => page.locator('.report-page tbody tr');
+// Each line as [room, reservation number under it, guest, items].
 const cells = async () =>
 	Promise.all(
-		(await rows().all()).map(async (r) => (await r.locator('td').allTextContents()).map((c) => c.trim()))
+		(await rows().all()).map(async (r) => [
+			((await r.locator('td.room').evaluate((td) => td.firstChild?.textContent)) ?? '').trim(),
+			((await r.locator('td.room .resno').textContent()) ?? '').trim(),
+			((await r.locator('td.guest').textContent()) ?? '').trim(),
+			((await r.locator('td.items').textContent()) ?? '').trim()
+		])
 	);
 
 beforeAll(async () => {
@@ -25,6 +32,7 @@ beforeAll(async () => {
 	early = await makeReservation({ arrival, roomid: rooms[0].roomid });
 	cancelled = await makeReservation({ arrival, roomid: rooms[2].roomid });
 	await cancel(cancelled);
+	leaving = await makeReservation({ arrival: addDays(day, -2), departure: day, roomid: rooms[3].roomid });
 });
 
 describe('show manual sales list', () => {
@@ -35,17 +43,41 @@ describe('show manual sales list', () => {
 		await page.waitForURL(`${APP_URL}/reports/manual-sales?date=${day}`, { timeout: 15_000 });
 	});
 
-	it('lists each occupied room in room order with its reservation and guest, and no charges', async () => {
+	it('lists each room slept in that night in room order, its reservation under the room, with a blank Items column', async () => {
 		await expect.poll(() => rows().count(), { timeout: 10_000 }).toBe(2);
 		expect((await page.locator('.report-page thead th').allTextContents()).map((t) => t.trim())).toEqual([
 			'Room',
-			'Res #',
 			'Guest',
-			'Room Order'
+			'Items'
 		]);
 		expect(await cells()).toEqual([
-			[rooms[0].room_compact, `☐ ${early.resnumber}`, early.lastname, String(rooms[0].roomorder)],
-			[rooms[5].room_compact, `☐ ${late.resnumber}`, late.lastname, String(rooms[5].roomorder)]
+			[rooms[0].room_compact, `☐ ${early.resnumber}`, early.lastname, ''],
+			[rooms[5].room_compact, `☐ ${late.resnumber}`, late.lastname, '']
+		]);
+		expect(await page.locator('.report-page').textContent()).not.toContain(String(leaving.resnumber));
+	});
+
+	it('gives Items the width of the sheet and each line room to write in, ruled off on paper', async () => {
+		const items = page.locator('.report-page tbody td.items').first();
+		const room = page.locator('.report-page tbody td.room').first();
+		const [itemsBox, roomBox] = [await items.boundingBox(), await room.boundingBox()];
+		expect(itemsBox!.width).toBeGreaterThan(roomBox!.width * 3);
+		expect(itemsBox!.height).toBeGreaterThanOrEqual(48);
+		await page.emulateMedia({ media: 'print' });
+		try {
+			const rule = await items.evaluate((td) => {
+				const s = getComputedStyle(td);
+				return `${s.borderLeftWidth} ${s.borderLeftStyle}`;
+			});
+			expect(rule).toBe('1px solid');
+		} finally {
+			await page.emulateMedia({ media: 'screen' });
+		}
+	});
+
+	it("prints Access's line explaining the box beside each reservation number", async () => {
+		expect(await page.locator('.report-page > p').allTextContents()).toEqual([
+			expect.stringContaining('Checkbox beside Res # is visual check for Cancelled Reservations.')
 		]);
 	});
 
