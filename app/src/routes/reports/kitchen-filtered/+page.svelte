@@ -44,7 +44,6 @@
 			<tr>
 				<th>Last Name:</th>
 				<th>First Name:</th>
-				<th>Guest Diet:</th>
 				<th>Kitchen/Meal Notes:</th>
 				<th>Arrive:</th>
 				<th>Depart</th>
@@ -55,8 +54,7 @@
 				<tr>
 					<td class="guest">{row.guestlastname}</td>
 					<td class="guest">{row.guestfirstname ?? ''}</td>
-					<td class="note">{row.guestdiet ?? ''}</td>
-					<td class="note">{row.kitchenmealnotes ?? ''}</td>
+					<td class="note">{row.diet_notes ?? ''}</td>
 					<td class="date">{dayMonth(row.arrival_date)}</td>
 					<td class="date">{dayMonth(row.departure_date)}</td>
 				</tr>

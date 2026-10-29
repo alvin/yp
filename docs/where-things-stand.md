@@ -28,7 +28,8 @@ year. Report by report:
 - **The Kitchen/Meal report** is titled **Daily Kitchen/Meal Report**, and the
   Res # column is gone.
 - **The 7-day kitchen report** is titled **Weekly Kitchen Report**, and the
-  Res # column is gone.
+  Res # and Guest Diet columns are gone. A diet type still on file from the old
+  pick list prints ahead of the notes, as it does on the daily report.
 
 **The four reports checked against Access.** Each was compared with the Access
 report itself and with the lodge's printed samples for 23 December 2025. The
@@ -52,7 +53,12 @@ Where we still differ from Access, on purpose:
 - The **Kitchen/Meal report's Total Guests** is everyone at the lodge that day,
   including those leaving. Access's figure on that report came from a faulty
   formula: it multiplied one party's size by the number of bookings, and
-  printed 88 on 23 December 2025, when about 70 guests were there.
+  printed 88 on 23 December 2025 (2 × 44 bookings), when about 70 guests were
+  there. Richard has said the totals don't matter to the lodge.
+
+None of these differences came from test bookings: no test booking touches 23
+December 2025, and the hosted system holds none at all. (The test bookings in
+the Print Center on a developer's machine are from running the tests there.)
 
 **The Manual Sales List is a sheet to write on.** It's what the desk fills in
 by hand at busy times, such as drinks before dinner, to enter later. Each line
@@ -483,13 +489,18 @@ app does.
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes;
    printing or reprinting a single document; how exact the printed layouts need
    to be; moving a deposit when a stay is cancelled or re-booked.
+9. **A booking with a two-year stay.** #117131 (Van Dyk Rammeloo), entered in
+   Access on 15 March 2026, runs from 24 April 2024 to 26 April 2026; it is
+   almost certainly 24–26 April 2026. It holds no room, so no report counts it,
+   but it will come across with the go-live file unless it is corrected in
+   Access first.
 
 **Known gaps nobody has asked for**
-9. A room's own dates can't be edited separately, as they could in Access;
+10. A room's own dates can't be edited separately, as they could in Access;
    stay dates change through *Change dates*. A room's own guest count can be set
    only where the stay holds rooms side by side; otherwise the room follows the
    booking's number.
-10. All-fields search takes a few hundred milliseconds whatever is typed.
+11. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 
