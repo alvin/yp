@@ -11,11 +11,10 @@
 
 <ReportShell
 	title="In House Report — {dateShort(data.date)}"
-	orientation="landscape"
 	tabs={opsTabs(data.date, 'in-house')}
 	date={data.date}
 	backHref="/print"
 	backLabel="Print Center"
 >
-	<InHouseBody date={data.date} rows={data.rows} totalGuests={data.total_guests} />
+	<InHouseBody date={data.date} rows={data.rows} counts={data.counts} />
 </ReportShell>

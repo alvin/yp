@@ -1,7 +1,7 @@
 // Story: spec/features/print-daily-operations-reports.feature
 import { beforeAll, describe, expect, it } from 'vitest';
 import { APP_URL, printedDate, useAppPage } from '../helpers/app';
-import { addDays, makeReservation, roomDirectory, todayISO, type Fixture } from '../helpers/db';
+import { addDays, makeReservation, roomDirectory, rpc, todayISO, type Fixture } from '../helpers/db';
 
 describe('print daily operations reports', () => {
 	const page = useAppPage('/print');
@@ -55,6 +55,8 @@ describe('print daily operations reports — the printed report', () => {
 	beforeAll(async () => {
 		fx = await makeReservation();
 		mid = addDays(fx.arrival, 1);
+		// A diet, so the kitchen reports have a line too.
+		await rpc('save_kitchen_meal', { p_guestid: fx.guestid, p_guestdiet: 'Vegan' });
 	});
 
 	it('prints the report for the date chosen', async () => {
@@ -102,13 +104,41 @@ describe('print daily operations reports — the printed report', () => {
 		const tableSize = () =>
 			reportPage.locator('.report-page table').first().evaluate((el) => getComputedStyle(el).fontSize);
 		expect(await tableSize()).toBe('16px'); // the confirmation, from the test before
-		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, { waitUntil: 'networkidle' });
+		await reportPage.goto(`${APP_URL}/reports/manual-sales?date=${mid}`, { waitUntil: 'networkidle' });
 		expect(await tableSize()).toBe('14px');
+		await reportPage.goto(`${APP_URL}/reports/housekeeping?date=${mid}`, { waitUntil: 'networkidle' });
 		const dates = await reportPage
 			.locator('.report-page td.date')
 			.evaluateAll((els) => els.map((e) => getComputedStyle(e).whiteSpace));
 		expect(dates.length).toBeGreaterThan(0);
 		expect(new Set(dates)).toEqual(new Set(['nowrap']));
+	});
+
+	it('prints Housekeeping, In House and both kitchen reports in portrait, smaller again, their lines dated without the year', async () => {
+		for (const report of [
+			`housekeeping?date=${mid}`,
+			`in-house?date=${mid}`,
+			`kitchen?date=${mid}`,
+			`kitchen-filtered?from=${fx.arrival}&to=${mid}`
+		]) {
+			await reportPage.goto(`${APP_URL}/reports/${report}`, { waitUntil: 'networkidle' });
+			const pageRule = await reportPage.evaluate(() =>
+				[...document.querySelectorAll('style')]
+					.map((s) => s.textContent ?? '')
+					.filter((t) => t.includes('@page'))
+					.join('\n')
+			);
+			expect(pageRule, report).toContain('size: letter portrait');
+			expect(
+				await reportPage.locator('.report-page table').first().evaluate((el) => getComputedStyle(el).fontSize),
+				report
+			).toBe('12px');
+			const dates = (await reportPage.locator('.report-page td.date').allTextContents()).filter(Boolean);
+			expect(dates.length, report).toBeGreaterThan(0);
+			for (const d of dates) expect(d, report).toMatch(/^\d{2}-[A-Z][a-z]{2}$/);
+			// The heading's date keeps its year.
+			expect(await reportPage.textContent('.report-page h3'), report).toMatch(/\d{2}-[A-Z][a-z]{2}-\d{2}\b/);
+		}
 	});
 
 	it('gives the Cancellation report its own range of days, apart from the daily reports', async () => {

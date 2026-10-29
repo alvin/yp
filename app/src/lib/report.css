@@ -124,6 +124,22 @@
 .report-page:has(.blackbar) table {
 	font-size: 14px;
 }
+/* Housekeeping, In House and the two kitchen reports print in portrait, a
+   size smaller again and with closer cells, so a portrait sheet carries what
+   a landscape one did (the lodge, 29 Oct). */
+.report-page table.compact {
+	font-size: 12px;
+}
+.report-page table.compact th,
+.report-page table.compact td {
+	padding: 3px 4px;
+}
+/* On the narrower sheet only the guest's name and the notes wrap; a room or a
+   status broken over two lines doubled its row. */
+.report-page table.compact th,
+.report-page table.compact td:not(.guest, .note) {
+	white-space: nowrap;
+}
 .report-page .total td {
 	border-top: 2px solid #444;
 	font-weight: 700;

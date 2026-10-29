@@ -26,6 +26,7 @@ import type {
 	GuestSearchRow,
 	HousekeepingNote,
 	HousekeepingRow,
+	InHouseCounts,
 	InHouseRow,
 	ItemsCashedOutRow,
 	KitchenFilteredRow,
@@ -379,6 +380,11 @@ export async function reportInHouse(date: string): Promise<InHouseRow[]> {
 	return unwrap(await supabase.rpc('report_in_house', { p_date: date }));
 }
 
+/** Guests arriving, departing and in house on a day, and Total Guests (arriving plus in house). */
+export async function inHouseCounts(date: string): Promise<InHouseCounts> {
+	return unwrap(await supabase.rpc('in_house_counts', { p_date: date }))[0];
+}
+
 /** Everyone at the lodge on a day whose stay carries a request. */
 export async function reportRequests(date: string): Promise<RequestRow[]> {
 	return unwrap(await supabase.rpc('report_requests', { p_date: date }));
@@ -393,7 +399,7 @@ export async function reportKitchenMeal(date: string): Promise<KitchenMealRow[]>
 	return unwrap(await supabase.rpc('report_kitchen_meal', { p_date: date }));
 }
 
-/** Guests in house on a day, a party moving rooms counted once — the Total Guests line. */
+/** Everyone at the lodge on a day, departing guests included and a party moving rooms counted once — the kitchen report's Total Guests. */
 export async function guestsInHouse(date: string): Promise<number> {
 	return unwrap(await supabase.rpc('guests_in_house', { p_date: date }));
 }

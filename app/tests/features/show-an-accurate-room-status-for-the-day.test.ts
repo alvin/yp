@@ -51,35 +51,19 @@ describe('show an accurate room status for the day', () => {
 		const ours = rows.filter((r) => r.resnumber === fx.resnumber).map((r) => r.status);
 		expect(ours.sort()).toEqual(['Move In', 'Move Out']);
 	});
-
-	it('runs Move Out beside Move In on the In House report', async () => {
-		const rows = await rpc<{ resnumber: number; section: string }[]>('report_in_house', {
-			p_date: moveDate
-		});
-		const rank = ['Arrive Today', 'Move In', 'Move Out', 'In House', 'Depart Today'];
-		const seen = rows.map((r) => rank.indexOf(r.section));
-		expect(seen.every((n) => n >= 0)).toBe(true);
-		expect(seen).toEqual([...seen].sort((a, b) => a - b));
-		expect(rows.filter((r) => r.resnumber === fx.resnumber).map((r) => r.section)).toEqual([
-			'Move In',
-			'Move Out'
-		]);
-	});
 });
 
 describe('show an accurate room status for the day — on screen and paper', () => {
 	const page = useAppPage();
 
-	it('prints Move Out under its own heading and counts the moving party once', async () => {
+	it('counts the moving party once on the In House report', async () => {
 		await page.goto(`${APP_URL}/reports/in-house?date=${moveDate}`, { waitUntil: 'networkidle' });
-		const headings = await page.locator('.report-page h2').allTextContents();
-		expect(headings.indexOf('Move Out')).toBe(headings.indexOf('Move In') + 1);
 		// The date is this test's alone: one party of two, in two rooms that day.
 		const sheet = (await page.textContent('.report-page')) ?? '';
 		expect(sheet).toMatch(/Total Guests\s*2\b/);
 	});
 
-	it('counts the moving party once on the kitchen report too', async () => {
+	it('counts the moving party once on the Daily Kitchen/Meal report too', async () => {
 		expect(await rpc<number>('guests_in_house', { p_date: moveDate })).toBe(2);
 		await page.goto(`${APP_URL}/reports/kitchen?date=${moveDate}`, { waitUntil: 'networkidle' });
 		const sheet = (await page.textContent('.report-page')) ?? '';

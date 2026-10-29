@@ -123,8 +123,18 @@ rooms checking out that day, 0031). Room availability and room sharing ask a
 different question — who holds a room *overnight* — and keep their own night
 rule, so a room left on the 5th is free for an arrival on the 5th.
 
-`guests_in_house(p_date)` (0014) — Total Guests on the In House and
-Kitchen/Meal reports, a party moving rooms counted once.
+`guests_in_house(p_date)` (0014) — Total Guests on the Kitchen/Meal report:
+everyone at the lodge that day, departing guests included, a party moving rooms
+counted once.
+
+`in_house_counts(p_date)` (0032) — the In House report's summary line: the
+guests arriving, departing and in house, and Total Guests (arriving plus in
+house, as Access counted it). The housekeeping report ends on the same Total
+Guests. A party moving rooms is counted once.
+
+`occupancy_status(…)` (0013) names a room's day: Arrive Today, Move In, Move
+Out, In House or Depart Today. The housekeeping report prints it as is; the In
+House report puts both rooms of a move under In House, as Access's did (0032).
 
 `reservation_deposit_held(p_reservationid)` (0014) — the deposit still held on
 a stay: received, less refunded, applied or kept. `v_reservation_summary`

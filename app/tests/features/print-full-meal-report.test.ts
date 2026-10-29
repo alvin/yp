@@ -1,6 +1,6 @@
 // Story: spec/features/print-full-meal-report.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { APP_URL, printedDate, useAppPage } from '../helpers/app';
+import { APP_URL, printedDate, printedDay, useAppPage } from '../helpers/app';
 import { addDays, makeReservation, roomDirectory, rpc, type Fixture } from '../helpers/db';
 
 // Typed the way the desk types: punctuation, capitals and asterisks included.
@@ -27,29 +27,27 @@ beforeAll(async () => {
 });
 
 describe('print full meal report', () => {
-	it('opens from the print menu for the day chosen, the day in its heading', async () => {
+	it('opens from the print menu for the day chosen, titled Daily, the day in its heading', async () => {
 		await page.goto(`${APP_URL}/print`, { waitUntil: 'networkidle' });
 		await page.fill('#print-date', day);
 		await page.click('a[href^="/reports/kitchen?"]');
 		await page.waitForURL(`${APP_URL}/reports/kitchen?date=${day}`, { timeout: 15_000 });
 		await expect.poll(() => page.textContent('.report-page h3')).toBe(`for ${printedDate(day)}`);
+		expect(await page.textContent('.report-page h1')).toBe('Daily Kitchen/Meal Report');
 	});
 
-	it('lists each stay in house with a diet: number, guest, dates, and the diet with its notes word for word', async () => {
+	it('lists each stay in house with a diet: guest, dates, and the diet with its notes word for word', async () => {
 		await expect.poll(() => rows().count(), { timeout: 10_000 }).toBe(2);
-		const cells = await rows()
-			.filter({ hasText: String(dieting.resnumber) })
-			.locator('td')
-			.allTextContents();
-		expect(cells.slice(0, 4)).toEqual([
-			String(dieting.resnumber),
+		const cells = await rows().filter({ hasText: dieting.lastname }).locator('td').allTextContents();
+		expect(cells.slice(0, 3)).toEqual([
 			`${dieting.lastname}, Test`,
-			printedDate(dieting.arrival),
-			printedDate(dieting.departure)
+			printedDay(dieting.arrival),
+			printedDay(dieting.departure)
 		]);
-		expect(cells[4]).toContain(DIET);
-		expect(cells[4]).toContain(NOTES);
-		expect(await rows().filter({ hasText: String(noDiet.resnumber) }).count()).toBe(0);
+		expect(cells[3]).toContain(DIET);
+		expect(cells[3]).toContain(NOTES);
+		expect(cells.join(' ')).not.toContain(String(dieting.resnumber));
+		expect(await rows().filter({ hasText: noDiet.lastname }).count()).toBe(0);
 	});
 
 	it("carries the day's Total Guests", async () => {
@@ -59,7 +57,7 @@ describe('print full meal report', () => {
 	it('narrows to the allergies on screen, without a Total Guests line', async () => {
 		await page.getByRole('button', { name: 'Allergy only' }).click();
 		await expect.poll(() => rows().allTextContents()).toEqual([
-			expect.stringContaining(String(allergic.resnumber))
+			expect.stringContaining(allergic.lastname)
 		]);
 		expect(await page.textContent('.report-page')).not.toContain('Total Guests');
 	});

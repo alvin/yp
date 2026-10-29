@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import ReportShell from '$lib/components/app/report-shell.svelte';
 	import ReportDateInput from '$lib/components/app/report-date-input.svelte';
-	import { dateShort } from '$lib/format.js';
+	import { dateShort, dayMonth } from '$lib/format.js';
 	import { opsTabs } from '$lib/report-nav.js';
 
 	let { data } = $props();
@@ -17,7 +17,7 @@
 >
 
 <ReportShell
-	title="Kitchen Report — {dateShort(data.from)} to {dateShort(data.to)}"
+	title="Weekly Kitchen Report — {dateShort(data.from)} to {dateShort(data.to)}"
 	tabs={opsTabs(data.from, 'kitchen-filtered')}
 	backHref="/print"
 	backLabel="Print Center"
@@ -37,12 +37,11 @@
 		/>
 	{/snippet}
 	<div class="blackbar">Yellow Point Lodge</div>
-	<h1>Kitchen Report</h1>
+	<h1>Weekly Kitchen Report</h1>
 	<h3>Arrival Date between {dateShort(data.from)} and {dateShort(data.to)}</h3>
-	<table class="ruled">
+	<table class="ruled compact">
 		<thead>
 			<tr>
-				<th>Res #</th>
 				<th>Last Name:</th>
 				<th>First Name:</th>
 				<th>Guest Diet:</th>
@@ -54,13 +53,12 @@
 		<tbody>
 			{#each data.rows as row, i (row.resnumber + '-' + i)}
 				<tr>
-					<td>{row.resnumber}</td>
-					<td>{row.guestlastname}</td>
-					<td>{row.guestfirstname ?? ''}</td>
+					<td class="guest">{row.guestlastname}</td>
+					<td class="guest">{row.guestfirstname ?? ''}</td>
 					<td class="note">{row.guestdiet ?? ''}</td>
 					<td class="note">{row.kitchenmealnotes ?? ''}</td>
-					<td class="date">{dateShort(row.arrival_date)}</td>
-					<td class="date">{dateShort(row.departure_date)}</td>
+					<td class="date">{dayMonth(row.arrival_date)}</td>
+					<td class="date">{dayMonth(row.departure_date)}</td>
 				</tr>
 			{/each}
 		</tbody>

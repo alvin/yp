@@ -1,20 +1,13 @@
 <script lang="ts">
-	import type { InHouseRow } from '$lib/data/types.js';
-	import { dateShort } from '$lib/format.js';
+	import type { InHouseCounts, InHouseRow } from '$lib/data/types.js';
+	import { dateShort, dayMonth } from '$lib/format.js';
 
-	let {
-		date,
-		rows,
-		totalGuests
-	}: { date: string; rows: InHouseRow[]; totalGuests: number } = $props();
-
-	const arriveToday = $derived(rows.filter((r) => r.section === 'Arrive Today').length);
-	const departToday = $derived(rows.filter((r) => r.section === 'Depart Today').length);
-	const inHouse = $derived(rows.filter((r) => r.section === 'In House').length);
+	let { date, rows, counts }: { date: string; rows: InHouseRow[]; counts: InHouseCounts } = $props();
 
 	// The day in the order it runs. report_in_house returns rows in this order,
-	// so the sections are already contiguous; an empty one is left out.
-	const ORDER = ['Arrive Today', 'Move In', 'Move Out', 'In House', 'Depart Today'];
+	// so the sections are already contiguous; an empty one is left out. A room
+	// move prints under In House, as on Access's report.
+	const ORDER = ['Arrive Today', 'In House', 'Depart Today'];
 	const sections = $derived(
 		ORDER.map((section) => ({ section, rows: rows.filter((r) => r.section === section) })).filter(
 			(s) => s.rows.length
@@ -26,13 +19,13 @@
 <h1>In House Report</h1>
 <h3>for {dateShort(date)}</h3>
 <p>
-	<b>Arrive Today</b> {arriveToday} &nbsp;&nbsp; <b>Depart Today</b> {departToday}
-	&nbsp;&nbsp; <b>In House</b> {inHouse} &nbsp;&nbsp;
-	<b>Total Guests</b> {totalGuests}
+	<b>Arrive Today</b> {counts.arrive_today} &nbsp;&nbsp; <b>Depart Today</b> {counts.depart_today}
+	&nbsp;&nbsp; <b>In House</b> {counts.in_house} &nbsp;&nbsp;
+	<b>Total Guests</b> {counts.total_guests}
 </p>
 {#each sections as s (s.section)}
 	<h2 class="section">{s.section}</h2>
-	<table class="ruled">
+	<table class="ruled compact">
 		<thead>
 			<tr>
 				<th>Res #:</th>
@@ -49,12 +42,12 @@
 			{#each s.rows as row, i (row.resnumber + '-' + row.room + '-' + i)}
 				<tr>
 					<td>{row.resnumber}</td>
-					<td>{row.guest}</td>
+					<td class="guest">{row.guest}</td>
 					<td>{row.arrival ?? ''}</td>
 					<td>{row.guest_count ?? ''}</td>
 					<td>{row.room}</td>
-					<td class="date">{dateShort(row.in_date)}</td>
-					<td class="date">{dateShort(row.out_date)}</td>
+					<td class="date">{dayMonth(row.in_date)}</td>
+					<td class="date">{dayMonth(row.out_date)}</td>
 					<td class="note">{row.occupancy_notes ?? ''}</td>
 				</tr>
 			{/each}

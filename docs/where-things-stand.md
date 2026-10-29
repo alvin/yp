@@ -2,11 +2,57 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 28 October 2026.
+Everything below is live on the hosted system as of 29 October 2026.
 
 ---
 
 ## What the lodge asked for
+
+**The daily reports in portrait.** Housekeeping, In House, the Kitchen/Meal
+report and the 7-day kitchen report now print on an upright page, their lines a
+size smaller again and set closer together. A room, a status or a date stays on
+one line; only a guest's name and the notes wrap. The stay dates leave off the
+year ("17-Jul"); the date at the top of each report keeps it ("for 17-Jul-26"),
+and so does a housekeeping note's date, since notes are often from an earlier
+year. Report by report:
+
+- **Housekeeping** starts each line with the room, and the Res # column is gone.
+  It ends on **Total Guests**, as Access's did: the guests arriving and staying
+  on, not those leaving.
+- **In House** has three sections: Arrive Today, In House and Depart Today. A
+  party moving rooms is listed under In House, the room they leave directly
+  above the room they move into, as Access's In House report did. Their dates
+  show the move: the room left is "Out" that day, the new room "In" that day.
+  The housekeeping report still marks the two rooms Move Out and Move In, as
+  Access's did.
+- **The Kitchen/Meal report** is titled **Daily Kitchen/Meal Report**, and the
+  Res # column is gone.
+- **The 7-day kitchen report** is titled **Weekly Kitchen Report**, and the
+  Res # column is gone.
+
+**The four reports checked against Access.** Each was compared with the Access
+report itself and with the lodge's printed samples for 23 December 2025. The
+lines on each report, and their order, match. Three things on the In House
+report didn't, and now do:
+
+- The figures at the top (Arrive Today, Depart Today, In House) are the number
+  of **guests**, as Access printed them (19, 22 and 28 on the sample). Ours
+  counted lines.
+- **Total Guests** is the guests arriving plus those in house, not those
+  leaving, as Access worked it out (47 on the sample). Ours also added the
+  guests leaving that day, so it read 70.
+- The **arrival time** prints only for a guest arriving that day, as in Access.
+
+Where we still differ from Access, on purpose:
+
+- A party **moving rooms is counted once**, in the room they move into. Access
+  listed both rooms under In House and counted the party twice.
+- The In House sections run Arrivals, In House, Departures, as the lodge asked
+  on 17 September. Access printed Departures before In House.
+- The **Kitchen/Meal report's Total Guests** is everyone at the lodge that day,
+  including those leaving. Access's figure on that report came from a faulty
+  formula: it multiplied one party's size by the number of bookings, and
+  printed 88 on 23 December 2025, when about 70 guests were there.
 
 **The Manual Sales List is a sheet to write on.** It's what the desk fills in
 by hand at busy times, such as drinks before dinner, to enter later. Each line
@@ -249,9 +295,11 @@ the first. It hadn't happened on the hosted system.
 
 **Room status is worked out, never guessed.** Rooms on the reservation screen
 used to read "In house" whatever the date. They now read Future, Past, Arrive
-today, Room move, Move out, In house or Depart today. On the Housekeeping and In
-House reports, the room a party leaves on a move day reads **Move Out**, so
-housekeeping knows it turns over. Total Guests counts a moving party once, on
+today, Room move, Move out, In house or Depart today. On the Housekeeping
+report, the room a party leaves on a move day reads **Move Out**, so
+housekeeping knows it turns over. (The In House report listed moves under
+their own headings until 29 October; it now lists both rooms under In House,
+as described above.) Total Guests counts a moving party once, on
 the In House and Kitchen reports alike.
 
 **Recording a move.** The move date offers only the nights a move can actually
@@ -319,6 +367,21 @@ app does.
 
 ## Decisions made
 
+- **The heading keeps the year** on the four daily reports; only the dates in
+  the lines drop it. The heading is one line and says which day the sheet is
+  for. Dates read "17-Jul", the lodge's usual style without the year.
+- **A housekeeping note's date keeps its year,** though the lodge asked for
+  dates without it. A note is often from an earlier year (the sample prints
+  "23-Dec-23" on a 2025 stay), and without the year it would read as this
+  week's. Every other date in the report lines drops the year.
+- **"Smaller" is one step, as last time,** and only on the four reports named.
+  The Manual Sales List, the Cancellation List, the Requests reports and the
+  cash reports are unchanged. The Requests report is also landscape; it can go
+  portrait the same way if the lodge wants.
+- **"Daily" and "Weekly" are in the printed titles only.** The Print Center and
+  the report tabs still call them "Kitchen / dietary" and "Kitchen — 7-day
+  range", as the desk knows them. The In House report keeps its Res # column,
+  since the request was for the other three.
 - **Notes already added to rooms when cancelling stay there.** Nothing marks
   which lines came from cancelling, and on the test system they're all test
   bookings, which the go-live import replaces. One can be deleted from Notes

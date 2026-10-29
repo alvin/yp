@@ -444,6 +444,14 @@ export interface InHouseRow {
 	occupancy_notes: string | null;
 }
 
+/** The In House report's summary line; total_guests also ends the housekeeping report. */
+export interface InHouseCounts {
+	arrive_today: number;
+	depart_today: number;
+	in_house: number;
+	total_guests: number;
+}
+
 export interface RequestRow {
 	resnumber: number;
 	guest: string;

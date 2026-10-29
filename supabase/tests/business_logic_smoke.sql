@@ -540,6 +540,7 @@ begin
   perform * from ypl.report_manual_sales(current_date);
   perform * from ypl.report_kitchen_meal_filtered(current_date, current_date + 7);
   perform ypl.guests_in_house(current_date);
+  perform * from ypl.in_house_counts(current_date);
   perform * from ypl.report_dcar_upper(current_date);
   perform * from ypl.report_dcar_payments(current_date);
   perform * from ypl.report_dcar_summary(current_date);

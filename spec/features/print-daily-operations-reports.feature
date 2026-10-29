@@ -15,5 +15,6 @@ Feature: print daily operations reports
     And The Cancellation report is not a daily report: it is not among the daily reports' tabs, and picks its own range of days.
     And Printed reports carry no footer and no page numbers.
     And The reports set their lines a size smaller than the guest documents, and a date never breaks across two lines.
+    And The Housekeeping, In House, Daily Kitchen/Meal and Weekly Kitchen reports print in portrait, their lines a size smaller again, and the dates in their lines as day and month without the year. A housekeeping note's date keeps it, since a note can date from an earlier stay, and so does the date in the heading.
     And Each room or guest on a daily report is ruled off from the next and every other one is shaded, so a line reads straight across the sheet; the shading prints.
     And The print output matches the lodge’s standard report formatting and naming.

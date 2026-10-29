@@ -1,6 +1,6 @@
 // Story: spec/features/print-filtered-kitchen-report-for-selected-date.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { APP_URL, printedDate, useAppPage } from '../helpers/app';
+import { APP_URL, printedDate, printedDay, useAppPage } from '../helpers/app';
 import { addDays, makeReservation, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
 const DIET = 'No red meat - Pork OK';
@@ -22,27 +22,27 @@ beforeAll(async () => {
 });
 
 describe('print filtered kitchen report for selected date', () => {
-	it('prints the range chosen in its heading', async () => {
+	it('is titled Weekly, and prints the range chosen in its heading', async () => {
 		await page.goto(`${APP_URL}/reports/kitchen-filtered?from=${inside.arrival}&to=${to}`, {
 			waitUntil: 'networkidle'
 		});
 		expect(await page.textContent('.report-page h3')).toBe(
 			`Arrival Date between ${printedDate(inside.arrival)} and ${printedDate(to)}`
 		);
+		expect(await page.textContent('.report-page h1')).toBe('Weekly Kitchen Report');
 	});
 
-	it('gives each guest arriving in the range one row, diet and notes in their own columns, as entered', async () => {
+	it('gives each guest arriving in the range one row, without the reservation number, diet and notes in their own columns, as entered', async () => {
 		// The dates are this test's alone, so its stay is the only row.
 		const rows = page.locator('.report-page tbody tr');
 		expect(await rows.count()).toBe(1);
 		expect(await rows.first().locator('td').allTextContents()).toEqual([
-			String(inside.resnumber),
 			inside.lastname,
 			'Avery',
 			DIET,
 			NOTES,
-			printedDate(inside.arrival),
-			printedDate(inside.departure)
+			printedDay(inside.arrival),
+			printedDay(inside.departure)
 		]);
 	});
 

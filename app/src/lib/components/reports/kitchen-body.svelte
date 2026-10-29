@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { KitchenMealRow } from '$lib/data/types.js';
-	import { dateShort } from '$lib/format.js';
+	import { dateShort, dayMonth } from '$lib/format.js';
 
 	let {
 		date,
@@ -21,12 +21,11 @@
 </script>
 
 <div class="blackbar">Yellow Point Lodge</div>
-<h1>Kitchen/Meal Report</h1>
+<h1>Daily Kitchen/Meal Report</h1>
 <h3>for {dateShort(date)}{allergyOnly ? ' — Allergy only' : ''}</h3>
-<table class="ruled">
+<table class="ruled compact">
 	<thead>
 		<tr>
-			<th>Res #:</th>
 			<th>Guest:</th>
 			<th>Arrival Date:</th>
 			<th>Departure Date:</th>
@@ -36,10 +35,9 @@
 	<tbody>
 		{#each visibleRows as row, i (row.resnumber + '-' + i)}
 			<tr>
-				<td>{row.resnumber}</td>
-				<td>{row.guest}</td>
-				<td class="date">{dateShort(row.arrival_date)}</td>
-				<td class="date">{dateShort(row.departure_date)}</td>
+				<td class="guest">{row.guest}</td>
+				<td class="date">{dayMonth(row.arrival_date)}</td>
+				<td class="date">{dayMonth(row.departure_date)}</td>
 				<td class="note">{row.diet_notes ?? ''}</td>
 			</tr>
 		{/each}

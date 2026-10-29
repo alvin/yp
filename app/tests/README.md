@@ -51,8 +51,8 @@ a time: a second run's cleanup deletes the first run's fixtures.
   Playwright wait: `locator.waitFor()`, `page.waitForURL(...)` and
   `expect.poll(...)` for anything the screen updates, never `waitForTimeout` or
   an unpolled read straight after a click. `field(page, label)`,
-  `printedDate()` and `screenDate()` read the reservation screen's fields and
-  dates the way they are shown.
+  `printedDate()`, `printedDay()` and `screenDate()` read the reservation
+  screen's fields and dates the way they are shown.
 - Do not truncate tables or delete data inside tests.
 
 ## Environment

@@ -9,10 +9,12 @@ Feature: print in-house occupancy report
     Given the printing coordinator runs daily operations reports
 
   Scenario: Acceptance criteria
-    Then Printed output includes Arrive Today, Move In, Move Out, In House and Depart Today sections.
+    Then Printed output includes Arrive Today, In House and Depart Today sections.
+    And A party moving rooms that day prints under In House, the room it leaves above the room it moves into, as on Access's report; a move has no section of its own.
     And Each section prints under its own heading, in the order the day runs, separated from the one before it.
     And A row is not labelled with its section a second time, the heading it sits under says which it is.
     And A section with nothing in it is left out rather than printed empty.
-    And Each row shows the reservation, guest, arrival time, guest count, room, and its in and out dates.
+    And Each row shows the reservation, guest, guest count, room, and its in and out dates; an arriving stay also shows its arrival time, and no other does, as on Access's report.
     And Each row prints its room's occupancy notes, as Access did, and not the guest's requests, which have their own Requests report.
-    And The summary line shows the Arrive Today, Depart Today and In House counts and Total Guests, as on the lodge's established report.
+    And The summary line shows the guests arriving, departing and in house, and Total Guests: those arriving and those in house, not those departing, as Access's report counted them.
+    And A party moving rooms that day is counted once, in the room it moves into, where Access counted both rooms.

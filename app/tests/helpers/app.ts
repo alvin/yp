@@ -81,6 +81,11 @@ export function printedDate(iso: string): string {
 	return `${d}-${MONTHS[Number(m) - 1]}-${y.slice(-2)}`;
 }
 
+/** A date in the lines of the daily sheets, without the year: 05-Mar. */
+export function printedDay(iso: string): string {
+	return printedDate(iso).slice(0, 6);
+}
+
 /** A date as the screens show it: Mar 5, 2026. */
 export function screenDate(iso: string): string {
 	const [y, m, d] = iso.slice(0, 10).split('-').map(Number);

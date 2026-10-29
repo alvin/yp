@@ -47,6 +47,11 @@ export function dateShort(d: string | Date | null | undefined): string {
   return `${dd}-${MONTHS_SHORT[dt.getMonth()]}-${String(dt.getFullYear()).slice(-2)}`;
 }
 
+/** 12-Nov — a date on the daily sheets, which leave the year to the heading. */
+export function dayMonth(d: string | Date | null | undefined): string {
+  return dateShort(d).slice(0, 6);
+}
+
 /** Nov 12, 2025 — screen style. */
 export function dateMed(d: string | Date | null | undefined): string {
   const dt = parse(d);

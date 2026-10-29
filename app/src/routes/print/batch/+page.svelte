@@ -81,8 +81,8 @@
 
 <svelte:head>
 	<title>Batch print · {dateMed(data.date)}</title>
-	<!-- One @page per print action: per-page orientation is unreliable across
-	     browsers, so landscape reports reflow into portrait. -->
+	<!-- One @page per print action: every page in it is portrait, on the
+	     group's paper. -->
 	{@html `<style>
 		@page { size: ${printing && group(printing).stock === 'a5' ? 'A5' : 'letter'}; margin: 0.5in; }
 		@media print {
@@ -128,20 +128,20 @@
 
 	<div class="batch-group" data-group="reports" data-testid="group-reports">
 		{@render heading('reports')}
-		<div class="batch-caption landscape no-print">Housekeeping Report</div>
-		<div class="report-page landscape">
-			<HousekeepingBody date={data.date} rows={data.reports.housekeeping} />
-		</div>
-		<div class="batch-caption landscape no-print">In House Report</div>
-		<div class="report-page landscape">
-			<InHouseBody
+		<div class="batch-caption no-print">Housekeeping Report</div>
+		<div class="report-page">
+			<HousekeepingBody
 				date={data.date}
-				rows={data.reports.inHouse}
-				totalGuests={data.reports.totalGuests}
+				rows={data.reports.housekeeping}
+				totalGuests={data.reports.inHouseTotals.total_guests}
 			/>
 		</div>
-		<div class="batch-caption landscape no-print">Kitchen/Meal Report</div>
-		<div class="report-page landscape">
+		<div class="batch-caption no-print">In House Report</div>
+		<div class="report-page">
+			<InHouseBody date={data.date} rows={data.reports.inHouse} counts={data.reports.inHouseTotals} />
+		</div>
+		<div class="batch-caption no-print">Daily Kitchen/Meal Report</div>
+		<div class="report-page">
 			<KitchenBody
 				date={data.date}
 				rows={data.reports.kitchenRows}
@@ -213,11 +213,8 @@
 		font-weight: 500;
 		color: #555;
 	}
-	.batch-caption.landscape {
-		width: 1220px;
-	}
 	.batch-heading {
-		width: 1220px;
+		width: 980px;
 		margin: 36px auto -8px;
 		font-size: 13px;
 		font-weight: 600;

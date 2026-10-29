@@ -11,11 +11,10 @@
 
 <ReportShell
 	title="Housekeeping Report — {dateShort(data.date)}"
-	orientation="landscape"
 	tabs={opsTabs(data.date, 'housekeeping')}
 	date={data.date}
 	backHref="/print"
 	backLabel="Print Center"
 >
-	<HousekeepingBody date={data.date} rows={data.rows} />
+	<HousekeepingBody date={data.date} rows={data.rows} totalGuests={data.total_guests} />
 </ReportShell>

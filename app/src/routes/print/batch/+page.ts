@@ -6,6 +6,7 @@
 import {
 	TODAY,
 	guestsInHouse,
+	inHouseCounts,
 	reportCancellationNotice,
 	reportGuestDocumentQueue,
 	reportHousekeeping,
@@ -19,14 +20,16 @@ import { addDays } from '$lib/format.js';
 import type { PageLoad } from './$types.js';
 
 async function loadReports(date: string) {
-	const [housekeeping, inHouse, kitchenRows, totalGuests, manualSales] = await Promise.all([
-		reportHousekeeping(date),
-		reportInHouse(date),
-		reportKitchenMeal(date),
-		guestsInHouse(date),
-		reportManualSales(date)
-	]);
-	return { housekeeping, inHouse, kitchenRows, totalGuests, manualSales };
+	const [housekeeping, inHouse, inHouseTotals, kitchenRows, totalGuests, manualSales] =
+		await Promise.all([
+			reportHousekeeping(date),
+			reportInHouse(date),
+			inHouseCounts(date),
+			reportKitchenMeal(date),
+			guestsInHouse(date),
+			reportManualSales(date)
+		]);
+	return { housekeeping, inHouse, inHouseTotals, kitchenRows, totalGuests, manualSales };
 }
 
 // One failed document must not sink the whole batch — the rest of the set

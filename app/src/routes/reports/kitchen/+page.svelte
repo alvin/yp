@@ -13,8 +13,7 @@
 <svelte:head><title>Kitchen · {dateShort(data.date)}</title></svelte:head>
 
 <ReportShell
-	title="Kitchen/Meal Report — {dateShort(data.date)}"
-	orientation="landscape"
+	title="Daily Kitchen/Meal Report — {dateShort(data.date)}"
 	tabs={opsTabs(data.date, 'kitchen')}
 	date={data.date}
 	backHref="/print"
