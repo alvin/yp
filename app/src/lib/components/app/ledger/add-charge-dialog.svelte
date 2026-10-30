@@ -13,6 +13,7 @@
     import { postCharge, postRoomNights } from "$lib/data/mutations.js";
     import { round2 } from "$lib/charges.js";
     import {
+        RATE_TYPES,
         ROOMS,
         inventoryById,
         roomById,
@@ -67,15 +68,8 @@
     // rate or date looks it up again; a slower earlier lookup never overwrites
     // a newer one.
     //
-    // The rate table keeps Access's names for the three rates; the desk calls
-    // them by who is in the room, as Access's own rate codes describe them:
-    // Regular is "Night for Two", Special "Night for One", Split "Split Rate".
-    // Which one a stay is charged, if any, is the clerk's choice.
-    const RATE_TYPES: { value: RoomRateType; label: string }[] = [
-        { value: "Regular", label: "Double" },
-        { value: "Special", label: "Single" },
-        { value: "Split", label: "Split" },
-    ];
+    // Which of the three rates a stay is charged, if any, is the clerk's
+    // choice (RATE_TYPES).
     $effect(() => {
         if (!open || kind !== "room") return;
         const roomid = Number(cRoom);

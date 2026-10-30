@@ -37,7 +37,9 @@ were always the occupancy notes, printed under the room on the confirmation.
 2. Expose the `ypl` schema (already configured in `supabase/config.toml` for
    local; for a hosted project set Project Settings → API → Exposed schemas).
 
-3. Create a staff login (email + password) — locally:
+3. Create a staff login (email + password). The admin login,
+   `admin@yellowpointlodge.com`, comes with the seeds (`supabase/seed_admin.sql`);
+   the front desk login is made by hand — locally:
 
    ```sh
    curl -s -X POST 'http://127.0.0.1:54321/auth/v1/admin/users' \
@@ -132,10 +134,39 @@ npm run cf:preview   # build and serve locally through workerd
 - `src/lib/components/ui/combobox/` — the one dropdown. A plain select button
   whose list can be narrowed by typing any part of an entry; used for every
   choice on every screen, which is what makes rooms and the priced-item list
-  workable. `src/lib/options.ts` builds its option lists.
+  workable. With `multiple` it ticks several entries, each with a tick box
+  (partly ticked for an entry partly chosen), under group headings if the
+  options carry them, with Select all and Clear acting on what is listed (the
+  matches, once something is typed). `src/lib/options.ts` builds its option
+  lists.
 - `src/lib/pending-charges.ts` — charges and the deposit captured while a stay
   is being booked, posted through the ordinary workflow RPCs once the
   reservation exists.
+- `src/lib/components/ui/sheet/` and `src/lib/components/app/form-sheet.svelte`
+  — the side drawer: the dialog's own primitive, title, description and
+  footer, sliding in from the right. `FormSheet` is a form in it, for the line
+  picked from a list beside it: the fields, Cancel and the save button as in
+  every dialog at the desk, Enter to save, and room at the left of the footer
+  for an action on the record (disable, remove). A form opened from inside
+  another (a room's rate) carries a way back to it. The admin area's lists
+  open their lines in it; any screen can.
+- `src/routes/admin/` — the admin area, for the admin login alone
+  (`$lib/admin.ts`; the database's `ypl.is_admin()` holds the same rule and
+  refuses everyone else's changes). Its navigation bar: **Sales Reports**
+  (Items Cashed Out over a range of days, all items or the ones chosen with the
+  multi-select dropdowns under the Selected tab), **Item Prices** (items and
+  item types), **Rooms & Rates** (the rooms as Access's Room form kept them,
+  each with its own dated rates, and the rate codes and room types they use),
+  **Taxes** (every dated rate of the five taxes) and **Year End Deposits**
+  (Next Year's Deposits over a chosen range). Each list opens its lines in the
+  drawer. The admin login lands there on signing in, and its front desk header
+  has an Admin button; anyone else who opens `/admin` is taken to the lookup
+  screen.
+- `src/lib/components/app/help-sheet.svelte` + `src/lib/admin-help.ts` — each
+  admin page's help: an info button that opens the page's tasks, step by step,
+  in the drawer. The text lives in `admin-help.ts`; a name in `**bold**` there
+  is a button, tab or field as the screen shows it, and the help story's test
+  fails if one no longer appears on the admin screens.
 - `src/lib/components/app/guest-search.svelte` — the one guest lookup, used
   wherever staff find a guest, so partial-name search behaves the same
   everywhere.

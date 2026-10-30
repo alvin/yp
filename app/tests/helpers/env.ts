@@ -16,3 +16,9 @@ export const APP_URL = process.env.TEST_APP_URL ?? 'http://localhost:5199';
 
 export const STAFF_EMAIL = process.env.TEST_STAFF_EMAIL ?? 'frontdesk@yellowpointlodge.com';
 export const STAFF_PASSWORD = process.env.TEST_STAFF_PASSWORD ?? 'lodge-front-desk';
+
+// The admin login. Its password is not in the repository, which is public:
+// put it in app/.env as TEST_ADMIN_PASSWORD (vitest.config.ts reads TEST_*
+// settings from there).
+export const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'admin@yellowpointlodge.com';
+export const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD ?? '';

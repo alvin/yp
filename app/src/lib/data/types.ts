@@ -566,3 +566,55 @@ export interface ItemsCashedOutRow {
 	room_tax: number;
 	hotel_tax: number;
 }
+
+/** An Items Cashed Out line over a range of days, with the day it was cashed out. */
+export interface ItemsSoldRow extends ItemsCashedOutRow {
+	cashed_out: string;
+	inv_type: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Admin area
+// ---------------------------------------------------------------------------
+
+/** A dated tax rate: a fraction, from one day to another. */
+export interface TaxRateRow {
+	taxrateid: number;
+	taxratetype: string;
+	taxrate: number;
+	from: string;
+	to: string;
+	notes: string | null;
+}
+
+/** A room's rate for a stretch of days: one rate type, its code and its price. */
+export interface RoomRateRow {
+	roomrateid: number;
+	roomid: number;
+	roomratetype: RoomRateType;
+	roomratecode: string;
+	roomrate: number;
+	from: string;
+	to: string;
+	notes: string | null;
+}
+
+/** A room rate code and what it stands for, with how many rooms have a rate at it today or later. */
+export interface RateCodeRow {
+	roomratecode: string;
+	description: string | null;
+	rooms: number;
+}
+
+/** A room type and how many active rooms are of it. */
+export interface RoomTypeRow {
+	roomtype: string;
+	rooms: number;
+}
+
+/** An item type with the daily cash line its charges post to. */
+export interface ItemTypeRow {
+	inventorytype: string;
+	transactiontype: string;
+	items: number;
+}

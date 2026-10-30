@@ -3,6 +3,8 @@ export interface ComboboxOption {
 	label: string;
 	/** Right-aligned detail — a price, a room type. Shown, not searched. */
 	hint?: string;
+	/** A heading the entry is listed under; entries of one group come together. */
+	group?: string;
 }
 
 /**

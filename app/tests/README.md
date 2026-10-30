@@ -59,4 +59,15 @@ a time: a second run's cleanup deletes the first run's fixtures.
 
 Defaults target the local stack; override with `TEST_SUPABASE_URL`,
 `TEST_SUPABASE_ANON_KEY`, `TEST_SUPABASE_SERVICE_ROLE_KEY`, `TEST_APP_URL`,
-`TEST_STAFF_EMAIL`, `TEST_STAFF_PASSWORD`.
+`TEST_STAFF_EMAIL`, `TEST_STAFF_PASSWORD`, `TEST_ADMIN_EMAIL`.
+
+The admin login's password has no default, because the repository is public:
+set `TEST_ADMIN_PASSWORD` in `app/.env` (gitignored; `vitest.config.ts` reads
+`TEST_*` settings from it) or in the environment. `useAppPage(path, 'admin')`
+and `adminRpc(...)` sign in as the admin login.
+
+Tests that change the tax rates, prices or rooms keep to what no other test
+charges at: tax rates and room rates from the year 2900 on, and items, item
+types, rooms, rate codes and room types named `ZZ…` (test rooms are kept
+disabled, out of the desk's lists, except while the screen adds one). Global
+setup clears them.

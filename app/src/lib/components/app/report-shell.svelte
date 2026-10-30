@@ -17,20 +17,24 @@
 		tabs,
 		date,
 		children,
-		toolbar
+		toolbar,
+		bar
 	}: {
 		title: string;
 		orientation?: 'portrait' | 'landscape';
 		/** The paper this document prints on. */
 		stock?: PaperStock;
-		backHref: string;
-		backLabel: string;
+		/** Where the back button goes; none under a navigation bar of its own. */
+		backHref?: string;
+		backLabel?: string;
 		/** Sibling reports in the same workflow, shown as tabs. */
 		tabs?: ReportTab[];
 		/** Working date; shows a date picker that reloads this report. */
 		date?: string;
 		children: Snippet;
 		toolbar?: Snippet;
+		/** Controls under the tabs that shape what the report lists; not printed. */
+		bar?: Snippet;
 	} = $props();
 </script>
 
@@ -41,9 +45,11 @@
 <div class="report-root min-h-screen pb-16">
 	<div class="no-print sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
 		<div class="mx-auto flex max-w-[1220px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
-			<Button variant="ghost" size="sm" href={backHref}>
-				<ArrowLeftIcon /> {backLabel}
-			</Button>
+			{#if backHref}
+				<Button variant="ghost" size="sm" href={backHref}>
+					<ArrowLeftIcon /> {backLabel}
+				</Button>
+			{/if}
 			<span class="text-muted-foreground truncate text-sm font-medium">{title}</span>
 			<div class="ml-auto flex flex-wrap items-center gap-2">
 				{#if date !== undefined}
@@ -72,6 +78,11 @@
 					</a>
 				{/each}
 			</nav>
+		{/if}
+		{#if bar}
+			<div class="mx-auto flex max-w-[1220px] flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-2">
+				{@render bar()}
+			</div>
 		{/if}
 	</div>
 

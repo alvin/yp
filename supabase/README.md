@@ -23,6 +23,7 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 |---|---|
 | `migrations/` | The schema, its rules and every view and RPC, as numbered files applied in order. Each opens with a header saying what it changes and why; later files replace earlier definitions rather than editing them |
 | `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
+| `seed_admin.sql` | The admin login, `admin@yellowpointlodge.com` (only its password's bcrypt hash: the repository is public) |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
 | `tools/access_table_map.py` | Source Access table to production table mapping |
 | `tools/generate_seed.py` | Regenerates `seed.sql` from reference/configuration tables |
@@ -36,7 +37,10 @@ This README is the central Supabase documentation. Import-output directories do 
 ## Migration order
 
 Apply every file in `migrations/` in filename order (`migrations/*.sql` expands in that order).
-Then load `seed.sql` for repeatable reference/configuration data.
+Then load `seed.sql` for repeatable reference/configuration data, and
+`seed_admin.sql` for the admin login. `supabase db reset` loads both
+(`config.toml`); `seed_admin.sql` leaves a login that already exists alone, and
+does nothing on a PostgreSQL without Supabase's auth schema.
 
 Migrations change structure and rules, never data. All data comes from the
 Access import (`seed.sql` and the full import below), which the lodge's current
@@ -102,6 +106,27 @@ Payments: `record_payment` (all categories; refund categories store negative;
 a deposit kept counts against the stay like a charge), `archive_payment`. The
 desk never records a deposit or prepayment as applied: the cash sheet applies
 whatever a stay still holds on its check-out day.
+Admin area (0033; the admin login only, `is_admin()`): `save_tax_rate`
+(adds a dated tax rate, or changes one's rate, From and To dates and notes; a
+new rate that starts while another runs, and runs at least as long, ends that
+one the day before), `remove_tax_rate` (a rate starting today or later; the rate
+ending the day before it runs on over its days again), `save_item_type` (adds
+an item type with the daily cash line its charges post to, or changes a
+type's line), `save_inventory_item` (adds an item or changes one, its notes
+included, and disables or enables it, sold or not; a code an active item
+already has is refused). Notes left out of either call stay as they are. An item's price isn't dated, so it is changed where it stands.
+Rooms, as Access's Room form kept them: `save_room` (name, number, type, code,
+shorthand, sort order, notes, taxes and archive; two rooms can't share a name
+and number, or a sort order, and a decimal sort order places a room between
+two others), `save_room_rate` (changes a rate row, or adds one to each room
+given, as Access's Append Room Rates did; each room's rate of that type
+running when it starts, and ending no later than it does, ends the day
+before), `remove_room_rate` (the same rule as a tax rate), `save_rate_code`
+(adds a rate code, or changes its description) and `add_room_type`. Each RPC
+refuses any other login with "Only the admin login can change the tax rates
+and the price list." Two rates of one tax, or of one room and rate type, can
+never cover the same day: a trigger on `tax_rates` and on `room_rates`
+refuses the row and names the one in the way, however it is written.
 `archive_transaction`/`archive_payment` are how a line entered in error is
 removed: the row is archived, not deleted, so it leaves the ledger, the balance
 and every report while the correction stays auditable. Both raise when the line
@@ -146,6 +171,27 @@ counts: a stay's charges on its check-out day, and a charge posted after its
 stay's check-out day (a walk-in sale on a daily sales account, a late charge)
 on the day it was posted. The top section's sales and taxes read it, and the
 Items Cashed Out appendix reads its lines other than rooms.
+
+`cashed_out_on(transdate, checkoutdate)` (0033) is the rule itself, which
+`charges_cashed_out` reads. `report_items_sold(p_from, p_to, p_codes)` is the
+Items Cashed Out appendix over a range of days, for the codes given (all when
+null), each line with the day it was cashed out and its item type. A summer
+runs to thousands of lines, past the API's 1,000-row page, so the app reads it
+a page at a time.
+
+`tax_rate_in_force(p_type, p_date)` / `room_rate_in_force(p_roomid, p_date,
+p_ratetype)` (0033) — the rate row in force on a date, the one rule behind
+`effective_tax_rate` and `effective_room_rate`. `rate_codes()` lists the room
+rate codes with how many active rooms have a rate at each today or later, and
+`room_types()` the room types with how many active rooms are of each.
+
+`charge_category(p_invtype)` — the daily cash line an item's charges post to:
+the line its type carries (`lookup_inventory_types.transactiontype`, 0033), or
+for the types from Access the one they always had. `item_types()` lists them.
+
+`report_next_years_deposits(p_from, p_to)` (0033) — deposits received between
+two dates for stays arriving after the second, by month: January 1 to
+December 31 is the year end.
 
 `applied_at_check_out(p_date)` (0021) — the deposit or prepayment each stay
 checking out that day still holds, applied to its bill: received, less refunded
@@ -365,6 +411,14 @@ A single new migration is applied the same way, naming only that file. Wrap it
 in `begin … commit` when it drops and recreates functions the app is using, so a
 failure part-way leaves the old definitions in place.
 
+The admin login goes onto the hosted project the same way, once its signup
+allowlist names it (`staging/staging_hardening.sql` does):
+
+```sh
+python3 supabase/tools/run_remote_sql.py evapfimnlxwckgbllzys \
+  supabase/staging/staging_hardening.sql supabase/seed_admin.sql
+```
+
 Two things the Management API cannot do, because they need a *direct* session:
 
 - **The full legacy import.** It is one transaction using
@@ -402,6 +456,12 @@ trigger on `auth.users` as a second line of defence.
 ## Security and Supabase API exposure
 
 `0004_security.sql` grants authenticated staff and service role access to `ypl`, enables RLS on production tables, and creates staff policies. Anonymous/public access receives no grants.
+
+`0033_admin_area.sql` narrows the policies on the tax rates, the price list
+and the rooms: every signed-in login reads `tax_rates`, `inventory_items`,
+`lookup_inventory_types`, `rooms`, `room_rates`, `lookup_room_rate_codes` and
+`lookup_room_types`, but only the admin login (`is_admin()`) writes them. The
+service role and the SQL editor are unaffected.
 
 In Supabase Project Settings → API → Exposed schemas, expose `ypl` if the app or power users need API/table-editor access to the production schema.
 

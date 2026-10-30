@@ -2,11 +2,104 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 29 October 2026.
+Everything below is live on the hosted system as of 30 October 2026.
 
 ---
 
 ## What the lodge asked for
+
+**An admin area.** A separate part of the system, at /admin, for one login:
+admin@yellowpointlodge.com. It does what until now needed Supabase itself, and
+covers what Access's own admin menu did: the Room Form, the Inventory Form, the
+Tax Rate Form, the lookup tables the rooms and items use, and Append Room Rates.
+It has its own bar across the top (Sales Reports, Item Prices, Rooms & Rates,
+Taxes and Year End Deposits) and a button back to the front desk. Signing in as
+the admin login opens it, and that login also gets an **Admin** button on the
+front desk.
+Anyone else who opens /admin lands on the lookup screen, and the database
+refuses their changes to taxes, prices and rooms. The login comes with the
+system's setup files, so a fresh system has it too. Its password is the one you
+gave; the setup files keep only a scrambled form of it, because the code is
+public.
+
+Every list in the admin area works the same way: click a line and it opens in
+a panel that slides in from the right, with the same kind of fields, buttons
+and messages as the front desk's own forms. Each page also has an info button
+by its heading (at the top, on the two reports) that opens its help in the same
+kind of panel: each task step by step, such as setting next season's prices for
+a group of rooms, entering a tax holiday, undoing a rate entered by mistake, or
+counting a kind of item but leaving some out. The help names each button and
+field as the screen shows it, and the system's checks fail if a screen changes
+and its help doesn't.
+
+- **Sales Reports.** The Items Cashed Out report for any From and To dates,
+  opening on this month so far. Each sale shows its date, with a subtotal for each item
+  code and the totals. Two tabs at the top switch between **All items** and
+  **Selected**. Selected adds two dropdowns, **Item types** and **Items**, where
+  each entry has a tick box and the number sold. Tick Shirts and Clothing, then
+  untick the caps, and the report lists every garment but the caps; the type's
+  box shows as partly ticked and its button reads "Part of Shirts and Clothing".
+  Each dropdown has **Select all** and **Clear**, and once something is typed
+  into its search they work on the matches alone (**Select all results**, as in
+  Excel's filter): type "hoodie", select all results, and every hoodie is in.
+  **Clear** on the bar starts over. A sale counts on the day it was cashed out,
+  the guest's check-out day, as on the daily Items Cashed Out. A report over a
+  long stretch had been cut short at 1,000 lines; it now prints every line.
+- **Item Prices**, in two tabs:
+  - **Items**: everything the lodge charges for, in code order, with its type,
+    unit price and taxes, and a search. A line opens the item to change its
+    code, description, type, price, taxes and notes, or to disable it, sold or
+    not. A disabled item leaves the front desk's list while its old charges
+    still name it, and **Show disabled** brings it back into view to enable
+    again. **Add item** enters a new one.
+  - **Item types**: each type with the line of the Daily Cash report its
+    items' sales go to, and **Add item type** for a new one.
+- **Rooms & Rates**, in three tabs, as Access's Room Form and lookup tables
+  kept them:
+  - **Rooms**: every room in the lodge's sort order, with the Double, Single
+    and Split rates it is charged today. A room opens with its details as on
+    Access's form (room name, room #, room type, sort order, room code, room
+    shorthand, room notes and its taxes), and below them its own rates, each
+    with its code, price and dates. A rate opens in the same panel, with a way
+    back to the room. **Add room** enters a new room, and the panel stays on it
+    to give it its first rates. A room can be disabled; its stays keep it.
+  - **Add rate** on the list puts one new rate on several rooms at once, as
+    Access's Append Room Rates did: next season's Double rate for the twelve
+    cottages is one entry. The rooms are ticked by name, and the panel lists
+    them. Picking a rate code (R01, "Night for Two - Private Cottage") ticks
+    the rooms charged at it now, which can then be changed. Each room's rate
+    running when it starts ends the day before, and the panel says so.
+  - **Rate codes**: each code and what it stands for, with how many rooms are
+    at it; **Add rate code** for a new one, and a code's description can be
+    changed.
+  - **Room types**: **Add room type** for a new one.
+- **Taxes.** Every rate of GST, PST, Liquor Tax, Room Tax and Destination
+  Marketing Tax, with the dates it applies, newest first under each tax, as
+  Access listed them. The rate in force is marked Current and one still to
+  come Upcoming. A line opens the rate to change its rate, dates or notes. **Add
+  rate** enters a new rate from any day, ahead of time included. When it
+  starts while another rate is running, that rate ends the day before, and the
+  panel says so before saving ("The 7% rate from 01-Jul-10 ends on
+  31-Mar-27."). Two rates of one tax can never cover the same day: the system
+  refuses and names the rate in the way. A charge is always taxed at the rate
+  of its own date. A rate can be removed up to the day it starts, after
+  confirming; the rate it ended picks up again, so a rate entered by mistake is
+  simply undone.
+- **Year End Deposits**, last on the bar: Next Year's Deposits, moved here from
+  the Print Center, with From and To dates. It opens on January 1 to December
+  31 of this year and prints exactly as it did; any other range prints its own
+  dates.
+
+**What the admin area doesn't change.** Everything on Access's Room, Inventory
+and Tax Rate forms can be changed, except HST and Other (Hotel) Tax, which stay
+as stored (see the decisions below); the notes on items and on tax rates were
+the last to be added. Rooms and items are disabled, not deleted. Rate codes and
+room types are added, and a code's description changed, but neither is renamed
+or deleted. Of Access's other lookup tables, the front desk uses four, which the
+admin area doesn't edit: salutations, phone types, payment types and payment
+categories. The rest (cities, regions,
+countries, diets, shuttle sites and the like) came across but nothing in the
+new system reads them. The Exchange Rate Form and Archive weren't carried over.
 
 **The daily reports in portrait.** Housekeeping, In House, the Kitchen/Meal
 report and the 7-day kitchen report now print on an upright page, their lines a
@@ -342,8 +435,8 @@ short).
 **Printed reports** carry no footer and no page numbers (the lodge, 28
 October).
 
-**Year-end deposits.** A **Next Year's Deposits** report (Print Center → Year
-end) totals the deposits taken from January 1 to December 31 for stays after
+**Year-end deposits.** A **Next Year's Deposits** report (since 29 October,
+the admin area's Year End Deposits) totals the deposits taken from January 1 to December 31 for stays after
 that year, month by month, with what was refunded or kept and what is still
 held at December 31. The $0.00 deposit lines Access added to new bookings
 aren't counted.
@@ -366,6 +459,43 @@ app does.
 ---
 
 ## Decisions made
+
+- **The admin login is admin@yellowpointlodge.com,** on the same domain as the
+  front desk login. Only that login opens the admin area, and only it can change
+  the taxes and the price list, in the database as well as on screen.
+- **Tax rates and room prices have dates, as in Access.** A change is a new
+  rate from its day, so the lodge can enter it ahead of time; charges dated
+  before it keep the old rate.
+- **A new item type is given its Daily Cash line.** An item's type decides
+  which line of the Daily Cash report its sales go to; a type without one would
+  put them under Misc. The lodge's own types keep the lines they always had.
+- **"The upcoming year" is the year now ending.** Year End Deposits opens on
+  January 1 to December 31, 2026, the year whose deposits are being totalled.
+  Opening on next year instead is a one-line change.
+- **Year End Deposits is in the admin area only.** The Print Center's Year end
+  card is gone.
+- **The reports keep their names.** Sales Reports prints as Items Cashed Out,
+  and Year End Deposits as Next Year's Deposits. The meal codes have no type in
+  Access and come under "Other" in the Item types dropdown.
+- **Taxes shows the five named.** HST and Hotel tax, both at 0%, stay in the
+  system and off the screen. During the GST holiday, when GST was 0%, Access
+  charged room nights HST at 3%; doing that again would need HST shown.
+- **Rooms are kept one at a time, as in Access,** each with its own rates,
+  with one entry for several rooms where Access used its Excel import. Since
+  2016 the lodge has typed each year's price over the same rate (Eve's still
+  reads "02-Jan-16 to 02-Jan-29" though its nights went from $276 in 2022 to
+  $337 this year). A new price can now be entered for the day it starts, and
+  the old one is kept.
+- **Rate codes and room types are added, and a code's description changed,
+  but neither is renamed or deleted:** the rates carry the code and the rooms
+  carry the type, so a rename would leave them naming nothing. The lodge's own
+  practice was to relabel a code ("R72, Not in use").
+- **A room's taxes are the lodge's four** (GST, PST, Room Tax, DMT). Access's
+  Room Form also showed HST and Other Tax, both at 0%; they stay as stored.
+- **A rate put on several rooms is removed room by room,** since nothing marks
+  that the rooms' rates were entered together.
+- **Disabled items are hidden until asked for,** since most of the old list is
+  disabled.
 
 - **The heading keeps the year** on the four daily reports; only the dates in
   the lines drop it. The heading is one line and says which day the sheet is
@@ -455,41 +585,46 @@ app does.
 ## Open items
 
 **For you to decide**
-1. **Date-range search** sorts by arrival rather than name, and never shows the
+1. **The admin password and the public code.** The code repository is public.
+   The setup files hold only a scrambled form of the admin password, but it is a
+   short phrase and could be worked out from that, and the hosted system holds
+   guest data. Making the repository private, or giving the hosted admin login a
+   different password, would close that.
+2. **Date-range search** sorts by arrival rather than name, and never shows the
    Cancelled or Shared badges.
-2. **Gift certificates.** The system can record a sale, but there's no button
+3. **Gift certificates.** The system can record a sale, but there's no button
    for it. You want to understand this before it goes to the lodge. A sale rung
    up on a daily sales account counts on the cash sheet the day it is sold; one
    added to a guest's stay waits for their check-out, like any charge.
 
 **For the lodge**
-3. **Testing the cash sheet before switchover.** The system's bookings are the
+4. **Testing the cash sheet before switchover.** The system's bookings are the
    Access copy from 28 March 2026. Stays that have checked out since were settled
    in Access, so their deposits (2,852 stays, $164,325) show as applied on their
    check-out days with nothing to match. A fresh Access import at switchover
    clears this.
-4. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
+5. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
    room charges entered through the new system went in at the Split rate:
    reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
    and 107033. Worth checking any that were real rather than testing.
-5. **A record of changes to a reservation.** The system keeps when a booking
+6. **A record of changes to a reservation.** The system keeps when a booking
    was made, confirmed and cancelled, but not when its details were later
    changed. Offered to Richard as a "last changed" date or a full history.
-6. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-7. **Older charges.** 387 room charges from the Access years bill a room the guest
+7. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+8. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-8. **Questions still open from their original feature pack:** the weekly
+9. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes;
    printing or reprinting a single document; how exact the printed layouts need
    to be; moving a deposit when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-9. A room's own dates can't be edited separately, as they could in Access;
+10. A room's own dates can't be edited separately, as they could in Access;
    stay dates change through *Change dates*. A room's own guest count can be set
    only where the stay holds rooms side by side; otherwise the room follows the
    booking's number.
-10. All-fields search takes a few hundred milliseconds whatever is typed.
+11. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 

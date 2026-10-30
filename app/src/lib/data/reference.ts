@@ -4,7 +4,7 @@
 
 import { supabase, unwrap } from './client.js';
 import { sortItemsByCode } from '../inventory.js';
-import type { InventoryItem, PaymentCategory, PaymentType, Room } from './types.js';
+import type { InventoryItem, PaymentCategory, PaymentType, Room, RoomRateType } from './types.js';
 
 /** The lodge's number, as the guest documents print it. */
 export const LODGE_PHONE = '(250) 245-7422';
@@ -17,6 +17,15 @@ export const LODGE_PHONE = '(250) 245-7422';
 export const BED_TYPES: { value: string; label: string }[] = [
 	{ value: 'Double', label: 'Regular' },
 	{ value: 'Twin', label: 'Split' }
+];
+
+// The rate table keeps Access's names for a room's three rates; the desk calls
+// them by who is in the room, as Access's own rate codes describe them:
+// Regular is "Night for Two", Special "Night for One", Split "Split Rate".
+export const RATE_TYPES: { value: RoomRateType; label: string }[] = [
+	{ value: 'Regular', label: 'Double' },
+	{ value: 'Special', label: 'Single' },
+	{ value: 'Split', label: 'Split' }
 ];
 
 export function bedTypeLabel(value: string | null | undefined): string {

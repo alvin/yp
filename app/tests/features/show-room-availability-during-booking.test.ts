@@ -28,15 +28,19 @@ async function roomList(): Promise<string[]> {
 	return shown;
 }
 
+// The admin tests add rooms named ZZ…, briefly, while this one may be reading
+// the list; leave them out on both sides.
+const fixture = (name: string) => name.startsWith('ZZ');
+
 beforeAll(async () => {
-	rooms = await roomDirectory();
+	rooms = (await roomDirectory()).filter((r) => !fixture(r.roomname));
 });
 
 describe('show room availability during booking', () => {
 	it('lists the rooms in the lodge’s own order, each with its bed layout', async () => {
 		const orders = rooms.map((r) => r.roomorder ?? Number.MAX_SAFE_INTEGER);
 		expect(orders).toEqual([...orders].sort((a, b) => a - b));
-		const shown = await roomList();
+		const shown = (await roomList()).filter((entry) => !fixture(entry));
 		expect(shown).toHaveLength(rooms.length);
 		shown.forEach((entry, i) => {
 			expect(entry.startsWith(rooms[i].room_compact), entry).toBe(true);

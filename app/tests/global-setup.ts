@@ -1,9 +1,18 @@
 // Global setup: verifies the local Supabase stack is up, ensures the staff
-// login exists, and starts the app dev server if nothing answers at APP_URL.
+// and admin logins exist, and starts the app dev server if nothing answers at APP_URL.
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
-import { ANON_KEY, APP_URL, SERVICE_ROLE_KEY, STAFF_EMAIL, STAFF_PASSWORD, SUPABASE_URL } from './helpers/env';
+import {
+	ADMIN_EMAIL,
+	ADMIN_PASSWORD,
+	ANON_KEY,
+	APP_URL,
+	SERVICE_ROLE_KEY,
+	STAFF_EMAIL,
+	STAFF_PASSWORD,
+	SUPABASE_URL
+} from './helpers/env';
 
 async function ok(url: string, headers: Record<string, string> = {}): Promise<boolean> {
 	try {
@@ -14,7 +23,7 @@ async function ok(url: string, headers: Record<string, string> = {}): Promise<bo
 	}
 }
 
-async function ensureStaffUser(): Promise<void> {
+async function ensureLogin(email: string, password: string): Promise<void> {
 	const headers = {
 		apikey: SERVICE_ROLE_KEY,
 		Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
@@ -23,12 +32,12 @@ async function ensureStaffUser(): Promise<void> {
 	const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, { headers });
 	if (res.ok) {
 		const body = (await res.json()) as { users?: { email: string }[] };
-		if (body.users?.some((u) => u.email === STAFF_EMAIL)) return;
+		if (body.users?.some((u) => u.email === email)) return;
 	}
 	await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
 		method: 'POST',
 		headers,
-		body: JSON.stringify({ email: STAFF_EMAIL, password: STAFF_PASSWORD, email_confirm: true })
+		body: JSON.stringify({ email, password, email_confirm: true })
 	});
 }
 
@@ -54,6 +63,35 @@ async function cleanPreviousRuns(): Promise<void> {
 		const { error } = await db.from('reservations').delete().in('reservationid', ids);
 		if (error) throw new Error(`could not clear ${ids.length} test reservations: ${error.message}`);
 	}
+	// The admin tests add items and item types named ZZ…, and set tax rates and
+	// room-night prices from the year 2900 on, so that nothing else is ever
+	// charged at them.
+	const leftovers = [
+		db.from('inventory_items').delete().like('invcode', 'ZZ%'),
+		db.from('tax_rates').delete().gte('taxratestartdate', '2900-01-01'),
+		db.from('room_rates').delete().gte('roomratestartdate', '2900-01-01')
+	];
+	for (const result of await Promise.all(leftovers)) {
+		if (result.error) throw new Error(`could not clear admin test data: ${result.error.message}`);
+	}
+	const { error: types } = await db.from('lookup_inventory_types').delete().like('inventorytype', 'ZZ%');
+	if (types) throw new Error(`could not clear test item types: ${types.message}`);
+	// The rooms tests add rooms, rate codes and room types named ZZ… too.
+	const { data: rooms } = await db.from('rooms').select('roomid').like('roomname', 'ZZ%');
+	const roomids = (rooms ?? []).map((r) => r.roomid);
+	if (roomids.length) {
+		const { error: rates } = await db.from('room_rates').delete().in('roomid', roomids);
+		if (rates) throw new Error(`could not clear test room rates: ${rates.message}`);
+		const { error } = await db.from('rooms').delete().in('roomid', roomids);
+		if (error) throw new Error(`could not clear test rooms: ${error.message}`);
+	}
+	for (const [table, column] of [
+		['lookup_room_rate_codes', 'roomratecode'],
+		['lookup_room_types', 'roomtype']
+	] as const) {
+		const { error } = await db.from(table).delete().like(column, 'ZZ%');
+		if (error) throw new Error(`could not clear test ${table}: ${error.message}`);
+	}
 	for (;;) {
 		const { data } = await db
 			.from('guests')
@@ -74,7 +112,11 @@ export default async function setup(): Promise<() => Promise<void>> {
 			`Supabase is not reachable at ${SUPABASE_URL}. Run \`supabase start\` from the repo root first.`
 		);
 	}
-	await ensureStaffUser();
+	if (!ADMIN_PASSWORD) {
+		throw new Error('Set TEST_ADMIN_PASSWORD in app/.env to the admin login\'s password.');
+	}
+	await ensureLogin(STAFF_EMAIL, STAFF_PASSWORD);
+	await ensureLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
 	await cleanPreviousRuns();
 
 	let dev: ChildProcess | null = null;

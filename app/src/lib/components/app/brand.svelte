@@ -1,4 +1,8 @@
-<a href="/" class="flex items-center gap-2.5" aria-label="Yellow Point Lodge — Front Desk home">
+<script lang="ts">
+	let { href = '/', area = 'Front Desk' }: { href?: string; area?: string } = $props();
+</script>
+
+<a {href} class="flex items-center gap-2.5" aria-label="Yellow Point Lodge — {area} home">
 	<span
 		class="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-lg shadow-sm"
 	>
@@ -10,7 +14,7 @@
 	<span class="leading-tight">
 		<span class="block text-sm font-semibold tracking-tight">Yellow Point Lodge</span>
 		<span class="text-muted-foreground block text-[11px] font-medium uppercase tracking-wider"
-			>Front Desk</span
+			>{area}</span
 		>
 	</span>
 </a>

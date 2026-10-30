@@ -4,7 +4,7 @@
 // or with real data in the target environment.
 
 import { createClient } from '@supabase/supabase-js';
-import { ANON_KEY, STAFF_EMAIL, STAFF_PASSWORD, SUPABASE_URL } from './env';
+import { ADMIN_EMAIL, ADMIN_PASSWORD, ANON_KEY, STAFF_EMAIL, STAFF_PASSWORD, SUPABASE_URL } from './env';
 
 export type YplClient = ReturnType<typeof anonClient>;
 
@@ -16,21 +16,28 @@ export function anonClient() {
 }
 
 let staff: YplClient | null = null;
+let admin: YplClient | null = null;
 
-/** A client signed in as front-desk staff — the same access path the app uses. */
-export async function staffClient(): Promise<YplClient> {
-	if (staff) return staff;
+async function signedIn(email: string, password: string, who: string): Promise<YplClient> {
 	const client = createClient(SUPABASE_URL, ANON_KEY, {
 		db: { schema: 'ypl' },
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
-	const { error } = await client.auth.signInWithPassword({
-		email: STAFF_EMAIL,
-		password: STAFF_PASSWORD
-	});
-	if (error) throw new Error(`staff sign-in failed: ${error.message}`);
-	staff = client;
+	const { error } = await client.auth.signInWithPassword({ email, password });
+	if (error) throw new Error(`${who} sign-in failed: ${error.message}`);
 	return client;
+}
+
+/** A client signed in as front-desk staff — the same access path the app uses. */
+export async function staffClient(): Promise<YplClient> {
+	staff ??= await signedIn(STAFF_EMAIL, STAFF_PASSWORD, 'staff');
+	return staff;
+}
+
+/** A client signed in as the admin login — the admin area's access path. */
+export async function adminClient(): Promise<YplClient> {
+	admin ??= await signedIn(ADMIN_EMAIL, ADMIN_PASSWORD, 'admin');
+	return admin;
 }
 
 /** Unwraps a PostgREST response, throwing on error. */
@@ -42,6 +49,12 @@ export function unwrap<T>(result: { data: T | null; error: { message: string } |
 /** Calls a ypl RPC as staff and unwraps the result. */
 export async function rpc<T = unknown>(fn: string, args?: Record<string, unknown>): Promise<T> {
 	const client = await staffClient();
+	return unwrap<T>(await client.rpc(fn, args));
+}
+
+/** Calls a ypl RPC as the admin login and unwraps the result. */
+export async function adminRpc<T = unknown>(fn: string, args?: Record<string, unknown>): Promise<T> {
+	const client = await adminClient();
 	return unwrap<T>(await client.rpc(fn, args));
 }
 

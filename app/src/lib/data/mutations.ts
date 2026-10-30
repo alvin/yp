@@ -368,3 +368,162 @@ export async function saveKitchenMeal(
 export async function setGuestNotes(guestid: number, notes: string): Promise<void> {
 	unwrap(await supabase.rpc('set_guest_notes', { p_guestid: guestid, p_notes: notes }));
 }
+
+// ---------------------------------------------------------------------------
+// Admin area: the tax rates and the price list. The database lets only the
+// admin login make these changes (`ypl.is_admin()`).
+// ---------------------------------------------------------------------------
+
+/** Adds a dated tax rate (no id) or changes one; the rate is a fraction (0.07 for 7%). */
+export async function saveTaxRate(rate: {
+	taxrateid: number | null;
+	taxratetype: string;
+	taxrate: number;
+	from: string;
+	to: string;
+	notes: string;
+}): Promise<number> {
+	return unwrap(
+		await supabase.rpc('save_tax_rate', {
+			p_taxrateid: rate.taxrateid,
+			p_taxratetype: rate.taxratetype,
+			p_rate: rate.taxrate,
+			p_from: rate.from,
+			p_to: rate.to,
+			p_notes: rate.notes
+		})
+	);
+}
+
+/** Removes a tax rate starting today or later; the rate it ended runs on. */
+export async function removeTaxRate(taxrateid: number): Promise<void> {
+	unwrap(await supabase.rpc('remove_tax_rate', { p_taxrateid: taxrateid }));
+}
+
+export interface RoomForm {
+	roomid: number | null;
+	roomname: string;
+	roomnumber: string;
+	roomtype: string;
+	roomcode: string;
+	roomshorthand: string;
+	roomorder: number;
+	roomnotes: string;
+	gst: boolean;
+	pst: boolean;
+	room_tax: boolean;
+	dmt: boolean;
+	active: boolean;
+}
+
+/** Adds a room (no id) or changes one; returns its id. */
+export async function saveRoom(room: RoomForm): Promise<number> {
+	return unwrap(
+		await supabase.rpc('save_room', {
+			p_roomid: room.roomid,
+			p_roomname: room.roomname,
+			p_roomnumber: room.roomnumber,
+			p_roomtype: room.roomtype,
+			p_roomcode: room.roomcode,
+			p_roomshorthand: room.roomshorthand,
+			p_roomorder: room.roomorder,
+			p_roomnotes: room.roomnotes,
+			p_gst: room.gst,
+			p_pst: room.pst,
+			p_room_tax: room.room_tax,
+			p_dmt: room.dmt,
+			p_active: room.active
+		})
+	);
+}
+
+/** Changes a room rate (an id), or adds one to each of the rooms given. */
+export async function saveRoomRate(rate: {
+	roomrateid: number | null;
+	roomids: number[];
+	roomratetype: RoomRateType;
+	roomratecode: string;
+	roomrate: number;
+	from: string;
+	to: string;
+	notes: string;
+}): Promise<void> {
+	unwrap(
+		await supabase.rpc('save_room_rate', {
+			p_roomrateid: rate.roomrateid,
+			p_roomids: rate.roomids,
+			p_roomratetype: rate.roomratetype,
+			p_roomratecode: rate.roomratecode,
+			p_rate: rate.roomrate,
+			p_from: rate.from,
+			p_to: rate.to,
+			p_notes: rate.notes
+		})
+	);
+}
+
+/** Removes a room rate starting today or later; the rate it ended runs on. */
+export async function removeRoomRate(roomrateid: number): Promise<void> {
+	unwrap(await supabase.rpc('remove_room_rate', { p_roomrateid: roomrateid }));
+}
+
+/** Adds a room rate code (isNew) or changes a code's description. */
+export async function saveRateCode(code: string, description: string, isNew: boolean): Promise<void> {
+	unwrap(
+		await supabase.rpc('save_rate_code', {
+			p_roomratecode: code,
+			p_description: description,
+			p_new: isNew
+		})
+	);
+}
+
+/** Adds a room type. */
+export async function addRoomType(roomtype: string): Promise<void> {
+	unwrap(await supabase.rpc('add_room_type', { p_roomtype: roomtype }));
+}
+
+/** Adds an item type, or changes the daily cash line an existing one posts to. */
+export async function saveItemType(inventorytype: string, transactiontype: string): Promise<void> {
+	unwrap(
+		await supabase.rpc('save_item_type', {
+			p_inventorytype: inventorytype,
+			p_transactiontype: transactiontype
+		})
+	);
+}
+
+export interface PriceListItem {
+	inventoryid: number | null;
+	invcode: string;
+	invitemdescription: string | null;
+	invtype: string | null;
+	invamount: number | null;
+	invgst: boolean;
+	invpst: boolean;
+	invlt: boolean;
+	invrt: boolean;
+	invdmt: boolean;
+	invnotes: string;
+	active: boolean;
+}
+
+/** Adds an item to the price list (no id) or changes one; returns its id. */
+export async function saveInventoryItem(item: PriceListItem): Promise<number> {
+	return unwrap(
+		await supabase.rpc('save_inventory_item', {
+			p_inventoryid: item.inventoryid,
+			p_invcode: item.invcode,
+			p_description: item.invitemdescription,
+			p_invtype: item.invtype,
+			p_price: item.invamount,
+			p_gst: item.invgst,
+			p_pst: item.invpst,
+			p_liquor: item.invlt,
+			p_room_tax: item.invrt,
+			p_dmt: item.invdmt,
+			p_active: item.active,
+			p_notes: item.invnotes
+		})
+	);
+}

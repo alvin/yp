@@ -32,7 +32,8 @@ create table if not exists ypl_staging.allowed_signups (
 );
 
 insert into ypl_staging.allowed_signups (email, note) values
-  ('frontdesk@yellowpointlodge.com', 'Shared staff account for client review')
+  ('frontdesk@yellowpointlodge.com', 'Shared staff account for client review'),
+  ('admin@yellowpointlodge.com', 'The admin login (seed_admin.sql)')
 on conflict (email) do nothing;
 
 create or replace function ypl_staging.enforce_signup_allowlist()

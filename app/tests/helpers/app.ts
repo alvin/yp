@@ -3,23 +3,30 @@
 
 import { afterAll, beforeAll } from 'vitest';
 import { chromium, type Browser, type Locator, type Page } from 'playwright';
-import { APP_URL, STAFF_EMAIL, STAFF_PASSWORD } from './env';
+import { ADMIN_EMAIL, ADMIN_PASSWORD, APP_URL, STAFF_EMAIL, STAFF_PASSWORD } from './env';
 
 let browser: Browser | null = null;
 let refs = 0;
 
-export async function openAppPage(): Promise<Page> {
+export type Login = 'staff' | 'admin';
+
+const LOGINS: Record<Login, { email: string; password: string; home: string }> = {
+	staff: { email: STAFF_EMAIL, password: STAFF_PASSWORD, home: '/' },
+	admin: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, home: '/admin/sales' }
+};
+
+/** A page signed in as front-desk staff, or as the admin login. */
+export async function openAppPage(login: Login = 'staff'): Promise<Page> {
 	if (!browser) browser = await chromium.launch();
 	refs += 1;
+	const { email, password, home } = LOGINS[login];
 	const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 	const page = await context.newPage();
-	await page.goto(APP_URL + '/', { waitUntil: 'networkidle' });
-	if (page.url().includes('/login')) {
-		await page.fill('#email', STAFF_EMAIL);
-		await page.fill('#password', STAFF_PASSWORD);
-		await page.click('button[type=submit]');
-		await page.waitForURL(APP_URL + '/', { timeout: 20_000 });
-	}
+	await page.goto(APP_URL + '/login', { waitUntil: 'networkidle' });
+	await page.fill('#email', email);
+	await page.fill('#password', password);
+	await page.click('button[type=submit]');
+	await page.waitForURL(new RegExp(`^${APP_URL}${home}(\\?.*)?$`), { timeout: 20_000 });
 	return page;
 }
 
@@ -43,15 +50,16 @@ export async function closeApp(page?: Page): Promise<void> {
 /**
  * A signed-in page for the enclosing file or describe block: opened in a
  * beforeAll registered here (so before any registered after the call) and
- * closed in an afterAll. Pass `path` to land on a screen once it is open.
+ * closed in an afterAll. Pass `path` to land on a screen once it is open, and
+ * `'admin'` to sign in as the admin login.
  *
  * Returns the page itself, usable in any hook or test that runs after it
  * opens; touching it earlier (at module load) throws.
  */
-export function useAppPage(path?: string): Page {
+export function useAppPage(path?: string, login: Login = 'staff'): Page {
 	let page: Page | undefined;
 	beforeAll(async () => {
-		page = await openAppPage();
+		page = await openAppPage(login);
 		if (path) await page.goto(APP_URL + path, { waitUntil: 'networkidle' });
 	});
 	afterAll(async () => {

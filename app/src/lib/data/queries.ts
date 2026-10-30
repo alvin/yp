@@ -3,6 +3,7 @@
 // database remains the single source of truth for search, ledgers, and reports.
 
 import { supabase, unwrap } from './client.js';
+import { sortItemsByCode } from '../inventory.js';
 import type {
 	AllFieldsRow,
 	CancellationListRow,
@@ -28,7 +29,10 @@ import type {
 	HousekeepingRow,
 	InHouseCounts,
 	InHouseRow,
+	InventoryItem,
 	ItemsCashedOutRow,
+	ItemsSoldRow,
+	ItemTypeRow,
 	KitchenFilteredRow,
 	KitchenMeal,
 	KitchenMealRow,
@@ -41,9 +45,14 @@ import type {
 	ReservationGuestSummary,
 	ReservationSummary,
 	FolioReceipt,
+	RateCodeRow,
+	Room,
+	RoomRateRow,
 	RoomRateType,
+	RoomTypeRow,
 	SharedRoom,
-	StayRoomRow
+	StayRoomRow,
+	TaxRateRow
 } from './types.js';
 
 /** Today's business date (YYYY-MM-DD, local time). */
@@ -458,10 +467,13 @@ export async function reportDcarSummary(date: string): Promise<DcarSummary> {
 	};
 }
 
-/** Deposits taken during a year for stays after it, month by month. */
-export async function reportNextYearsDeposits(year: number): Promise<NextYearsDepositsRow[]> {
+/** Deposits taken over a range of days for stays after it, month by month. */
+export async function reportNextYearsDeposits(
+	from: string,
+	to: string
+): Promise<NextYearsDepositsRow[]> {
 	const rows = unwrap(
-		await supabase.rpc('report_next_years_deposits', { p_year: year })
+		await supabase.rpc('report_next_years_deposits', { p_from: from, p_to: to })
 	) as NextYearsDepositsRow[];
 	return rows.map((r) => ({
 		...r,
@@ -498,11 +510,8 @@ export async function reportCashierDetail(date: string): Promise<CashierDetailRo
 	return rows.map((r) => ({ ...r, amount: num(r.amount), pymt_date: d(r.pymt_date)! }));
 }
 
-export async function reportItemsCashedOut(date: string): Promise<ItemsCashedOutRow[]> {
-	const rows = unwrap(
-		await supabase.rpc('report_items_cashed_out', { p_date: date })
-	) as ItemsCashedOutRow[];
-	return rows.map((r) => ({
+function itemsCashedOutRow<T extends ItemsCashedOutRow>(r: T): T {
+	return {
 		...r,
 		total: num(r.total),
 		gst: num(r.gst),
@@ -512,5 +521,167 @@ export async function reportItemsCashedOut(date: string): Promise<ItemsCashedOut
 		liquor: num(r.liquor),
 		room_tax: num(r.room_tax),
 		hotel_tax: num(r.hotel_tax)
+	};
+}
+
+export async function reportItemsCashedOut(date: string): Promise<ItemsCashedOutRow[]> {
+	const rows = unwrap(
+		await supabase.rpc('report_items_cashed_out', { p_date: date })
+	) as ItemsCashedOutRow[];
+	return rows.map(itemsCashedOutRow);
+}
+
+// The API returns at most 1,000 rows a request (the project's max rows); a
+// report that can run longer is read a page at a time. Its RPC orders its
+// rows, so the pages meet exactly.
+const PAGE = 1000;
+
+/** Items Cashed Out over a range of days, every item, with each line's type. */
+export async function reportItemsSold(from: string, to: string): Promise<ItemsSoldRow[]> {
+	const rows: ItemsSoldRow[] = [];
+	for (let start = 0; ; start += PAGE) {
+		const page = unwrap(
+			await supabase
+				.rpc('report_items_sold', { p_from: from, p_to: to })
+				.range(start, start + PAGE - 1)
+		) as ItemsSoldRow[];
+		rows.push(...page);
+		if (page.length < PAGE) break;
+	}
+	return rows.map((r) => ({ ...itemsCashedOutRow(r), cashed_out: d(r.cashed_out)! }));
+}
+
+// ---------------------------------------------------------------------------
+// Admin area: the tax rates and the price list
+// ---------------------------------------------------------------------------
+
+/** Every dated rate of the taxes given, newest first within each. */
+export async function taxRates(types: string[]): Promise<TaxRateRow[]> {
+	const rows = unwrap(
+		await supabase
+			.from('tax_rates')
+			.select('taxrateid, taxratetype, taxrate, taxratestartdate, taxrateenddate, taxratenotes')
+			.eq('taxratearchive', false)
+			.in('taxratetype', types)
+			.order('taxratestartdate', { ascending: false })
+	) as {
+		taxrateid: number;
+		taxratetype: string;
+		taxrate: number;
+		taxratestartdate: string;
+		taxrateenddate: string;
+		taxratenotes: string | null;
+	}[];
+	return rows.map((r) => ({
+		taxrateid: r.taxrateid,
+		taxratetype: r.taxratetype,
+		taxrate: Number(r.taxrate),
+		from: d(r.taxratestartdate)!,
+		to: d(r.taxrateenddate)!,
+		notes: r.taxratenotes
 	}));
+}
+
+/** Every item on the price list, those disabled included, in code order. */
+export async function priceListItems(): Promise<InventoryItem[]> {
+	const rows = unwrap(
+		await supabase.from('inventory_items').select('*').order('invcode')
+	) as InventoryItem[];
+	return sortItemsByCode(
+		rows.map((r) => ({ ...r, invamount: r.invamount == null ? null : Number(r.invamount) }))
+	);
+}
+
+/** The item types, each with the daily cash line it posts to. */
+export async function itemTypes(): Promise<ItemTypeRow[]> {
+	return unwrap(await supabase.rpc('item_types')) as ItemTypeRow[];
+}
+
+/** The daily cash lines an item's charges can post to (every line but Room). */
+export async function dailyCashLines(): Promise<string[]> {
+	const rows = unwrap(
+		await supabase
+			.from('lookup_transaction_types')
+			.select('transactiontype')
+			.neq('transactiontype', 'Room')
+			.order('transactiontypeorder')
+	) as { transactiontype: string }[];
+	return rows.map((r) => r.transactiontype);
+}
+
+/** Every room, those disabled included, in the lodge's sort order. */
+export async function adminRooms(): Promise<Room[]> {
+	const rows = unwrap(
+		await supabase.from('rooms').select('*').order('roomorder').order('roomid')
+	) as Room[];
+	return rows.map((r) => ({ ...r, roomorder: r.roomorder == null ? null : Number(r.roomorder) }));
+}
+
+type RoomRateTableRow = {
+	roomrateid: number;
+	roomid: number;
+	roomratetype: RoomRateType;
+	roomratecode: string;
+	roomrate: number;
+	roomratestartdate: string;
+	roomrateenddate: string;
+	roomratenotes: string | null;
+};
+
+function roomRateRow(r: RoomRateTableRow): RoomRateRow {
+	return {
+		roomrateid: r.roomrateid,
+		roomid: r.roomid,
+		roomratetype: r.roomratetype,
+		roomratecode: r.roomratecode,
+		roomrate: Number(r.roomrate),
+		from: d(r.roomratestartdate)!,
+		to: d(r.roomrateenddate)!,
+		notes: r.roomratenotes
+	};
+}
+
+const ROOM_RATE_COLUMNS =
+	'roomrateid, roomid, roomratetype, roomratecode, roomrate, roomratestartdate, roomrateenddate, roomratenotes';
+
+/** Every room's rates in force today or still to come: a few a room, whatever the years. */
+export async function roomRatesFromToday(): Promise<RoomRateRow[]> {
+	const rows: RoomRateTableRow[] = [];
+	for (let start = 0; ; start += PAGE) {
+		const page = unwrap(
+			await supabase
+				.from('room_rates')
+				.select(ROOM_RATE_COLUMNS)
+				.eq('roomratearchive', false)
+				.gte('roomrateenddate', TODAY)
+				.order('roomrateid')
+				.range(start, start + PAGE - 1)
+		) as RoomRateTableRow[];
+		rows.push(...page);
+		if (page.length < PAGE) break;
+	}
+	return rows.map(roomRateRow);
+}
+
+/** One room's rates, past ones included, newest first. */
+export async function roomRateHistory(roomid: number): Promise<RoomRateRow[]> {
+	const rows = unwrap(
+		await supabase
+			.from('room_rates')
+			.select(ROOM_RATE_COLUMNS)
+			.eq('roomid', roomid)
+			.eq('roomratearchive', false)
+			.order('roomratestartdate', { ascending: false })
+	) as RoomRateTableRow[];
+	return rows.map(roomRateRow);
+}
+
+/** The room rate codes, each with what it stands for. */
+export async function rateCodes(): Promise<RateCodeRow[]> {
+	return unwrap(await supabase.rpc('rate_codes')) as RateCodeRow[];
+}
+
+/** The room types. */
+export async function roomTypes(): Promise<RoomTypeRow[]> {
+	return unwrap(await supabase.rpc('room_types')) as RoomTypeRow[];
 }

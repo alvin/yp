@@ -8,18 +8,21 @@
     import { Button } from "$lib/components/ui/button/index.js";
     import { Toaster } from "$lib/components/ui/sonner/index.js";
     import LogOutIcon from "@lucide/svelte/icons/log-out";
+    import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
     import { goto } from "$app/navigation";
     import { dateMed } from "$lib/format.js";
     import { TODAY } from "$lib/data/queries.js";
     import { supabase } from "$lib/data/client.js";
 
-    let { children } = $props();
+    let { children, data } = $props();
 
     // Report routes render their own full-page paper shell with print controls;
-    // the sign-in screen renders without app chrome.
+    // the sign-in screen renders without app chrome, and the admin area has
+    // its own.
     const bare = $derived(
         page.url.pathname.startsWith("/reports") ||
-            page.url.pathname === "/login",
+            page.url.pathname === "/login" ||
+            page.url.pathname.startsWith("/admin"),
     );
 
     async function signOut() {
@@ -59,6 +62,12 @@
                         <CalculatorIcon />
                         <span class="hidden sm:inline">Daily Cash</span>
                     </Button>
+                    {#if data.admin}
+                        <Button variant="ghost" size="sm" href="/admin">
+                            <SlidersIcon />
+                            <span class="hidden sm:inline">Admin</span>
+                        </Button>
+                    {/if}
                     <Button
                         variant="ghost"
                         size="sm"

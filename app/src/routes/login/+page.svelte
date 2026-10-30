@@ -7,6 +7,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { supabase } from '$lib/data/client.js';
+	import { isAdmin } from '$lib/admin.js';
 
 	let email = $state('');
 	let password = $state('');
@@ -22,7 +23,7 @@
 				return;
 			}
 			await invalidateAll();
-			await goto('/');
+			await goto(isAdmin(email) ? '/admin' : '/');
 		} finally {
 			busy = false;
 		}

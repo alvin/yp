@@ -32,6 +32,8 @@ declare
   v_roomid integer;
   v_invid integer;
   v_rate numeric;
+  v_code text;
+  v_day date;
 begin
   ------------------------------------------------------------------
   -- Reference data sanity
@@ -526,6 +528,156 @@ begin
   assert (select count(*) from ypl.report_kitchen_meal(current_date)) >= 1, 'kitchen report empty';
 
   ------------------------------------------------------------------
+  -- Admin area (0033): only the admin login changes rates and prices;
+  -- rates are dated rows that never overlap, and a new one ends the
+  -- one running when it starts; a room night's taxes are its rooms'
+  -- own; an item type carries its daily cash line; a code names one
+  -- item on the price list at a time
+  ------------------------------------------------------------------
+  assert ypl.is_admin(), 'a direct database session is trusted';
+  perform set_config('request.jwt.claims',
+    '{"email": "frontdesk@yellowpointlodge.com", "role": "authenticated"}', true);
+  assert not ypl.is_admin(), 'the front desk login is not the admin login';
+  begin
+    perform ypl.save_tax_rate(null, 'PST', 0.08, current_date + 30, current_date + 60);
+    raise exception 'save_tax_rate accepted a front desk login';
+  exception when insufficient_privilege then null;
+  end;
+  perform set_config('request.jwt.claims',
+    '{"email": "Admin@YellowPointLodge.com", "role": "authenticated"}', true);
+  assert ypl.is_admin(), 'the admin login, however it is capitalised';
+  perform set_config('request.jwt.claims', '', true);
+
+  -- A change ahead of time: the rate running ends the day before.
+  v_rate := ypl.effective_tax_rate('PST', current_date);
+  v_int := (select taxrateid from ypl.tax_rate_in_force('PST', current_date));
+  v_upper := (select taxrateenddate::date - current_date from ypl.tax_rates where taxrateid = v_int);
+  v_txid := ypl.save_tax_rate(null, 'PST', 0.08, current_date + 30, current_date + v_upper::integer);
+  assert ypl.effective_tax_rate('PST', current_date + 29) = v_rate, 'the running rate changed before the new one';
+  assert ypl.effective_tax_rate('PST', current_date + 30) = 0.08, 'the new rate is not in force from its day';
+  assert (select taxrateenddate::date from ypl.tax_rates where taxrateid = v_int) = current_date + 29,
+    'the running rate did not end the day before';
+  -- Overlaps are refused, naming the rate in the way.
+  begin
+    perform ypl.save_tax_rate(null, 'PST', 0.09, current_date + 40, current_date + 50);
+    raise exception 'an overlapping rate was accepted';
+  exception when raise_exception then
+    if sqlerrm not like 'PST is already 8% from %' then raise; end if;
+  end;
+  begin
+    update ypl.tax_rates set taxrateenddate = current_date + 40 where taxrateid = v_int;
+    raise exception 'an overlapping edit was accepted';
+  exception when raise_exception then
+    if sqlerrm not like 'PST is already 8%' || '%' then raise; end if;
+  end;
+  begin
+    perform ypl.save_tax_rate(v_txid, 'PST', 1.5, current_date + 30, current_date + 60);
+    raise exception 'a rate of 150%% was accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'A tax rate is from 0% to under 100%.' then raise; end if;
+  end;
+  begin
+    perform ypl.remove_tax_rate(v_int);
+    raise exception 'a rate in force was removed';
+  exception when raise_exception then
+    if sqlerrm <> 'A rate that started before today can''t be removed.' then raise; end if;
+  end;
+  -- Removing it undoes it: the rate it ended runs on again.
+  perform ypl.remove_tax_rate(v_txid);
+  assert ypl.effective_tax_rate('PST', current_date + 30) = v_rate, 'the rate it ended did not run on';
+  assert (select taxrateenddate::date from ypl.tax_rates where taxrateid = v_int) = current_date + v_upper::integer,
+    'the rate it ended does not run to the removed one''s end';
+
+  -- Rooms: a room as Access kept it, a rate on several rooms at once, the
+  -- room's own rate ended the day before, and removing it undoes it.
+  perform ypl.add_room_type('Smoke Yurt');
+  perform ypl.save_rate_code('ZZR', 'Smoke rate', true);
+  begin
+    perform ypl.save_rate_code('zzr', 'Again', true);
+    raise exception 'a rate code already on the list was accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'zzr is already a rate code.' then raise; end if;
+  end;
+  v_int := ypl.save_room(null, 'Smoke Cabin', '01', 'Smoke Yurt', 'sm1', 'Q', 999.5, null,
+    true, false, true, true);
+  assert (select roomgst and not roompst and roomrt and roomdmt and not roomarchive and roomorder = 999.5
+            from ypl.rooms where roomid = v_int), 'room not added as given';
+  begin
+    perform ypl.save_room(null, 'smoke cabin', '01', 'Smoke Yurt', null, null, 1000, null, true, false, true, true);
+    raise exception 'a second room of one name and number was accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'There is already a room Smoke Cabin 01.' then raise; end if;
+  end;
+  begin
+    perform ypl.save_room(null, 'Smoke Cabin', '02', 'Smoke Yurt', null, null, 999.5, null, true, false, true, true);
+    raise exception 'a second room at one sort order was accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'Smoke Cabin 01 already sorts at 999.5.' then raise; end if;
+  end;
+  v_day := (select roomrateenddate::date from ypl.room_rate_in_force(v_roomid, current_date, 'Regular'));
+  perform ypl.save_room_rate(null, array[v_int, v_roomid], 'Regular', 'ZZR', 400, current_date + 30, v_day);
+  assert ypl.effective_room_rate(v_int, current_date + 30, 'Regular') = 400, 'the new room has no rate';
+  assert ypl.effective_room_rate(v_roomid, current_date + 30, 'Regular') = 400, 'the second room has no rate';
+  v_num := ypl.effective_room_rate(v_roomid, current_date, 'Regular');
+  assert v_num <> 400, 'the room''s rate changed before the new one';
+  assert (select roomrateenddate::date from ypl.room_rate_in_force(v_roomid, current_date, 'Regular'))
+         = current_date + 29, 'the room''s running rate did not end the day before';
+  begin
+    perform ypl.save_room_rate(null, array[v_roomid], 'Regular', 'ZZR', 500, current_date + 40, current_date + 50);
+    raise exception 'an overlapping room rate was accepted';
+  exception when raise_exception then
+    if sqlerrm not like '% already has a Double rate of $400.00 from %' then raise; end if;
+  end;
+  perform ypl.remove_room_rate((select roomrateid from ypl.room_rate_in_force(v_roomid, current_date + 30, 'Regular')));
+  assert ypl.effective_room_rate(v_roomid, current_date + 30, 'Regular') = v_num, 'the room''s rate did not run on';
+  assert (select roomrateenddate::date from ypl.room_rate_in_force(v_roomid, current_date, 'Regular')) = v_day,
+    'the room''s rate does not run to the removed one''s end';
+  begin
+    perform ypl.remove_room_rate((select roomrateid from ypl.room_rate_in_force(v_roomid, current_date, 'Regular')));
+    raise exception 'a room rate in force was removed';
+  exception when raise_exception then
+    if sqlerrm <> 'A rate that started before today can''t be removed.' then raise; end if;
+  end;
+
+  -- A room's taxes are its own: a charge for its nights is taxed by them.
+  perform ypl.save_room(v_int, 'Smoke Cabin', '01', 'Smoke Yurt', 'sm1', 'Q', 999.5, null,
+    true, false, false, true);
+  assert not (select roomrt from ypl.rooms where roomid = v_int), 'room tax flag not cleared';
+  perform ypl.save_room(v_int, 'Smoke Cabin', '01', 'Smoke Yurt', 'sm1', 'Q', 999.5, null,
+    null, null, null, null, false);
+  assert (select roomarchive from ypl.rooms where roomid = v_int), 'room not disabled';
+  assert not exists (select 1 from ypl.room_directory(current_date, current_date + 1) d where d.roomid = v_int),
+    'a disabled room is still offered';
+
+  -- An item type carries the daily cash line its charges post to.
+  assert ypl.charge_category('Red Wine') = 'Liquor', 'an Access type lost its line';
+  perform ypl.save_item_type('Smoke Hats', 'Hats/Shirts');
+  assert ypl.charge_category('Smoke Hats') = 'Hats/Shirts', 'a new type does not post to its line';
+  begin
+    perform ypl.save_item_type('Smoke Rooms', 'Room');
+    raise exception 'a type posting to Room was accepted';
+  exception when raise_exception then
+    if sqlerrm not like 'Choose the daily cash line%' then raise; end if;
+  end;
+
+  v_int := ypl.save_inventory_item(null, 'ZZ1', 'Smoke hat', 'Smoke Hats', 25, p_gst => true, p_pst => true);
+  assert (select invamount from ypl.inventory_items where inventoryid = v_int) = 25, 'item not added';
+  v_txid := ypl.post_charge(v_res.reservationguestid, v_int, 1, current_date);
+  assert (select transtype from ypl.transactions where transactionid = v_txid) = 'Hats/Shirts',
+    'a new type''s item did not post to its daily cash line';
+  begin
+    perform ypl.save_inventory_item(null, 'zz1', 'Second', null, 1);
+    raise exception 'a code already on the list was accepted';
+  exception when raise_exception then
+    if sqlerrm like 'a code already%' then raise; end if;
+  end;
+  perform ypl.save_inventory_item(v_int, 'ZZ1', 'Smoke hat', 'Smoke Hats', 30, p_active => false);
+  assert (select invarchive and invamount = 30 and invgst from ypl.inventory_items where inventoryid = v_int),
+    'a sold item not disabled with its new price, taxes kept';
+  v_int := ypl.save_inventory_item(null, 'ZZ1', 'Replacement', null, 1);
+  assert v_int is not null, 'a disabled item''s code could not be reused';
+
+  ------------------------------------------------------------------
   -- Report RPCs all execute
   ------------------------------------------------------------------
   perform * from ypl.report_reservation_confirmation(v_res.reservationid);
@@ -548,6 +700,10 @@ begin
   perform * from ypl.report_deposits_applied(current_date);
   perform * from ypl.report_cashier_detail(current_date);
   perform * from ypl.report_items_cashed_out(current_date);
+  perform * from ypl.report_items_sold(current_date - 30, current_date, array['L01']);
+  perform * from ypl.report_items_sold(current_date - 30, current_date);
+  perform * from ypl.report_next_years_deposits(make_date(extract(year from current_date)::integer, 1, 1),
+                                               make_date(extract(year from current_date)::integer, 12, 31));
   perform * from ypl.search_guests_by_name('SMOKE');
   perform * from ypl.search_guests_by_name('-MOKE SMITH');
   perform * from ypl.search_all_fields('SMOKE');

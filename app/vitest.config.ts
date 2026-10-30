@@ -1,4 +1,11 @@
+import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
+
+// TEST_* settings can live in app/.env (gitignored), such as the admin
+// login's password; one set in the environment wins.
+for (const [key, value] of Object.entries(loadEnv('test', process.cwd(), 'TEST_'))) {
+	process.env[key] ??= value;
+}
 
 // Feature test suite: one test file per spec/features/*.feature, exercising the
 // real local Supabase stack (database business logic) and the running app
