@@ -98,8 +98,8 @@ room types are added, and a code's description changed, but neither is renamed
 or deleted. Of Access's other lookup tables, the front desk uses four, which the
 admin area doesn't edit: salutations, phone types, payment types and payment
 categories. The rest (cities, regions,
-countries, diets, shuttle sites and the like) came across but nothing in the
-new system reads them. The Exchange Rate Form and Archive weren't carried over.
+countries, diets, shuttle sites and the like) stay in the Access file, since
+nothing in the new system reads them. The Exchange Rate Form and Archive weren't carried over.
 
 **The daily reports in portrait.** Housekeeping, In House, the Kitchen/Meal
 report and the 7-day kitchen report now print on an upright page, their lines a
@@ -373,6 +373,19 @@ September 2024) keeps it, and that day's report still shows it.
 
 ## What else changed along the way
 
+**Only what the system uses comes across from Access.** Of the Access file's
+tables, only those the system uses are loaded, every row as before. The rest
+stay in the Access file and are gone from the database: Access's own settings
+and its list of staff, the lookups no screen offers (cities, countries, diets,
+shuttle sites and so on), the lists and scratch tables its forms and reports
+built, the tables from old price and rate loads, and the backup copies it kept
+of the bookings, charges and payments, which are nearly all still in the live
+tables. The setup file used to start a system without an Access file now holds
+only the setup: rooms and their rates, the price list, tax and exchange rates,
+and the pick lists the screens use. It never held guest data. It no longer
+holds staff names or Access's own details either, though earlier copies remain
+in the code's public history.
+
 **A cleanup pass.** Unused code is gone, and code written several times over
 is now written once. The reservation screen, about a quarter of the app's
 screen code, is now a set of small parts, and the tests and the written
@@ -496,6 +509,10 @@ app does.
   that the rooms' rates were entered together.
 - **Disabled items are hidden until asked for,** since most of the old list is
   disabled.
+- **Access tables nothing reads stay in Access,** the backup copies of the
+  bookings included: of their 15,057 bookings, all but six are still in the
+  live tables. Bringing a table back means a line in the import's list and a
+  table for it in the database.
 
 - **The heading keeps the year** on the four daily reports; only the dates in
   the lines drop it. The heading is one line and says which day the sheet is

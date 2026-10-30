@@ -22,12 +22,12 @@ Why preserve Access-derived columns? The project needs to load the existing prod
 | Path | Purpose |
 |---|---|
 | `migrations/` | The schema, its rules and every view and RPC, as numbered files applied in order. Each opens with a header saying what it changes and why; later files replace earlier definitions rather than editing them |
-| `seed.sql` | Repeatable reference/configuration seed generated from Access lookup/config tables |
+| `seed.sql` | The setup the system uses (rooms and their rates, the price list, tax and exchange rates, the pick lists), generated from Access, for a system started without an Access file |
 | `seed_admin.sql` | The admin login, `admin@yellowpointlodge.com` (only its password's bcrypt hash: the repository is public) |
 | `tests/business_logic_smoke.sql` | Transactional smoke test of the full business-logic layer (rolls back; safe anywhere) |
-| `tools/access_table_map.py` | Source Access table to production table mapping |
-| `tools/generate_seed.py` | Regenerates `seed.sql` from reference/configuration tables |
-| `tools/export_access_data.py` | Exports all Access tables into a full production import SQL script targeting `ypl.*` |
+| `tools/access_table_map.py` | Which Access tables are loaded (`TABLES`, with their names here), which of them are seeded, and which stay in Access (`LEFT_IN_ACCESS`) |
+| `tools/generate_seed.py` | Regenerates `seed.sql` from the setup tables |
+| `tools/export_access_data.py` | Exports the Access tables the system uses into a full production import SQL script targeting `ypl.*` |
 | `tools/run_remote_sql.py` | Applies SQL files to the hosted project through the Management API |
 | `staging/` | SQL kept for the hosted project alone, such as the signup allowlist |
 | `config.toml` | The local stack's settings, including the `ypl` schema on the API |
@@ -37,8 +37,8 @@ This README is the central Supabase documentation. Import-output directories do 
 ## Migration order
 
 Apply every file in `migrations/` in filename order (`migrations/*.sql` expands in that order).
-Then load `seed.sql` for repeatable reference/configuration data, and
-`seed_admin.sql` for the admin login. `supabase db reset` loads both
+Then load `seed.sql` for the setup, and `seed_admin.sql` for the admin
+login. `supabase db reset` loads both
 (`config.toml`); `seed_admin.sql` leaves a login that already exists alone, and
 does nothing on a PostgreSQL without Supabase's auth schema.
 
@@ -263,13 +263,17 @@ cancel → reports) inside one transaction and rolls back.
 
 ## Core production tables
 
-Every Access source table is represented in `ypl` with a readable name.
+Every Access table the system uses has a table in `ypl` with a readable name.
+The rest stay in the Access file (`LEFT_IN_ACCESS` in `tools/access_table_map.py`):
+Access's own settings and user list, lookups no screen offers, its helper and
+scratch tables, tables from old rate and price loads, and its BACKUP copies of
+the live tables.
 
 | Workflow area | Production tables |
 |---|---|
 | Guests and reservations | `ypl.guests`, `ypl.reservations`, `ypl.reservation_guests` |
-| Rooms and room moves | `ypl.rooms`, `ypl.room_assignments`, `ypl.room_assignments_backup` |
-| Charges and payments | `ypl.transactions`, `ypl.payments`, plus backup tables |
+| Rooms and room moves | `ypl.rooms`, `ypl.room_assignments` |
+| Charges and payments | `ypl.transactions`, `ypl.payments` |
 | Operations notes | `ypl.housekeeping_notes`, `ypl.kitchen_meals` |
 | Lookup/config | `ypl.lookup_*`, `ypl.room_rates`, `ypl.tax_rates`, `ypl.exchange_rates`, `ypl.inventory_items` |
 
@@ -330,16 +334,19 @@ Regenerate repeatable seed data with:
 python3 supabase/tools/generate_seed.py
 ```
 
-`seed.sql` includes reference/configuration data only:
+`seed.sql` is the setup a system needs to start without an Access file, and
+only what the system uses (`SEED_ACCESS_TABLES`):
 
-- application/config metadata
-- lookup values
-- rooms
-- inventory
-- tax/exchange/room-rate tables
-- Access query-helper tables that are safe as repeatable reference data
+- rooms and their rates
+- the price list
+- tax and exchange rates
+- the pick lists the screens and rules read
 
-`seed.sql` deliberately excludes operational production rows such as guests, reservations, payments, transactions, housekeeping/kitchen notes, mailouts, and backups because those include PII and old payment-card fields.
+It holds no guest, booking, charge or payment records (guests, reservations,
+room assignments, transactions, payments, housekeeping and kitchen notes),
+because those include PII and old payment-card fields, and none of the Access
+tables the system doesn't read, Access's user list and its own settings among
+them.
 
 ## Full production data import
 
@@ -355,13 +362,15 @@ By default, this writes:
 supabase/legacy_import/all_legacy_data.sql
 ```
 
-Generated `*.sql` files under `supabase/legacy_import/` are ignored by git because they include all Access production data, including PII and old card fields.
+Generated `*.sql` files under `supabase/legacy_import/` are ignored by git because they include the Access production data, PII and old card fields included.
 
 The full import script:
 
-- exports every Access source table,
+- exports every Access table the system uses (`TABLES`), and stops on an
+  Access table that is in neither `TABLES` nor `LEFT_IN_ACCESS`, so a new one is
+  decided on rather than skipped,
 - rewrites Access `tbl...` table targets to production `ypl.*` table names,
-- preserves all old operational data and sensitive fields for the air-gapped deployment,
+- preserves every row of those tables, old operational data and sensitive fields included, for the air-gapped deployment,
 - loads with `session_replication_role = replica` so the business-logic
   triggers do not recompute or validate historical rows (byte-for-byte import;
   requires superuser, which the controlled migration environment provides),
@@ -371,7 +380,7 @@ The full import script:
   `tools/access_table_map.py`; `generate_seed.py` does the same),
 - resets serial sequences and the in-house reservation-number sequence after import.
 
-The path is verified end-to-end against the real `.accdb`: all tables load with
+The path is verified end-to-end against the real `.accdb`: every table loads with
 zero referential orphans, no duplicate reservation numbers, `numnights`
 consistent with stay dates, and report and search RPCs run in tens of milliseconds on the full dataset,
 except `search_all_fields`, which takes a few hundred. Note that

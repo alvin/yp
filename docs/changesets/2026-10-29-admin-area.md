@@ -314,8 +314,9 @@ deleted, the three rate types, the list of taxes and the Daily Cash report's lin
 and a rate that started before today is changed, not removed. Of the other lookup tables, the
 desk uses four (salutations, phone types, payment types, payment categories), and none of them
 is in the admin area; payment types and categories also drive the payment rules. The rest
-(cities, regions, countries, diets, shuttle sites, users, payment and inventory codes) are
-carried over but read by nothing in the new system.
+(cities, regions, countries, diets, shuttle sites, users, payment and inventory codes) stay in
+the Access file, since nothing in the new system reads them
+(`2026-10-29-access-tables-in-use.md`).
 
 ## 9. Tests and checks
 

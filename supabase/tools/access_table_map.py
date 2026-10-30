@@ -1,13 +1,16 @@
 """Access source table names mapped to Supabase-friendly snake_case names.
 
-Columns intentionally remain the mdbtools-normalized Access field names so data can
-be exported directly from the .accdb and loaded without per-column transforms.
+Only the Access tables the system uses are mapped (TABLES); the rest stay in the
+Access file (LEFT_IN_ACCESS). Columns intentionally remain the mdbtools-normalized
+Access field names so data can be exported directly from the .accdb and loaded
+without per-column transforms.
 """
 
 from __future__ import annotations
 
 import re
 import subprocess
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,153 +28,133 @@ class AccessTable:
         return self.access_name.lower()
 
 
+# The Access tables the system uses: each is read by a screen, report, view,
+# function or rule. The import loads these and only these.
 TABLES: tuple[AccessTable, ...] = (
-    AccessTable("tblApplicationInformation", "application_information"),
-    AccessTable(
-        "tblApplicationInformationFROMBACK", "application_information_from_back"
-    ),
-    AccessTable("tblApplicationObjects", "application_objects"),
-    AccessTable("tblApplicationRegistration", "application_registration"),
-    AccessTable("tblApplicationSpecification", "application_specifications"),
-    AccessTable("tblApplicationVersion", "application_versions"),
     AccessTable("tblExchangeRate", "exchange_rates"),
     AccessTable("tblGuest", "guests"),
     AccessTable("tblHousekeeping", "housekeeping_notes"),
-    AccessTable("tblHousekeepingBACKUP", "housekeeping_notes_backup"),
     AccessTable("tblInventory", "inventory_items"),
     AccessTable("tblKitchenMeal", "kitchen_meals"),
-    AccessTable("tblKitchenMealNEW", "kitchen_meals_new"),
-    AccessTable("tblLookupCity", "lookup_cities"),
-    AccessTable("tblLookupGuestDiet", "lookup_guest_diets"),
-    AccessTable("tblLookupInventoryCode", "lookup_inventory_codes"),
     AccessTable("tblLookupInventoryType", "lookup_inventory_types"),
     AccessTable("tblLookupPaymentCategory", "lookup_payment_categories"),
-    AccessTable("tblLookupPaymentCode", "lookup_payment_codes"),
     AccessTable("tblLookupPaymentType", "lookup_payment_types"),
-    AccessTable("tblLookupRegion", "lookup_regions"),
     AccessTable("tblLookupRoomRateCode", "lookup_room_rate_codes"),
     AccessTable("tblLookupRoomRateType", "lookup_room_rate_types"),
     AccessTable("tblLookupRoomType", "lookup_room_types"),
     AccessTable("tblLookupSalutation", "lookup_salutations"),
-    AccessTable("tblLookupShuttleSite", "lookup_shuttle_sites"),
     AccessTable("tblLookupTaxRateType", "lookup_tax_rate_types"),
-    AccessTable("tblLookupUser", "lookup_users"),
-    AccessTable("tblMailout", "mailouts"),
     AccessTable("tblOccupancy", "room_assignments"),
-    AccessTable("tblOccupancyBACKUP", "room_assignments_backup"),
     AccessTable("tblPayment", "payments"),
-    AccessTable("tblPaymentBACKUP", "payments_backup"),
-    AccessTable("tblPaymentTypeZero", "payment_type_zero"),
-    AccessTable("tblPaymentZero", "payment_zero"),
-    AccessTable("tblResBoard", "reservation_board"),
     AccessTable("tblReservation", "reservations"),
-    AccessTable("tblReservationBACKUP", "reservations_backup"),
     AccessTable("tblReservationGuest", "reservation_guests"),
-    AccessTable("tblReservationGuestBACKUP", "reservation_guests_backup"),
     AccessTable("tblRoom", "rooms"),
     AccessTable("tblRoomRate", "room_rates"),
-    AccessTable("tblRoomRateNEW", "room_rates_new"),
-    AccessTable("tblShuttle", "shuttles"),
     AccessTable("tblTaxRate", "tax_rates"),
     AccessTable("tblTransaction", "transactions"),
-    AccessTable("tblTransactionBACKUP", "transactions_backup"),
-    AccessTable("MSysCompactError", "access_compact_errors"),
-    AccessTable("tblInventoryExcel", "inventory_excel_import"),
-    AccessTable("tblLookupCountry", "lookup_countries"),
     AccessTable("tblLookupPhoneFaxType", "lookup_phone_fax_types"),
     AccessTable("tblLookupTransactionType", "lookup_transaction_types"),
-    AccessTable("tblInventoryRate", "inventory_rates"),
-    AccessTable("tblInventoryRate2", "inventory_rates_2"),
-    AccessTable("tblCalcTaxRateFilter", "calc_tax_rate_filters"),
-    AccessTable("tblCalcTaxRateFilter2", "calc_tax_rate_filters_2"),
-    AccessTable("tblChooseRoomRate", "choose_room_rates"),
-    AccessTable("tblChooseRoomRate2", "choose_room_rates_2"),
-    AccessTable("tblInventoryTax", "inventory_taxes"),
-    AccessTable("tblInventoryTax2", "inventory_taxes_2"),
 )
 
-TABLE_RENAMES: dict[str, str] = {
-    table.mdbtools_name: table.postgres_name for table in TABLES
-}
-
-# Reference/configuration tables that are useful as repeatable Supabase seed data.
-# Full production data, including PII and payment-card fields, is handled by
-# export_access_data.py.
-SEED_ACCESS_TABLES: tuple[str, ...] = (
+# Access tables nothing in the system reads, so the import and the seed leave
+# them in the Access file and the schema has no table for them (0034). Every
+# table in the Access file is in TABLES or here; export_access_data.py refuses
+# an Access table that is in neither, so a new one is decided on, not dropped.
+LEFT_IN_ACCESS: tuple[str, ...] = (
+    # Access's own settings: about, registration, version and object lists,
+    # and its compact-error log.
     "tblApplicationInformation",
     "tblApplicationInformationFROMBACK",
     "tblApplicationObjects",
     "tblApplicationRegistration",
     "tblApplicationSpecification",
     "tblApplicationVersion",
+    "MSysCompactError",
+    # Access's user list: staff names and initials.
+    "tblLookupUser",
+    # Lookups the new screens don't offer.
     "tblLookupCity",
     "tblLookupCountry",
-    "tblLookupGuestDiet",
-    "tblLookupInventoryCode",
-    "tblLookupInventoryType",
-    "tblLookupPaymentCategory",
-    "tblLookupPaymentCode",
-    "tblLookupPaymentType",
-    "tblLookupPhoneFaxType",
     "tblLookupRegion",
-    "tblLookupRoomRateCode",
-    "tblLookupRoomRateType",
-    "tblLookupRoomType",
-    "tblLookupSalutation",
+    "tblLookupGuestDiet",
     "tblLookupShuttleSite",
-    "tblLookupTaxRateType",
-    "tblLookupTransactionType",
-    "tblLookupUser",
-    "tblExchangeRate",
-    "tblTaxRate",
-    "tblRoom",
-    "tblRoomRate",
-    "tblRoomRateNEW",
-    "tblInventory",
-    "tblInventoryExcel",
+    "tblLookupPaymentCode",
+    "tblLookupInventoryCode",
+    # Copies of the live tables, kept by Access as backups.
+    "tblHousekeepingBACKUP",
+    "tblOccupancyBACKUP",
+    "tblPaymentBACKUP",
+    "tblReservationBACKUP",
+    "tblReservationGuestBACKUP",
+    "tblTransactionBACKUP",
+    # Helper and scratch tables Access's forms and reports used.
+    "tblMailout",
+    "tblResBoard",
+    "tblKitchenMealNEW",
     "tblPaymentTypeZero",
     "tblPaymentZero",
     "tblInventoryRate",
     "tblInventoryRate2",
+    "tblInventoryTax",
+    "tblInventoryTax2",
     "tblCalcTaxRateFilter",
     "tblCalcTaxRateFilter2",
     "tblChooseRoomRate",
     "tblChooseRoomRate2",
-    "tblInventoryTax",
-    "tblInventoryTax2",
+    # Tables from old rate and price loads, and the shuttle log (empty).
+    "tblRoomRateNEW",
+    "tblInventoryExcel",
+    "tblShuttle",
 )
 
-# All SERIAL columns in the renamed PostgreSQL schema. Some Access helper tables
-# do not define primary keys but still use SERIAL columns and need sequence reset.
+TABLE_RENAMES: dict[str, str] = {
+    table.mdbtools_name: table.postgres_name for table in TABLES
+}
+
+# The setup a system needs to start without an Access file: rooms and their
+# rates, the price list, tax and exchange rates, and the pick lists the screens
+# and rules read. No guest, booking or payment data (PII and old payment-card
+# fields): export_access_data.py loads those with the rest of TABLES.
+SEED_ACCESS_TABLES: tuple[str, ...] = (
+    "tblLookupInventoryType",
+    "tblLookupPaymentCategory",
+    "tblLookupPaymentType",
+    "tblLookupPhoneFaxType",
+    "tblLookupRoomRateCode",
+    "tblLookupRoomRateType",
+    "tblLookupRoomType",
+    "tblLookupSalutation",
+    "tblLookupTaxRateType",
+    "tblLookupTransactionType",
+    "tblExchangeRate",
+    "tblTaxRate",
+    "tblRoom",
+    "tblRoomRate",
+    "tblInventory",
+)
+
+# The SERIAL columns of the tables in TABLES, reset past the loaded Access IDs.
 SERIAL_COLUMNS: tuple[tuple[str, str], ...] = (
-    ("application_registration", "registrationid"),
-    ("application_specifications", "specid"),
-    ("application_versions", "versionid"),
     ("exchange_rates", "exchangerateid"),
     ("guests", "guestid"),
     ("housekeeping_notes", "housekeepingnotesid"),
-    ("housekeeping_notes_backup", "housekeepingnotesid"),
     ("inventory_items", "inventoryid"),
     ("kitchen_meals", "kitchenmealid"),
-    ("kitchen_meals_new", "kitchenmealid"),
-    ("lookup_users", "userid"),
     ("room_assignments", "occupancyid"),
-    ("room_assignments_backup", "occupancyid"),
     ("payments", "paymentid"),
-    ("payments_backup", "paymentid"),
     ("reservations", "reservationid"),
-    ("reservations_backup", "reservationid"),
     ("reservation_guests", "reservationguestid"),
-    ("reservation_guests_backup", "reservationguestid"),
     ("rooms", "roomid"),
     ("room_rates", "roomrateid"),
-    ("room_rates_new", "roomrateid"),
-    ("shuttles", "shuttletripid"),
     ("tax_rates", "taxrateid"),
     ("transactions", "transactionid"),
-    ("transactions_backup", "transactionid"),
-    ("calc_tax_rate_filters", "taxrateid"),
 )
+
+
+def undecided_tables(access_tables: Iterable[str]) -> list[str]:
+    """The Access tables in neither TABLES nor LEFT_IN_ACCESS, sorted."""
+    decided = {table.access_name for table in TABLES} | set(LEFT_IN_ACCESS)
+    return sorted(set(access_tables) - decided)
 
 
 def postgres_table_for_access(access_name: str) -> str:

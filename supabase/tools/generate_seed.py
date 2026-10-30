@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Generate repeatable Supabase reference/config seed SQL from Access.
+"""Generate repeatable Supabase setup seed SQL from Access.
 
-This seed intentionally stays limited to reference/configuration tables. Use
+The seed is the setup a system needs to start without an Access file to load
+(access_table_map.SEED_ACCESS_TABLES): rooms and their rates, the price list, tax
+and exchange rates, and the pick lists the system reads. Use
 export_access_data.py for the complete production import, including guest PII and
 old payment-card fields, in the air-gapped local environment.
 """
@@ -42,14 +44,14 @@ def main() -> None:
             [
                 "-- =============================================================================\n",
                 "-- seed.sql\n",
-                "-- Access reference/configuration seed extracted from\n"
+                "-- The setup the system uses, extracted from\n"
                 "-- legacy-db/YPLogicCurrentConsolidated.accdb with mdbtools.\n",
                 "--\n",
-                "-- Includes: application/config rows, lookup tables, tax/exchange/rate tables,\n",
-                "-- rooms, inventory, and Access query-helper tables.\n",
-                "-- Excludes: production guest/reservation/occupancy/payment/transaction/history\n",
-                "-- tables because they contain PII and old payment-card fields. Use\n",
-                "-- supabase/tools/export_access_data.py for the complete local import.\n",
+                "-- Includes: rooms and their rates, the price list, tax and exchange rates,\n",
+                "-- and the pick lists the screens and rules read.\n",
+                "-- Excludes: guest, booking, charge and payment records (PII and old\n",
+                "-- payment-card fields), which supabase/tools/export_access_data.py loads,\n",
+                "-- and the Access tables nothing in the system reads.\n",
                 "-- =============================================================================\n\n",
                 f"set search_path = {TARGET_SCHEMA}, public;\n\n",
             ]

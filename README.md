@@ -29,4 +29,5 @@ python3 supabase/tools/export_access_data.py   # writes supabase/legacy_import/a
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/legacy_import/all_legacy_data.sql
 ```
 
-The import is verified lossless end-to-end (see `supabase/README.md`).
+The import carries every row of the Access tables the system uses, verified end-to-end;
+the rest stay in the Access file (see `supabase/README.md`).
