@@ -1,7 +1,10 @@
 // Story: spec/features/show-tender-types.feature
 import { beforeAll, describe, expect, it } from 'vitest';
-import { makeReservation, pay, rpc, type Fixture } from '../helpers/db';
+import { makeReservation, pay, rpc, staffClient, unwrap, type Fixture } from '../helpers/db';
 
+// The tenders the lodge has always had. The report prints every payment type
+// on file but the two that settle bills without money, so a tender the lodge
+// adds in Access prints as well.
 const TENDERS = [
 	'Mastercard',
 	'Visa',
@@ -19,16 +22,23 @@ const TENDERS = [
 
 let fx: Fixture;
 let rows: { paymenttype: string; calc_amount: number; sort_order: number }[];
+let onFile: string[];
 
 beforeAll(async () => {
 	fx = await makeReservation();
 	await pay(fx, 'Payment (Regular)', 42, { type: 'Amex' });
 	rows = await rpc('report_dcar_payments', { p_date: fx.arrival });
+	const db = await staffClient();
+	onFile = (unwrap(await db.from('lookup_payment_types').select('paymenttype')) as { paymenttype: string }[])
+		.map((t) => t.paymenttype)
+		.filter((t) => t !== 'Gift Certificate' && t !== 'None (Sent to A/R)');
 });
 
 describe('show tender types', () => {
 	it('lists the lodge’s full tender set, including the US variants', () => {
-		expect(rows.map((r) => r.paymenttype).sort()).toEqual([...TENDERS].sort());
+		const printed = rows.map((r) => r.paymenttype).sort();
+		expect(printed).toEqual([...onFile].sort());
+		expect(printed).toEqual(expect.arrayContaining(TENDERS));
 	});
 
 	it('keeps the tenders in their established order', () => {

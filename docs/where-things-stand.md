@@ -2,7 +2,7 @@
 
 The one document to read. It sums up the work done from the lodge's feedback,
 the decisions made along the way, and what is still open.
-Everything below is live on the hosted system as of 30 October 2026.
+Everything below is live on the hosted system as of 31 October 2026.
 
 ---
 
@@ -373,6 +373,16 @@ September 2024) keeps it, and that day's report still shows it.
 
 ## What else changed along the way
 
+**The October Access file loads cleanly.** The copy of 31 October has the same
+structure as March's and loads in full, every row of every table the system
+uses, with its bookings up to 30 October. Every check and test passes on it.
+Since March the lodge has raised the R10 rooms' Double rate to $256, changed a
+dozen items, added two, and added a tender, Discover. The hosted test system
+has it too, since 31 October, in place of the March copy and the bookings made
+there during the review. On the day of a copy, the six Daily Sales accounts and
+the Rate Quoter show as arriving and departing that day, because Access dates
+them to the current day every night.
+
 **Only what the system uses comes across from Access.** Of the Access file's
 tables, only those the system uses are loaded, every row as before. The rest
 stay in the Access file and are gone from the database: Access's own settings
@@ -509,6 +519,8 @@ app does.
   that the rooms' rates were entered together.
 - **Disabled items are hidden until asked for,** since most of the old list is
   disabled.
+- **Discover prints on every cash sheet,** like the other tenders, at $0.00 on
+  a day without one. Access's sheet showed it only on a day it was used.
 - **Access tables nothing reads stay in Access,** the backup copies of the
   bookings included: of their 15,057 bookings, all but six are still in the
   live tables. Bringing a table back means a line in the import's list and a
@@ -616,32 +628,27 @@ app does.
 
 **For the lodge**
 4. **Testing the cash sheet before switchover.** The system's bookings are the
-   Access copy from 28 March 2026. Stays that have checked out since were settled
-   in Access, so their deposits (2,852 stays, $164,325) show as applied on their
-   check-out days with nothing to match. A fresh Access import at switchover
-   clears this.
-5. **Room charges posted at the Split rate.** Before the rate fix, 9 of the 12
-   room charges entered through the new system went in at the Split rate:
-   reservations 113102 (three charges), 113111, 113141, 113220, 113937, 115143
-   and 107033. Worth checking any that were real rather than testing.
-6. **A record of changes to a reservation.** The system keeps when a booking
+   Access copy from 31 October 2026. Stays that check out after that are settled
+   in Access, so their deposits show as applied on their check-out days with
+   nothing to match. A fresh Access import at switchover clears this.
+5. **A record of changes to a reservation.** The system keeps when a booking
    was made, confirmed and cancelled, but not when its details were later
    changed. Offered to Richard as a "last changed" date or a full history.
-7. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
-8. **Older charges.** 387 room charges from the Access years bill a room the guest
+6. **The Daily Cash report's US lines** — whenever they're ready to revisit it.
+7. **Older charges.** 387 room charges from the Access years bill a room the guest
    wasn't in (rooms were changed after charging). Worth knowing if old bills
    come up.
-9. **Questions still open from their original feature pack:** the weekly
+8. **Questions still open from their original feature pack:** the weekly
    spreadsheet handoff; storing daily cash adjustments and staff-tip codes;
    printing or reprinting a single document; how exact the printed layouts need
    to be; moving a deposit when a stay is cancelled or re-booked.
 
 **Known gaps nobody has asked for**
-10. A room's own dates can't be edited separately, as they could in Access;
+9. A room's own dates can't be edited separately, as they could in Access;
    stay dates change through *Change dates*. A room's own guest count can be set
    only where the stay holds rooms side by side; otherwise the room follows the
    booking's number.
-11. All-fields search takes a few hundred milliseconds whatever is typed.
+10. All-fields search takes a few hundred milliseconds whatever is typed.
 
 ---
 
